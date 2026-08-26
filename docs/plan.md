@@ -43,6 +43,7 @@ the settled decisions and `CONTEXT.md` for the words.
 | Real-message benchmark | 30 real Previews: ML Kit 6 ✅ / 18 ⚠️ / 6 ❌, Lark 27 ✅ / 3 ⚠️ / 0 ❌; ML Kit translates Chinese Sender names literally | `docs/experiments/02-quality.md` Benchmark 3 |
 | Message-read scopes | Granted on the CLI app under Max's user identity (`search:message`, `im:message.*_msg:get_as_user`, …). Handoff's "effectively blocked" is false for this app | same, "Scope finding" |
 | Romanization | Android ICU `Han-Latin/Names` works on the phone; `romanize()` is tested (`RomanizeTest`, instrumented) | `Romanize.kt` |
+| Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
 
 ## Layers
@@ -72,6 +73,16 @@ withdraw — Lark updates the Original in place. `POST_NOTIFICATIONS` is require
 Cancel option (Max): debug builds keep the Original next to the Relay for comparison;
 release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
 
+### Layer 4 — LarkApiTranslator 🔨 in progress
+
+See `docs/experiments/05-lark-api.md`. `LarkApiTranslator` calls Lark's engine over
+`HttpURLConnection` with the CLI app's credentials from `local.properties` (→
+`BuildConfig`, embedded in the APK; Max OK'd this for now). `FallbackTranslator` uses ML Kit
+when Lark fails (offline, error code, or the silent pass-through on Latin-heavy text) and
+prefixes the fallback output with `~` so the Relay and `events.jsonl` show the engine.
+No pacing: Experiment 05 saw no rate limit. Verify on the phone: (1) debug hook shows
+Lark-quality output; (2) a bot DM relays; (3) radios off → `~` ML Kit output.
+
 ### Later (not experiments)
 
 - [ ] Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
@@ -80,12 +91,11 @@ release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
   appends every Relay pair and removal (with reason) to `filesDir/events.jsonl`;
   `MainActivity` lists them newest-first with a Refresh button. Shell read:
   `adb exec-out run-as com.vegerot.larklish cat files/events.jsonl`.
-- [ ] **`LarkApiTranslator` behind a setting.** Experiment 02 shows Lark's engine is clearly
-  better on ByteDance/TikTok/Lark jargon (see `docs/experiments/02-quality.md`,
-  "Benchmark 2"). Decision (Max, 2026-08-25): stay on ML Kit for faster iteration; add
-  the Lark API as a follow-up feature; abandon ML Kit only if it is unusably bad.
-  Constraints: tenant token only, rate limit `99991400` seen on back-to-back calls
-  (3 s spacing avoided it), 1,000 chars per call.
+- [x] ~~`LarkApiTranslator` behind a setting.~~ → Layer 4. Decision history: Max
+  (2026-08-25) kept ML Kit for faster iteration; Experiments 04–05 showed Lark's engine
+  fixes every ML Kit failure seen in the soak, so Layer 4 makes Lark primary with ML Kit
+  as fallback. A production build needs a dedicated `translation:text`-only app instead
+  of the fat CLI app's secret.
 - [ ] **App icon (Max, late stage).** Every Relay shows Larklish's icons, not Lark's: the
   **small icon** (monochrome glyph in the status bar and shade header) is mandatory for a
   notification, and the **large icon** (right side of the row) is optional — Layer 3 copies

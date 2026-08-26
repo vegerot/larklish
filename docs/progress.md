@@ -607,3 +607,24 @@ Next:
 
 - `LarkApiTranslator` (plan discussion parked; Max denied the plan gate for
   now).
+
+### 2026-08-26 — Experiment 05: Lark translate API over raw HTTP
+
+- 🔑 Tenant is Feishu-brand → host `open.feishu.cn`. Reused the CLI app
+  `cli_aa949bbb72e39cde` (has `translation:text`); decrypted its secret from
+  `lark-cli`'s AES-GCM file store into the scratchpad (never printed).
+- 🧪 From the Linux machine with `urllib`: token endpoint (7200 s), translate
+  endpoint, 8 sequential + 8 concurrent calls with no rate limit, newline
+  survives a combined call, error shape HTTP 400 + `code`. Phone pings the
+  host at 124 ms. Doc: 1,000 chars/call, 20 QPS per tenant.
+- 🚩 Latin-heavy input (`Chenglong Song: oec.… 需要扩容。`) passes through
+  untranslated, 3 of 3 times; without the Sender it translates. The app
+  must treat unchanged output as a failure.
+- ✅ Lark fixes every ML Kit failure from the soak (names, case, emoji,
+  "High excellent"). Full tables in `docs/experiments/05-lark-api.md`.
+- 📄 `plan.md`: Layer 4 added (Lark primary, ML Kit fallback with `~`
+  prefix, credentials via `local.properties` → `BuildConfig`).
+
+Next:
+
+- Implement Layer 4 and verify on the phone.
