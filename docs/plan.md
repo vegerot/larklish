@@ -43,6 +43,7 @@ the table below; `CONTEXT.md` holds the words.
 | Real-message benchmark | 30 real Previews: ML Kit 6 ✅ / 18 ⚠️ / 6 ❌, Lark 27 ✅ / 3 ⚠️ / 0 ❌; ML Kit translates Chinese Sender names literally | `docs/experiments/02-quality.md` Benchmark 3 |
 | Message-read scopes | Granted on the CLI app under Max's user identity (`search:message`, `im:message.*_msg:get_as_user`, …). Handoff's "effectively blocked" is false for this app | same, "Scope finding" |
 | Romanization | Android ICU `Han-Latin/Names` works on the phone; `romanize()` is tested (`RomanizeTest`, instrumented) | `Romanize.kt` |
+| Lark Preview budget | 45 characters of message text, cut back to a space/punctuation, `...` appended; no boundary before 45 → empty Preview; newline ends it | `docs/experiments/06-full-message.md` |
 | Layer 4 soak | 36 Relays on real traffic: 0 fallback rows; 8 Han rows graded 5 ✅ / 3 ⚠️ / 0 ❌; first Han group title readable; `romanize()` mangles bot Senders with Han (`Triton数据安全` → pinyin) | `docs/experiments/05-lark-api.md` "Soak" |
 | Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
@@ -115,12 +116,13 @@ Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 - [ ] **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
   write the Sender/message split test-first. Cases: plain `Sender: message`,
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
-- [ ] **2.0 idea (Max): longer notifications and/or AI-summarized notifications.** Lark cuts
-  the Preview to the first clause (Experiment 01). Showing the whole message needs the
-  message text, which the listener never gets: it would need the message-read API under
-  the user identity (polling was rejected at the start; the scopes are granted now, see
-  "Message-read scopes" above) or another source. A summary of the full message
-  needs the same access plus a summarizer. Record only; not in the current layers.
+- [ ] **2.0 idea (Max): full-message notifications.** Lark's Preview is at most 45
+  characters, cut back to a boundary, and **empty when the first 45 characters hold no
+  boundary** (Experiment 06). The Original cannot carry more (E1). The text must come
+  from the Open API under the user identity, keyed by chat (source B in
+  `docs/experiments/06-full-message.md`). Next experiments: E2 (chat lookup + latency
+  with `lark-cli --as user`), E4 (user token lifetime on the phone). Polling was
+  rejected at the start; a per-notification lookup is a different shape (Max's call).
 
 ## Commands
 

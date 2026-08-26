@@ -747,3 +747,22 @@ Next:
   debug builds only); sharing it stops the signature-mismatch trap between
   machines. `plan.md` Commands: `cp debug.keystore ~/.android/debug.keystore`
   once per machine. `local.properties` (Lark app secret) stays ignored.
+
+### 2026-08-26 — Experiment 06: the Original cannot carry the full message
+
+- 🧪 E1: extras of a live Original hold no extra text (`subText` null, no
+  `textLines`/`messages`); the tap intent (`NotificationTransferActivity`) has
+  extras that `dumpsys` never prints, root or not.
+- 📏 E5, ten bot DMs: Lark keeps **45 characters** of message text, backs up to
+  the last space/punctuation, appends `...`; a newline ends the Preview; **no
+  boundary before 45 → empty Preview** (`Sender:...`). Han and Latin count the
+  same. Tables in `experiments/06-full-message.md`.
+- 📐 Consequence: the full text can only come from the Open API under the user
+  identity, keyed by chat (source B). `plan.md` 2.0 item rewritten; settled-facts
+  row added.
+
+Next:
+
+- E2: `lark-cli --as user` chat lookup by title + latest-message latency
+  (user identity on this Mac is `needs_refresh`).
+- E4: user token lifetime for a phone-side fetch.
