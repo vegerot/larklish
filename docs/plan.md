@@ -80,6 +80,13 @@ The quality table has 14 rows (5 real, 9 made up). Max's judgment is pending.
   the Lark API as a follow-up feature; abandon ML Kit only if it is unusably bad.
   Constraints: tenant token only, rate limit `99991400` seen on back-to-back calls
   (3 s spacing avoided it), 1,000 chars per call.
+- **App icon (Max, late stage).** Every Relay shows Larklish's icons, not Lark's: the
+  **small icon** (monochrome glyph in the status bar and shade header) is mandatory for a
+  notification, and the **large icon** (right side of the row) is optional — Layer 3 copies
+  the Original's group avatar there. The launcher icon is the same asset family. Today it is
+  the system default (`@android:drawable/sym_def_app_icon`). Design a proper adaptive
+  launcher icon + monochrome small icon once the Relay is stable; 译鸟 (translation bird) is
+  the theme.
 - **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
   write the Sender/message split test-first. Cases: plain `Sender: message`,
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.

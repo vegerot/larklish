@@ -342,3 +342,5 @@ Next:
 - ▶️ Layer 3 (Relay) on Max's go, with ML Kit behind `Translator`.
 - Optional: Max runs `lark-cli auth login` for `search:message` to pull real
   Previews into the benchmark.
+- 📄 Follow-up (Max): `plan.md` Later now lists a proper app icon — small
+  (monochrome, shown on every Relay) and launcher — for a late stage.
