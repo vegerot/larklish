@@ -48,11 +48,49 @@ Consequences:
 - The Preview is at most ~45 characters, so the Relay can never carry more than that from
   the Original alone. The full text must come from somewhere else.
 
-## Remaining sources (not run yet)
+## E2 — Source B: Open API by chat, under the user identity
 
-- **B. Open API by chat** (user identity): title → chat id → latest messages → text.
-  Needs E2 (lookup + timing with `lark-cli --as user`) and E4 (user token lifetime on the
-  phone). Message-read scopes are already granted on the CLI app.
-- **C. Open API by text search**: `search:message` with the truncated Preview. Needs E3
-  (index latency). Useless for the empty-Preview case above, which is exactly the case
-  that hurts most; B does not have that problem.
+All calls `lark-cli api … --as user` from the Mac (the CLI's user identity auto-refreshed).
+
+- ✅ **Chat by title.** `GET /open-apis/im/v1/chats/search?query=<title>`: the exact title
+  `San Jose 1199 Coleman Avenue - Office Life` → 1 hit (`oc_7be4…`). The truncated title
+  Lark puts in the Original (`San Jose 1199...`) → 2 hits; pick the one whose `name`
+  starts with the prefix. Han title `高优` → 8 hits, the right group among them, so
+  filter by name there too. 2.5 s for the first call (token refresh), then ~1 s.
+- ✅ **Latest messages.** `GET /open-apis/im/v1/messages?container_id_type=chat&
+  container_id=oc_…&sort_type=ByCreateTimeDesc&page_size=3` → `items[].body.content` is
+  JSON `{"text": "…"}` for `text` messages; `msg_type`, `create_time` (ms), `sender`
+  (open_id) come with it. Mentions appear as `@_user_1` placeholders; the `mentions`
+  array maps them to names. ~1.9 s through lark-cli.
+- ✅ **Latency.** Bot DM sent → the message was in the list on the **first poll,
+  3.0 s later** (lark-cli start-up included), full 70-character text intact while the
+  phone's Original showed 31 characters + `...`.
+- ✅ **Burst.** 10 sequential list calls: no error code; 17 s total = 1.7 s each, dominated
+  by CLI start-up (raw HTTP is ~0.4–0.8 s per Experiment 05).
+- ⏳ Not run: a **DM** whose title is the person's name (or `Lark` for bots) — whether
+  `chats/search` returns p2p chats by the person's name [CONFIRM]. Fallback: the
+  `contacts` search by name → `open_id` → `chats` with `p2p` type.
+
+## E4 — User token lifetime
+
+`lark-cli auth status`: user access token 2 h (`expiresAt`), refresh token **7 days,
+sliding** (`refreshExpiresAt` = last refresh + 7 d), scope list includes `offline_access`.
+A phone app that refreshes at least weekly stays signed in; the sign-in itself is the
+device-code flow lark-cli uses (verification URL + code, one tap on the phone).
+
+## Answer so far
+
+The Original cannot carry the full message (E1) and Lark cuts it to ≤ 45 characters,
+often to nothing (E5). Source B works: title → `chats/search` → `messages` list gives the
+full text within ~3 s of the post, under the user identity, whose token can live on the
+phone (E4). Open: DM lookup (E2 ⏳), and Max's call on doing per-notification lookups
+under the user identity (the handoff rejected *polling*; this is one lookup per Original).
+
+## Sketch (not a plan yet)
+
+`LarkListener` → `Preview.parse` → if the Preview ends in `...` (or is empty), fetch:
+chat id (cached per title) → latest message whose `create_time` ≥ Original `when` − 5 s
+and whose text starts with the Preview stem → translate the full text → Relay with
+`BigTextStyle` (≤ ~450 characters shown expanded; Lark's translate limit is 1,000).
+Otherwise relay as today. A user token on the phone: device-code sign-in screen in
+`MainActivity`, refresh weekly.

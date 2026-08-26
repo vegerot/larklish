@@ -119,10 +119,11 @@ Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 - [ ] **2.0 idea (Max): full-message notifications.** Lark's Preview is at most 45
   characters, cut back to a boundary, and **empty when the first 45 characters hold no
   boundary** (Experiment 06). The Original cannot carry more (E1). The text must come
-  from the Open API under the user identity, keyed by chat (source B in
-  `docs/experiments/06-full-message.md`). Next experiments: E2 (chat lookup + latency
-  with `lark-cli --as user`), E4 (user token lifetime on the phone). Polling was
-  rejected at the start; a per-notification lookup is a different shape (Max's call).
+  from the Open API under the user identity, keyed by chat: `chats/search` by title →
+  `messages` list gives the full text ~3 s after the post (E2); the user refresh token
+  lives 7 days sliding, so a phone-side sign-in is workable (E4). Open: DM lookup by
+  person name; and Max's call — the handoff rejected *polling*, this is one lookup per
+  Original. Sketch at the end of `docs/experiments/06-full-message.md`.
 
 ## Commands
 

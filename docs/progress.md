@@ -766,3 +766,20 @@ Next:
 - E2: `lark-cli --as user` chat lookup by title + latest-message latency
   (user identity on this Mac is `needs_refresh`).
 - E4: user token lifetime for a phone-side fetch.
+
+### 2026-08-26 — Experiment 06 continued: source B works, token lifetime known
+
+- ✅ E2 (`lark-cli api --as user`): `chats/search` by exact title → 1 hit; by the
+  truncated title prefix → 2 hits (filter by name prefix); `messages` list
+  (`ByCreateTimeDesc`) returns the full text as `body.content` JSON; a bot DM
+  was readable 3.0 s after the send, on the first poll; 10 back-to-back calls,
+  no rate-limit error.
+- ✅ E4: user token 2 h, refresh token 7 days sliding (`lark-cli auth status`),
+  `offline_access` granted.
+- ⏳ Open: DM lookup by person name; Max's call on per-Original lookups under
+  the user identity. Sketch recorded in `experiments/06-full-message.md`.
+
+Next:
+
+- Max decides: pursue the full-message layer (sketch), or park it.
+- Parked: push the stack (9 commits above `origin/main`); Later items.
