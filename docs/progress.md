@@ -539,3 +539,30 @@ Next:
 - Soak overnight; read `events.jsonl` for the quality report and the
   desktop-withdrawal reason.
 - Then `LarkApiTranslator`.
+
+### 2026-08-25 — Redeploy saga: adb wedge, silent uninstall, soak re-armed
+
+- 🐛→✅ Redeploy failed with ddmlib `TimeoutException`. `adb devices` still
+  said `device` while `adb shell` timed out — the state listing lies; probe
+  with a real shell command. A genuine `adb kill-server` + `start-server`
+  plus a few seconds of re-enumeration fixed it (`lsusb` showed the phone
+  present throughout).
+- 🐚 Gotcha: `pkill --full 'gradlew installDebug'` matches the shell that
+  runs it (the pattern is inside its own command line) and kills it.
+  Exit 144 with no output = self-inflicted.
+- 🚩 Something fully uninstalled and reinstalled the app at 23:46 (new uid,
+  fresh `firstInstallTime`; likely a Studio deploy replacing the CLI-signed
+  install). That silently wiped: `events.jsonl` (test rows only, no loss),
+  the ML Kit model, and the `POST_NOTIFICATIONS` grant — which would have
+  dropped every Relay overnight without a trace.
+- ✅ Re-armed for the soak: `pm grant … POST_NOTIFICATIONS` (verified),
+  listener rebound (`connected`), model re-downloaded via the debug hook.
+- 📏 One real Original (Lanxiang Wang, Seller group) arrived while the
+  listener was unbound; it has no Relay. Expected: posted events are not
+  delivered retroactively.
+
+Next:
+
+- Soak overnight; read `events.jsonl` in the morning.
+- Then `LarkApiTranslator` (plan discussion parked; Max denied the plan
+  gate for now).
