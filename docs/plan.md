@@ -37,6 +37,9 @@ the settled decisions and `CONTEXT.md` for the words.
 | Interception | A sideloaded listener receives Originals; `allow_listener` binds it at once, no restricted-settings gate | `docs/experiments/01-listener.md` |
 | Autogroup summary | Arrives as a second `posted` event with null title/text; Layer 3 skips `FLAG_GROUP_SUMMARY` | same |
 | Withdrawal | Did not happen with Lark desktop off; desktop-active is the likely trigger | same |
+| ML Kit quality | Gist OK in 7 of 14 rows; names, identifiers and mentions damaged in almost all; 6 rows change meaning | `docs/experiments/02-quality.md` |
+| Lark API quality | Better, but not perfect: one identifier changed, one Sender dropped; rate limit `99991400` hit 5 of 14 calls | same |
+| Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
 
 ## Layers
 
@@ -49,20 +52,11 @@ See `docs/experiments/00-adb.md`.
 See `docs/experiments/01-listener.md`. Gradle project (AGP 9.3.2, built-in Kotlin,
 `minSdk 36`), `LarkListener` logs every Lark Original. Interception works.
 
-### Layer 2 — Translator screen (is on-device quality good enough?)
+### Layer 2 — Translator screen ✅ done
 
-- Compose screen: text field → button → English output. Same app, same package.
-- `Translator` interface with one method; `MlKitTranslator` is the first implementation.
-- ML Kit `com.google.mlkit:translate:17.0.3`, `TranslateLanguage.CHINESE` → `ENGLISH`.
-  Download the ~30 MB model on first use.
-- Non-Chinese input: first test what ML Kit does with English text. Add language ID
-  (`com.google.mlkit:language-id`) only if the output is bad. Keep it simple.
-- Evidence: `docs/experiments/02-quality.md`, a table of ~10 real previews:
-  Chinese → ML Kit → Lark's own translation. Get Lark's translation with
-  `lark-cli api POST /open-apis/translation/v1/text/translate --as bot` (scope granted).
-  Note: on 2026-08-25 the API answered `99991400 request trigger frequency limit` to
-  single calls. Retry later; space the ~10 calls out.
-- Pass: Max judges the ML Kit column "gist OK".
+See `docs/experiments/02-quality.md`. Compose `MainActivity` (text field → ML Kit → English,
+plus an `am start --es text` debug hook), `Translator` interface, `MlKitTranslator`.
+The quality table has 14 rows (5 real, 9 made up). Max's judgment is pending.
 
 ### Layer 3 — Relay (does the replacement work?)
 

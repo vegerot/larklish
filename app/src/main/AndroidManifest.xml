@@ -1,7 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <application android:label="Larklish">
+    <!-- ML Kit downloads the ~30 MB zh→en model once. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:label="Larklish"
+        android:icon="@android:drawable/sym_def_app_icon">
+
+        <!-- Layer 2: translator screen. Also the debug hook: `am start` with a
+             string extra named `text` translates at once (see MainActivity). -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <!-- The system binds this service after the user (or `cmd notification allow_listener`)
              grants notification access. -->

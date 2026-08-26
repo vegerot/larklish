@@ -252,3 +252,58 @@ Next:
 Next:
 
 - ▶️ Layer 2, awaiting Max's go.
+
+## Layer 2 — Translator screen
+
+### 2026-08-25 — Layer 2 done: translator works; ML Kit damages names
+
+- 📐 Toolchain (Claude's call): Compose BOM `2026.08.00`, Compose compiler plugin
+  `2.2.10` (= AGP 9.3.2's built-in Kotlin), ML Kit `translate:17.0.3`,
+  `kotlinx-coroutines-play-services:1.11.0`, `activity-compose:1.13.0`.
+- 🧱 `Translator` (one method), `MlKitTranslator` (download model if needed,
+  then translate; both via `Task.await()`), `MainActivity` (Compose: text field,
+  button, output; `--es text` extra translates at once and logs
+  `Translator: in=[…] out=[…]`). Manifest: `INTERNET`, launcher Activity,
+  explicit icon (`@android:drawable/sym_def_app_icon`) — the icon lint warning
+  is gone. The app now shows in the drawer.
+- 🐛→✅ Build failed: Compose runtime 1.12.0 needs `compileSdk 37`. Set
+  `compileSdk = 37`, kept `targetSdk = 36` (they are separate; the error text
+  says so).
+- ↩️ Correction: Studio's earlier `compileSdk` bump to 37 was needed after
+  all. Only the `targetSdk` revert stands (Max's call).
+- 🐛→✅ Manifest merger failed on an XML comment containing `--es`. XML comments
+  cannot hold `--`. Reworded the comment.
+- ✅ Studio `build_project`: success, 0 problems. Inspections: all Kotlin files
+  and the manifest clean; `app/build.gradle.kts` warns `targetSdk 36` is not
+  the latest (expected). CLI `installDebug`: 8 s.
+- 📏 First call downloaded the zh→en model and translated within seconds
+  (21:24:31). No Wi-Fi-only condition; the phone was on Wi-Fi.
+- 📏 Quality table, 14 Previews (5 real from the shade, 9 made up):
+  ML Kit gist OK in 7 of 14; names/identifiers/mentions damaged in almost
+  every row (`Jiarui` → `Jiaroi`, `oec.seller.assistant_api` →
+  `OEC.Seller.Assistant_API`, `@you` → `@ you`); meaning changed in rows
+  4, 6, 8, 11, 13, 14. Full table in `experiments/02-quality.md`.
+- 🚩 Lark's engine also erred: row 10 changed an identifier; row 11 dropped
+  the Sender. Rate limit `99991400` on 5 of 14 sequential calls; row 2 never
+  got through in 4 tries.
+- 🐚 Four CLI gotchas (zsh `mapfile`, `adb shell` eats loop stdin, `am start`
+  same-intent delivery, `rg` without PCRE2) recorded in
+  `experiments/02-quality.md`.
+- 📐 Standing preference (Max): build through Android Studio when it is not
+  harder; CLI stays fine for install + capture loops. Saved to memory.
+- 📄 `experiments/02-quality.md`; `plan.md` Layer 2 marked done, three
+  settled-facts rows added.
+
+Open:
+
+- ⏭️ STOP and ASK — Max: is the ML Kit column "gist OK" for a notification
+  Preview? The table says: gist yes in half the rows, names damaged nearly
+  everywhere. Options: keep ML Kit; switch to `LarkApiTranslator`; or ML Kit
+  with the Sender split off before translation (removes every Sender-name
+  error at no cost).
+
+Next:
+
+- Max writes `Preview.parse` in `Preview.kt` (stub in the working copy): the
+  rule that splits `Sender: message`. It decides what the Translator sees.
+- ▶️ Layer 3 (Relay) after Max's go.
