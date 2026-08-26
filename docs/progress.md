@@ -591,3 +591,19 @@ Next:
 - Fix the two recorder defects (record raw `EXTRA_TEXT`; skip summary removals).
 - Then `LarkApiTranslator` (plan discussion parked; Max denied the plan
   gate for now).
+
+### 2026-08-26 — Recorder fixes from the soak
+
+- 🐛→✅ `Recorder.relayed` now gets the raw `EXTRA_TEXT`, so `@you`/`@all`
+  survive in the `text` column. Verified with a bot DM that mentions Max:
+  row reads `Max Coplan's Feishu CLI@you: …` on both sides.
+- 🐛→✅ `onNotificationRemoved` skips `FLAG_GROUP_SUMMARY`, like the posted
+  path. Verified: a `cancelAll` (`reason=9`) with two Originals live produced
+  two removal rows and no summary row.
+- ✅ `installDebug` upgrade kept the 18 soak rows, the grant, and the model.
+  Listener rebound. JVM tests green.
+
+Next:
+
+- `LarkApiTranslator` (plan discussion parked; Max denied the plan gate for
+  now).

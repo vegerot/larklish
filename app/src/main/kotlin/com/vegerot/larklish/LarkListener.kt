@@ -47,7 +47,8 @@ class LarkListener : NotificationListenerService() {
         // Android's autogroup summary for Lark: no title, no text (Experiment 01).
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         val title = n.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
-        val preview = Preview.parse(n.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        val text = n.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+        val preview = Preview.parse(text)
         // A translate failure (no model, no network) would crash the service. The model is on the
         // phone after the first Layer 2 run, so this is unlikely; Android restarts the service.
         scope.launch {
@@ -57,7 +58,7 @@ class LarkListener : NotificationListenerService() {
             )
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-            recorder.relayed(sbn.key, title, preview.run { if (sender.isEmpty()) message else "$sender: $message" },
+            recorder.relayed(sbn.key, title, text,
                 relay.extras.getCharSequence(Notification.EXTRA_TITLE).toString(), relayText)
             // Debug builds keep the Original next to the Relay for comparison while we
             // develop. Release builds cancel it (Max, 2026-08-25).
@@ -72,6 +73,8 @@ class LarkListener : NotificationListenerService() {
         reason: Int,
     ) {
         if (sbn.packageName != LARK) return
+        // Lark's cancelAll() also removes Android's autogroup summary (Experiment 04). Skip it.
+        if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
         recorder.removed(sbn.key, reason)
         // Our own cancelNotification() above also lands here; the Relay must survive that.
         if (reason == REASON_LISTENER_CANCEL) return
