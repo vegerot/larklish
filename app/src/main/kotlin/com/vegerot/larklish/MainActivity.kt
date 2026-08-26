@@ -50,7 +50,7 @@ private fun TranslatorScreen(translator: Translator, initialText: String) {
 
     fun translate() = scope.launch {
         output = "…"
-        output = runCatching { translator.zhToEn(input) }.getOrElse { "error: $it" }
+        output = runCatching { translator.englishOf(input) }.getOrElse { "error: $it" }
         Log.i(TAG, "in=[$input] out=[$output]")
     }
 

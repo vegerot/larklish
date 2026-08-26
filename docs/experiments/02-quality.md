@@ -307,3 +307,13 @@ approximation of the Preview, not the Preview itself.
   handoff's claim that message-read scopes are "effectively blocked" by security review
   is false for this app. The other reasons to reject polling (two booleans vs three
   Tiers, no push for users) still hold. The 2.0 "full message" idea becomes feasible.
+
+## Emoji (added 2026-08-25 late)
+
+- 🚩 ML Kit translates a lone 😀 as **"Bamboo"** (Max found it on the translator screen).
+- 🚩 In mixed text ML Kit **deletes** emoji: `服务挂了😀，正在回滚👍🏼` → "The service
+  hangs, rolling back".
+- ✅ The Han gate (`String.hasHan` → `Translator.englishOf`) keeps non-Han text away from
+  the engine, so an emoji-only Preview passes through unchanged. The gate now guards both
+  the Relay and the translator screen. Emoji loss inside Chinese text remains an engine
+  defect; revisit with `LarkApiTranslator`.

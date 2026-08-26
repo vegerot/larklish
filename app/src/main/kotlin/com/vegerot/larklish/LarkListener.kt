@@ -49,7 +49,10 @@ class LarkListener : NotificationListenerService() {
         // A translate failure (no model, no network) would crash the service. The model is on the
         // phone after the first Layer 2 run, so this is unlikely; Android restarts the service.
         scope.launch {
-            val relay = buildRelay(this@LarkListener, sbn, englishOf(title), preview, englishOf(preview.message))
+            val relay = buildRelay(
+                this@LarkListener, sbn,
+                translator.englishOf(title), preview, translator.englishOf(preview.message),
+            )
             manager.notify(sbn.key, RELAY_ID, relay)
             // Debug builds keep the Original next to the Relay for comparison while we
             // develop. Release builds cancel it (Max, 2026-08-25).
@@ -57,10 +60,6 @@ class LarkListener : NotificationListenerService() {
             Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[${relay.extras.getCharSequence(Notification.EXTRA_TEXT)}]")
         }
     }
-
-    /** Only Han text goes to the Translator: English, names and identifiers pass unchanged. */
-    private suspend fun englishOf(text: String): String =
-        if (text.any { it.isHan() }) translator.zhToEn(text) else text
 
     override fun onNotificationRemoved(
         sbn: StatusBarNotification,

@@ -24,4 +24,15 @@ class RomanizeTest {
     fun hanInsideOtherTextBecomesPinyinWords() {
         assertEquals("Argos Ping Tai Bao Jing", romanize("Argos平台报警"))
     }
+
+    @Test
+    fun emojiOnlySenderIsUnchanged() {
+        assertEquals("😀", romanize("😀"))
+        assertEquals("Bits 👍🏼", romanize("Bits 👍🏼"))
+    }
+
+    @Test
+    fun emojiBesideHanSurvivesRomanization() {
+        assertEquals("Chen Yu Meng😀", romanize("陈昱萌😀"))
+    }
 }

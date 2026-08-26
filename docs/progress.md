@@ -487,3 +487,32 @@ Next:
 
 - Follow-ups from plan.md "Later": `LarkApiTranslator`, app icon,
   onboarding. The test group stays for future experiments.
+
+### 2026-08-25 — Emoji: gate extracted and tested; two engine defects found
+
+- 🐛 Max found it: the translator screen turned a lone 😀 into **"Bamboo"**.
+  The screen was sending everything to ML Kit; only the listener had a gate.
+- 🧱 Gate extracted: `Han.kt` (`Char.isHan`, `String.hasHan`, ICU-free) and
+  `Translator.englishOf` extension. Both the Relay and the screen use it;
+  `MlKitTranslator` stays engine-only.
+- 🧪 Unit tests (JVM): `EnglishOfTest` with a fake `Translator` proves emoji
+  and English never reach the engine and Han+emoji goes whole; `PreviewTest`
+  gains emoji in Sender and message. `RomanizeTest` gains emoji cases on the
+  phone: 😀 unchanged, `陈昱萌😀` → "Chen Yu Meng😀" (ICU glues the emoji to
+  the last syllable). 9 JVM + 5 instrumented, all green.
+- 🐛→✅ First run: `ExceptionInInitializerError` — putting `hasHan` in
+  `Romanize.kt` dragged the ICU `Transliterator` init onto the JVM, where
+  `android.icu` is a stub. Han helpers moved to their own ICU-free file.
+- 🔑 Recipe: run instrumented tests WITHOUT the uninstall side effect:
+  `./gradlew installDebug installDebugAndroidTest` then `adb shell am
+  instrument -w com.vegerot.larklish.test/androidx.test.runner.
+  AndroidJUnitRunner`. Grants survive; only the process dies — toggle
+  `allow_listener` to rebind.
+- 📏 Probes: 😀 → 😀 through the screen (gate works); ML Kit deletes emoji
+  inside Chinese text (`…😀，…👍🏼` → none in output). Engine defect;
+  revisit with `LarkApiTranslator`. Noted in `experiments/02-quality.md`.
+
+Next:
+
+- Follow-ups from plan.md "Later": `LarkApiTranslator`, app icon,
+  onboarding.

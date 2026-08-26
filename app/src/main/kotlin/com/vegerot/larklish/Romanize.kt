@@ -5,8 +5,6 @@ import android.icu.text.Transliterator
 // Han → pinyin (name readings), then strip tone marks. Android ships the ICU data.
 private val hanToLatin: Transliterator = Transliterator.getInstance("Han-Latin/Names; Latin-ASCII")
 
-fun Char.isHan() = Character.isIdeographic(code)
-
 /**
  * Romanize a Sender for a reader who does not read Chinese.
  * 温天信 → "Wen Tianxin"; Argos平台报警 → "Argos Ping Tai Bao Jing"; "Max Coplan" unchanged.

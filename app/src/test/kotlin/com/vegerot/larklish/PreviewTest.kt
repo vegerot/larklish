@@ -39,4 +39,16 @@ class PreviewTest {
             Preview.parse("You have received a message."),
         )
     }
+
+    @Test
+    fun emojiSurvivesInSenderAndMessage() {
+        assertEquals(
+            Preview(sender = "夏银璐😀", mention = null, message = "好的👍🏼 收到"),
+            Preview.parse("夏银璐😀: 好的👍🏼 收到"),
+        )
+        assertEquals(
+            Preview(sender = "Bits", mention = Mention.YOU, message = "😀"),
+            Preview.parse("Bits@you: 😀"),
+        )
+    }
 }
