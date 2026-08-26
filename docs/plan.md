@@ -61,17 +61,11 @@ See `docs/experiments/02-quality.md`. Compose `MainActivity` (text field → ML 
 plus an `am start --es text` debug hook), `Translator` interface, `MlKitTranslator`.
 The quality table has 14 rows (5 real, 9 made up). Max's judgment is pending.
 
-### Layer 3 — Relay (does the replacement work?)
+### Layer 3 — Relay ✅ core done (bot DM)
 
-- Own channel. Post the Relay with the Original's `contentIntent` and `largeIcon`.
-  Text = `romanize(preview.sender) + ": " + translate(preview.message)` (the Sender never
-  goes through the Translator; see Experiment 02). Then `cancelNotification(original.key)`.
-- When the Original is removed by Lark (`onNotificationRemoved`, reason ≠ our own
-  cancel), cancel the Relay too.
-- Loop guard: ignore `com.vegerot.larklish`.
-- Test by hand: `lark-cli` bot message → Relay appears, Original gone, no double, tap
-  opens the right chat. Screenshots via `adb exec-out screencap`.
-- Pass: all four hold for a group message and for a bot DM.
+See `docs/experiments/03-relay.md`. The Relay replaces the Original and the tap opens
+the right chat. Pending observation with real traffic: a group-message Relay, and the
+withdrawal mirror (`onNotificationRemoved`). `POST_NOTIFICATIONS` is required.
 
 ### Later (not experiments)
 

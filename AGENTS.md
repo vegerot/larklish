@@ -31,6 +31,7 @@ its terms.
 ## 🛠️ Commands
 
 - The phone is connected over `adb`. Use it directly for experiments.
+- Prefer running commands through the Android Studio MCP when it does not add complexity above manually running `./gradlew`
 - Prefer `--long-flag` names over `-s`hort flags.
 - Break long shell commands into multiple lines with `\`.
 - Prefer the fff tools for file search and grep. In Bash, prefer `rg` and `fd` over `grep`

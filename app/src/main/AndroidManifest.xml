@@ -3,6 +3,8 @@
 
     <!-- ML Kit downloads the ~30 MB zh→en model once. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+: posting the Relay needs this runtime permission. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="Larklish"

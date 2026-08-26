@@ -1,0 +1,42 @@
+package com.vegerot.larklish
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class PreviewTest {
+    @Test
+    fun senderAndMessageSplitAtTheFirstColonSpace() {
+        assertEquals(
+            Preview(sender = "Yinghao Li", mention = null, message = "哈喽，我发现有个问题"),
+            Preview.parse("Yinghao Li: 哈喽，我发现有个问题"),
+        )
+    }
+
+    @Test
+    fun mentionSuffixOnTheSenderIsSplitOff() {
+        assertEquals(
+            Preview(sender = "Bits", mention = Mention.YOU, message = "Sync Task Conflicted"),
+            Preview.parse("Bits@you: Sync Task Conflicted"),
+        )
+        assertEquals(
+            Preview(sender = "Rachel Lam", mention = Mention.ALL, message = "Hello @all Please join us"),
+            Preview.parse("Rachel Lam@all: Hello @all Please join us"),
+        )
+    }
+
+    @Test
+    fun onlyTheFirstColonSpaceSplits() {
+        assertEquals(
+            Preview(sender = "Bits", mention = null, message = "【告警】集群: 5xx 比例超过 1%"),
+            Preview.parse("Bits: 【告警】集群: 5xx 比例超过 1%"),
+        )
+    }
+
+    @Test
+    fun textWithoutColonSpaceIsAllMessage() {
+        assertEquals(
+            Preview(sender = "", mention = null, message = "You have received a message."),
+            Preview.parse("You have received a message."),
+        )
+    }
+}

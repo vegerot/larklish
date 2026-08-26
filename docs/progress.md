@@ -410,3 +410,42 @@ Next:
 
 - ▶️ Layer 3 (Relay) on Max's go. `Preview.parse` test-first as its first
   slice, then wire `romanize` and `Translator` into the Relay.
+
+## Layer 3 — Relay
+
+### 2026-08-25 — Layer 3 core done: the Relay replaces the Original
+
+- 📐 Decision (Max): TDD is optional for experiments; do not let tests lock
+  in a design. `Preview.parse` and `romanize` keep their tests; the Relay
+  has none.
+- 🧱 `Preview.parse` (4 unit tests, JVM): split at the first `: `, `@you` /
+  `@all` → `Mention`, no-colon text is all message. `Relay.kt`: Relay =
+  Original's `contentIntent` + `largeIcon` + `when`, our channel `relay`,
+  text = `romanize(sender)[@mention]: englishOf(message)`. `LarkListener`:
+  skip `FLAG_GROUP_SUMMARY`, translate only Han text, `notify(key, 1, …)`
+  then `cancelNotification(key)`; on removal (reason ≠ our own listener
+  cancel) cancel the Relay.
+- 🐛→✅ First Relay was dropped silently: `POST_NOTIFICATIONS` was never
+  declared or granted. Manifest + `pm grant` fixed it.
+- 🐚 Gotcha: `connectedDebugAndroidTest` uninstalls the app afterwards,
+  wiping the listener grant, the permission grant, and the ML Kit model.
+  Re-grant and expect the first translation to re-download ~30 MB.
+- 🐚 Gotcha: `adb shell cmd statusbar expand-notifications` before `input
+  tap`; the first tap landed on the launcher because the shade was closed.
+- ✅ End-to-end (bot DM): send 22:28:21 → `relayed` 22:28:26; `dumpsys`
+  shows 1 larklish record, 0 larksuite; expanded shade shows "Larklish •
+  now / Lark / <English BigText>"; tap → `NexusBotActivity` (the right
+  chat) and the Relay auto-cancels. Screenshots in the session scratchpad;
+  evidence in `experiments/03-relay.md`.
+- 📏 Lark did not truncate this message; truncation is variable. ML Kit
+  inverted `先别发布` again ("everyone is released") — engine swap stays
+  the first follow-up.
+- ⏳ Waiting on real traffic: group-message Relay and Lark's own withdrawal
+  (`onNotificationRemoved` mirror). The listener stays installed and logs.
+
+Next:
+
+- Watch real traffic for a group Relay and a withdrawal; record both in
+  `experiments/03-relay.md`.
+- Then the follow-ups in plan.md "Later": `LarkApiTranslator`, app icon,
+  onboarding.

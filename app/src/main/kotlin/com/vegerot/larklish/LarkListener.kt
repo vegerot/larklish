@@ -1,15 +1,39 @@
 package com.vegerot.larklish
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 private const val TAG = "LarkListener"
 private const val LARK = "com.larksuite.suite"
+private const val RELAY_ID = 1 // one Relay per Original key (the tag), so the id is constant
 
-/** Layer 1: log every Lark Original. No Relay yet. */
+/** Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws. */
 class LarkListener : NotificationListenerService() {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val translator: Translator = MlKitTranslator()
+    private lateinit var manager: NotificationManager
+
+    override fun onCreate() {
+        super.onCreate()
+        manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(
+            NotificationChannel(RELAY_CHANNEL, "Relays", NotificationManager.IMPORTANCE_HIGH),
+        )
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
 
     override fun onListenerConnected() {
         Log.i(TAG, "connected; active Lark notifications: ${activeNotifications.count { it.packageName == LARK }}")
@@ -18,18 +42,23 @@ class LarkListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.packageName != LARK) return
         val n = sbn.notification
-        val extras = n.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)
-        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
-        Log.i(
-            TAG,
-            "posted key=${sbn.key} title=[$title] text=[$text] textLen=${text?.length} " +
-                "bigTextSame=${bigText == text} template=${extras.getString(Notification.EXTRA_TEMPLATE)} " +
-                "contentIntent=${n.contentIntent != null} flags=0x${n.flags.toString(16)} " +
-                "group=${n.group} channel=${n.channelId}",
-        )
+        // Android's autogroup summary for Lark: no title, no text (Experiment 01).
+        if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
+        val title = n.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
+        val preview = Preview.parse(n.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
+        // A translate failure (no model, no network) would crash the service. The model is on the
+        // phone after the first Layer 2 run, so this is unlikely; Android restarts the service.
+        scope.launch {
+            val relay = buildRelay(this@LarkListener, sbn, englishOf(title), preview, englishOf(preview.message))
+            manager.notify(sbn.key, RELAY_ID, relay)
+            cancelNotification(sbn.key)
+            Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[${relay.extras.getCharSequence(Notification.EXTRA_TEXT)}]")
+        }
     }
+
+    /** Only Han text goes to the Translator: English, names and identifiers pass unchanged. */
+    private suspend fun englishOf(text: String): String =
+        if (text.any { it.isHan() }) translator.zhToEn(text) else text
 
     override fun onNotificationRemoved(
         sbn: StatusBarNotification,
@@ -37,6 +66,9 @@ class LarkListener : NotificationListenerService() {
         reason: Int,
     ) {
         if (sbn.packageName != LARK) return
-        Log.i(TAG, "removed key=${sbn.key} reason=$reason")
+        // Our own cancelNotification() above also lands here; the Relay must survive that.
+        if (reason == REASON_LISTENER_CANCEL) return
+        manager.cancel(sbn.key, RELAY_ID)
+        Log.i(TAG, "original removed key=${sbn.key} reason=$reason; relay canceled")
     }
 }
