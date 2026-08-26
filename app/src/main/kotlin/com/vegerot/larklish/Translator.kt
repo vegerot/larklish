@@ -9,4 +9,4 @@ interface Translator {
  * Only Han text goes to the Translator. English, names, identifiers and emoji pass
  * unchanged — ML Kit mangles them (Experiment 02; it turned a lone 😀 into "Bamboo").
  */
-suspend fun Translator.englishOf(text: String): String = if (text.hasHan()) zhToEn(text) else text
+suspend fun Translator.englishOf(text: String): String = if (text.any { it.isHan() }) zhToEn(text) else text

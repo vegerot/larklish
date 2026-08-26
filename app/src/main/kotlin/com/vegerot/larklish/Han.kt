@@ -5,5 +5,3 @@ package com.vegerot.larklish
 
 fun Char.isHan() = Character.isIdeographic(code)
 
-/** True when [this] holds at least one Han character — the only text worth translating. */
-fun String.hasHan() = any { it.isHan() }
