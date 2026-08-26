@@ -14,7 +14,7 @@ the settled decisions and `CONTEXT.md` for the words.
 | Preview length | Lark truncates at ~64 chars | same |
 | Listener grant | `cmd notification allow_listener` — no Settings UI needed | `cmd notification` help |
 | Lark withdraws Originals | Yes, on its own (desktop active). Relay must follow. | same |
-| Lark translation API | Needs scope `translation:text`; tenant token; 1000 chars; 20 QPS | `lark-cli api` error, docs |
+| Lark translation API | Works via `lark-cli api --as bot` (scope `translation:text` granted); English input passes through unchanged | `docs/experiments/00-adb.md` |
 | Pixel Live Translate | Not available (Tensor-only, and this is Lineage) | — |
 
 ## Layers
@@ -44,8 +44,8 @@ See `docs/experiments/00-adb.md`.
 - Non-Chinese input: first test what ML Kit does with English text. Add language ID
   (`com.google.mlkit:language-id`) only if the output is bad. Keep it simple.
 - Evidence: `docs/experiments/02-quality.md`, a table of ~10 real previews:
-  Chinese → ML Kit → Lark's own translation. Get Lark's translation from the API once the
-  `translation:text` scope exists, else by hand in the app.
+  Chinese → ML Kit → Lark's own translation. Get Lark's translation with
+  `lark-cli api POST /open-apis/translation/v1/text/translate --as bot` (scope granted).
 - Pass: Max judges the ML Kit column "gist OK".
 
 ### Layer 3 — Relay (does the replacement work?)
