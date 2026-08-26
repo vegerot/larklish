@@ -74,29 +74,29 @@ release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
 
 ### Later (not experiments)
 
-- Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
+- [ ] Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
   Android 13+ "Allow restricted settings" step for sideloaded apps.
-- ~~Debug UI: list of recent Original → Relay pairs.~~ ✅ Done 2026-08-25: `Recorder`
+- [x] Debug UI: list of recent Original → Relay pairs. ✅ Done 2026-08-25: `Recorder`
   appends every Relay pair and removal (with reason) to `filesDir/events.jsonl`;
   `MainActivity` lists them newest-first with a Refresh button. Shell read:
   `adb exec-out run-as com.vegerot.larklish cat files/events.jsonl`.
-- **`LarkApiTranslator` behind a setting.** Experiment 02 shows Lark's engine is clearly
+- [ ] **`LarkApiTranslator` behind a setting.** Experiment 02 shows Lark's engine is clearly
   better on ByteDance/TikTok/Lark jargon (see `docs/experiments/02-quality.md`,
   "Benchmark 2"). Decision (Max, 2026-08-25): stay on ML Kit for faster iteration; add
   the Lark API as a follow-up feature; abandon ML Kit only if it is unusably bad.
   Constraints: tenant token only, rate limit `99991400` seen on back-to-back calls
   (3 s spacing avoided it), 1,000 chars per call.
-- **App icon (Max, late stage).** Every Relay shows Larklish's icons, not Lark's: the
+- [ ] **App icon (Max, late stage).** Every Relay shows Larklish's icons, not Lark's: the
   **small icon** (monochrome glyph in the status bar and shade header) is mandatory for a
   notification, and the **large icon** (right side of the row) is optional — Layer 3 copies
   the Original's group avatar there. The launcher icon is the same asset family. Today it is
   the system default (`@android:drawable/sym_def_app_icon`). Design a proper adaptive
   launcher icon + monochrome small icon once the Relay is stable; 译鸟 (translation bird) is
   the theme.
-- **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
+- [ ] **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
   write the Sender/message split test-first. Cases: plain `Sender: message`,
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
-- **2.0 idea (Max): longer notifications and/or AI-summarized notifications.** Lark cuts
+- [ ] **2.0 idea (Max): longer notifications and/or AI-summarized notifications.** Lark cuts
   the Preview to the first clause (Experiment 01). Showing the whole message needs the
   message text, which the listener never gets: it would need the message-read API under
   the user identity (see `larklish-handoff.md`, rejected polling: user-token scopes go
