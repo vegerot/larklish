@@ -674,3 +674,28 @@ Next:
 - Keep soaking Layer 4; the row to watch is a Han group title through Lark.
 - Later items unchanged: app icon, onboarding, release-build check, dedicated
   `translation:text`-only Lark app.
+
+### 2026-08-26 — First deploy from the Mac: same signer, data kept
+
+- 🔑 Recipe: the phone's install is signed by the Linux debug keystore
+  (`CD:5B:25:F8…`). Studio had generated a new Mac keystore (`9A:3D:D0:12…`),
+  which would have failed as a signature mismatch (or forced an uninstall
+  that wipes `events.jsonl`, the grants, and the ML Kit model). Max supplied
+  the Linux keystore as `debug.keystore.base64`; decoded to
+  `~/.android/debug.keystore` (Mac one kept as `debug.keystore.mac-studio-2026-08-26.bak`).
+  `apksigner verify --print-certs` on the pulled `base.apk` confirmed the match.
+- ✅ `./gradlew installDebug` (42 s) upgraded in place: `events.jsonl` 74 rows,
+  byte-identical to the pre-deploy copy; `POST_NOTIFICATIONS` still granted;
+  listener rebound at once (`connected; active Lark notifications: 4`);
+  `no_backup/com.google.mlkit.translate.models/en_zh` still present.
+- ✅ End-to-end: bot DM sent 15:55:40 → `relayed` 15:55:46 (6 s). Relay text
+  `Mac deployment test: This notification should be translated from Feishu
+  engine, without tilde 🍎` — Lark engine, no `~`, emoji kept.
+- 📏 `events.jsonl` grew 43 → 74 rows between 12:00 and 15:50 PDT on real
+  traffic with the Layer 4 build; not yet graded.
+
+Next:
+
+- Grade the 31 new Layer 4 rows (look for `~` rows and Han group titles).
+- Later items unchanged: app icon, onboarding, release-build check, dedicated
+  `translation:text`-only Lark app.
