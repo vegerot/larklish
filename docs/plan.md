@@ -98,6 +98,13 @@ Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
   fixes every ML Kit failure seen in the soak, so Layer 4 makes Lark primary with ML Kit
   as fallback. A production build needs a dedicated `translation:text`-only app instead
   of the fat CLI app's secret.
+- [ ] **Romanize only person names.** `romanize()` is right for bare 2–4-character Han
+  names (陈昱萌 → Chen Yumeng) and wrong for bot or group Senders that mix Latin and Han
+  (`Triton数据安全` → "Triton Shu Ju An Quan", `Argos平台报警` → "Argos Ping Tai Bao
+  Jing"), where pinyin carries no meaning. Lark's engine translates those well ("Triton
+  Data Security"). Change: in `Relay.kt`, romanize a Sender only when it is a bare Han
+  name; send every other Han-containing Sender through `englishOf`. Add a `RomanizeTest`
+  case. Evidence: `docs/experiments/05-lark-api.md` "Soak".
 - [ ] **App icon (Max, late stage).** Every Relay shows Larklish's icons, not Lark's: the
   **small icon** (monochrome glyph in the status bar and shade header) is mandatory for a
   notification, and the **large icon** (right side of the row) is optional — Layer 3 copies
