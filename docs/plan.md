@@ -4,6 +4,24 @@ Larklish grows like an onion 🧅. Each layer is the smallest thing that answers
 question. Commit every layer, even the ones we throw away. See `larklish-handoff.md` for
 the settled decisions and `CONTEXT.md` for the words.
 
+## Working rules
+
+- Keep `progress.md` short, append-only, and continuation-ready.
+  - The goal of `progress.md` is that any engineer can read this plan and then
+    read `progress.md` and understand what is done and what is left.
+  - Summarize each action (code changes, experiments, commits, findings) in
+    `progress.md` as the work happens, to hand off mid-task.
+  - Use one emoji per action. End every entry with a `Next:` block.
+- Mutable state (commit hashes, statuses, message ids) lives in `progress.md`,
+  not here. Evidence lives in `experiments/`.
+- Stop at the end of each layer. Do not continue until Max asks.
+- Commit at least at the end of each layer. Do not commit half-done work. Each
+  commit must build and install.
+- At the start of each layer, or after a context compaction, read
+  `progress.md` from the bottom and check the working copy against the last
+  entry (`git status`, `git diff --stat`).
+- If you need clarity the docs do not give, STOP and ASK.
+
 ## Settled by the experiments so far
 
 | Question | Answer | Evidence |
