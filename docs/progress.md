@@ -383,3 +383,30 @@ Next:
 - ▶️ Layer 3 (Relay) on Max's go.
 - 2.0 "full message" idea is feasible now (message-read scopes granted);
   still recorded only.
+
+### 2026-08-25 — romanize() done test-first on the phone
+
+- 📐 Decision (Max): Chinese Sender names are useless to him; romanize them
+  if it is trivially easy. It was.
+- 🧪 TDD, instrumented (ICU data lives on the phone): `RomanizeTest` under
+  `app/src/androidTest`. Seam: `romanize(sender: String): String`. Slices:
+  (1) 温天信 → "Wen Tianxin" red → green with ICU `Han-Latin/Names;
+  Latin-ASCII`; (2) no-Han Senders unchanged (`Bits`, `Max Coplan`,
+  `Daitao(DT) Song`) red → green; (3) Argos平台报警 → "Argos Ping Tai Bao
+  Jing" red (ICU spaces the syllables; my name-join glued them) → green by
+  joining only bare 2–4 character Han names.
+- ✅ `./gradlew connectedDebugAndroidTest`: 3 tests, 0 failed, 12 s. Added
+  `androidx.test.ext:junit:1.3.0`, `androidx.test:runner:1.7.0`,
+  `AndroidJUnitRunner`.
+- 🐚 Gotcha: one run reported "Instrumentation run failed due to Process
+  crashed" with no stack trace; the rerun passed. Runner flake, not code.
+- 🐚 Gotcha: editing a Kotlin file with `rstrip("}\n")` removed two braces
+  and made three "runs" fail in <1 s. A build that fails in under a second
+  is a compile error, not a test result. Rewrite the file whole.
+- 📄 `plan.md`: Layer 3 Relay text = `romanize(sender) + ": " +
+  translate(message)`; settled-facts row. `02-quality.md`: decision noted.
+
+Next:
+
+- ▶️ Layer 3 (Relay) on Max's go. `Preview.parse` test-first as its first
+  slice, then wire `romanize` and `Translator` into the Relay.

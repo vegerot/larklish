@@ -298,6 +298,9 @@ approximation of the Preview, not the Preview itself.
   never translated, ML Kit's worst failure class disappears. Open question for Max: a
   Chinese Sender name in the Relay — keep the characters (what Lark shows in-app), or
   romanize (what the Lark API does)? Keeping them is zero code.
+  **Decision (Max, 2026-08-25): romanize** — Chinese characters are useless to Max.
+  Done in `Romanize.kt` with Android's ICU `Han-Latin/Names` transform, test-first on the
+  phone (`RomanizeTest`): 温天信 → "Wen Tianxin", Argos平台报警 → "Argos Ping Tai Bao Jing".
 - **Scope finding (overturns part of the handoff):** the CLI app's user token already
   carries `im:message.group_msg:get_as_user`, `im:message.p2p_msg:get_as_user`,
   `im:message:readonly`, `im:chat.user_setting:read`, `search:message` and more. The
