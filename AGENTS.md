@@ -31,23 +31,13 @@ its terms.
 ## 🛠️ Commands
 
 - The phone is connected over `adb`. Use it directly for experiments.
-- Prefer running commands through the Android Studio MCP when it does not add complexity above manually running `./gradlew`
-- Prefer `--long-flag` names over `-s`hort flags.
-- Break long shell commands into multiple lines with `\`.
-- Prefer the fff tools for file search and grep. In Bash, prefer `rg` and `fd` over `grep`
-  and `find`.
+- Prefer running commands through the Android Studio MCP unless running `./gradlew` is a lot easier.
 - Do not search the home directory or `/` broadly.
 
-## 📖 Output standard
+## 📖 Output Standard 🏁 Goal: text that is clear, unambiguous, and easy for all readers.
 
-Write all text (responses, docs, comments, UI text) in ASD-STE100 Simplified Technical
-English, with emojis 🙏🏼.
-
-- Use short, clear sentences: max 20 words for instructions, max 25 for descriptions.
-- One instruction or one main idea per sentence. Active voice. Imperative for instructions.
-- One meaning per word. Use the same word for the same thing every time.
-- One topic per paragraph, max six sentences, main topic first.
-- Explain an unfamiliar term or abbreviation at first use.
+- 🔁 Use one meaning per word or emoji. Use the same word or emoji for the same thing every time. Do not use synonyms.
+- ❓ Explain an unfamiliar term or abbreviation at first use.
 
 ## 📚 References
 
