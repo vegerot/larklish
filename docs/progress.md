@@ -236,3 +236,19 @@ Next:
 - ▶️ Layer 2, awaiting Max's go. Add unit tests when Layer 3 introduces
   logic (skip summaries, parse Sender, relay, cancel); the phone stays the
   integration test.
+
+### 2026-08-25 — Layer 1 manual test redone: pass in 5 s
+
+- 🔁 Reinstalled with `targetSdk=36` (`./gradlew installDebug`); the system
+  rebound the listener at once (new pid, "active Lark notifications: 5").
+- ✅ Bot DM `om_x100b67d2272c14a0d4662b1f6cbd6a1` sent 21:07:55, received by
+  `onNotificationPosted` 21:08:00. Same shape as run 1. Log in
+  `experiments/01-listener.md` ("Re-run").
+- 📏 `textLen=73` vs 54 in run 1: Lark's cut is not a fixed character count.
+  Both cuts sit right before a punctuation mark — clause boundary [CONFIRM].
+- 📏 Lark reused notification id `948177842` for the same chat, so a second
+  message in one chat arrives as an update of the same key.
+
+Next:
+
+- ▶️ Layer 2, awaiting Max's go.

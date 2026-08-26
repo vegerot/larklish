@@ -52,3 +52,23 @@ Date: 2026-08-25. Dev machine: GNU+Linux. Phone: Pixel 4a, LineageOS 23.2 (SDK 3
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb logcat -s LarkListener:I
 ```
+
+## Re-run (2026-08-25 21:08, from the Android Studio session)
+
+Reinstalled after the `targetSdk` revert to 36. The system rebound the listener at
+once (`connected; active Lark notifications: 5`). Bot DM
+`om_x100b67d2272c14a0d4662b1f6cbd6a1` sent 21:07:55, posted 21:08:00 (**5 s**).
+
+```
+posted key=0|com.larksuite.suite|948177842|null|10229 title=[Lark]
+  text=[Max Coplan's Feishu CLI: 测试二：重新运行第一层的手动测试。这条消息来自 Android Studio 会话，请忽略...]
+  textLen=73 bigTextSame=true template=android.app.Notification$BigTextStyle
+  contentIntent=true flags=0x10 group=null channel=normal_v2
+```
+
+- 📏 `textLen=73` here vs 54 in the first run. Lark's cut is **not a fixed character
+  count**. Both cuts landed right before a punctuation mark (`，` in run 1, the final
+  `。` in run 2). Hypothesis: Lark trims at a clause boundary [CONFIRM]. Good for
+  translation input either way.
+- 📏 Same notification `id` (`948177842`) as the first run: Lark reuses one id per chat
+  and updates it, so a second message in the same chat is an update, not a new post.
