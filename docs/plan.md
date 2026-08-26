@@ -46,6 +46,8 @@ See `docs/experiments/00-adb.md`.
 - Evidence: `docs/experiments/02-quality.md`, a table of ~10 real previews:
   Chinese → ML Kit → Lark's own translation. Get Lark's translation with
   `lark-cli api POST /open-apis/translation/v1/text/translate --as bot` (scope granted).
+  Note: on 2026-08-25 the API answered `99991400 request trigger frequency limit` to
+  single calls. Retry later; space the ~10 calls out.
 - Pass: Max judges the ML Kit column "gist OK".
 
 ### Layer 3 — Relay (does the replacement work?)
@@ -68,11 +70,14 @@ See `docs/experiments/00-adb.md`.
 
 ## Commands
 
+Dev machine: GNU+Linux. SDK at `~/Android/Sdk` (has `platforms/android-36`,
+`build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
+
 ```sh
-brew install --cask android-commandlinetools           # SDK, once
-export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
-sdkmanager --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once; Gradle finds the SDK
 ./gradlew installDebug
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
+lark-cli im +messages-send --as bot \
+  --user-id ou_4d4c9ea3307c313a134ac3ea0821935e --text "中文"   # trigger an Original
 ```
