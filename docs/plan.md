@@ -75,7 +75,10 @@ release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
 
 - Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
   Android 13+ "Allow restricted settings" step for sideloaded apps.
-- Debug UI: list of recent Original → Relay pairs.
+- ~~Debug UI: list of recent Original → Relay pairs.~~ ✅ Done 2026-08-25: `Recorder`
+  appends every Relay pair and removal (with reason) to `filesDir/events.jsonl`;
+  `MainActivity` lists them newest-first with a Refresh button. Shell read:
+  `adb exec-out run-as com.vegerot.larklish cat files/events.jsonl`.
 - **`LarkApiTranslator` behind a setting.** Experiment 02 shows Lark's engine is clearly
   better on ByteDance/TikTok/Lark jargon (see `docs/experiments/02-quality.md`,
   "Benchmark 2"). Decision (Max, 2026-08-25): stay on ML Kit for faster iteration; add

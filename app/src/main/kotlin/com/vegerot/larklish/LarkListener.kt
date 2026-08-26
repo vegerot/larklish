@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.io.File
 
 private const val TAG = "LarkListener"
 private const val LARK = "com.larksuite.suite"
@@ -20,6 +21,7 @@ private const val RELAY_ID = 1 // one Relay per Original key (the tag), so the i
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val translator: Translator = MlKitTranslator()
+    private val recorder by lazy { Recorder(File(filesDir, "events.jsonl")) }
     private lateinit var manager: NotificationManager
 
     override fun onCreate() {
@@ -54,10 +56,13 @@ class LarkListener : NotificationListenerService() {
                 translator.englishOf(title), preview, translator.englishOf(preview.message),
             )
             manager.notify(sbn.key, RELAY_ID, relay)
+            val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+            recorder.relayed(sbn.key, title, preview.run { if (sender.isEmpty()) message else "$sender: $message" },
+                relay.extras.getCharSequence(Notification.EXTRA_TITLE).toString(), relayText)
             // Debug builds keep the Original next to the Relay for comparison while we
             // develop. Release builds cancel it (Max, 2026-08-25).
             if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
-            Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[${relay.extras.getCharSequence(Notification.EXTRA_TEXT)}]")
+            Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[$relayText]")
         }
     }
 
@@ -67,6 +72,7 @@ class LarkListener : NotificationListenerService() {
         reason: Int,
     ) {
         if (sbn.packageName != LARK) return
+        recorder.removed(sbn.key, reason)
         // Our own cancelNotification() above also lands here; the Relay must survive that.
         if (reason == REASON_LISTENER_CANCEL) return
         manager.cancel(sbn.key, RELAY_ID)

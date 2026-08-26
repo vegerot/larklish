@@ -516,3 +516,26 @@ Next:
 
 - Follow-ups from plan.md "Later": `LarkApiTranslator`, app icon,
   onboarding.
+
+### 2026-08-25 — Recorder + events UI: the soak now produces a dataset
+
+- 🐛 Max asked "are we recording all the notifications?" — we were not.
+  Logcat is a ring buffer, wiped by reboot and by every `adb logcat -c`.
+- 🧱 `Recorder`: appends JSONL to `filesDir/events.jsonl` — one `relayed`
+  line per Relay (Original title/text + Relay title/text) and one `removed`
+  line per removal with its reason (all reasons, including our own cancel).
+  `LarkListener` writes; `MainActivity` reads.
+- 🧱 Events UI in `MainActivity`: below the translator, newest first —
+  Relay text prominent, Chinese Original underneath, removal rows with the
+  reason code. Refresh button rereads the file.
+- ✅ Live test: bot DM at 23:20 → one `relayed` JSONL line with both texts;
+  the UI shows the pair. Shell read works:
+  `adb exec-out run-as com.vegerot.larklish cat files/events.jsonl`.
+- 📄 `plan.md`: the "Debug UI: recent Original → Relay pairs" Later item is
+  done.
+
+Next:
+
+- Soak overnight; read `events.jsonl` for the quality report and the
+  desktop-withdrawal reason.
+- Then `LarkApiTranslator`.
