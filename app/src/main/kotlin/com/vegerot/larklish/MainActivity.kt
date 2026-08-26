@@ -42,7 +42,7 @@ private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(ZoneId.sy
 
 /** Layer 2 translator screen + the recorder's event list (newest first). */
 class MainActivity : ComponentActivity() {
-    private val translator = MlKitTranslator()
+    private val translator = defaultTranslator()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

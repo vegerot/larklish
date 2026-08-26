@@ -73,15 +73,16 @@ withdraw — Lark updates the Original in place. `POST_NOTIFICATIONS` is require
 Cancel option (Max): debug builds keep the Original next to the Relay for comparison;
 release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
 
-### Layer 4 — LarkApiTranslator 🔨 in progress
+### Layer 4 — LarkApiTranslator ✅ done
 
 See `docs/experiments/05-lark-api.md`. `LarkApiTranslator` calls Lark's engine over
 `HttpURLConnection` with the CLI app's credentials from `local.properties` (→
 `BuildConfig`, embedded in the APK; Max OK'd this for now). `FallbackTranslator` uses ML Kit
 when Lark fails (offline, error code, or the silent pass-through on Latin-heavy text) and
 prefixes the fallback output with `~` so the Relay and `events.jsonl` show the engine.
-No pacing: Experiment 05 saw no rate limit. Verify on the phone: (1) debug hook shows
-Lark-quality output; (2) a bot DM relays; (3) radios off → `~` ML Kit output.
+No pacing: Experiment 05 saw no rate limit. Verified on the phone 2026-08-26: (1) the
+debug hook shows Lark-quality output; (2) a bot DM relays through the listener; (3) the
+Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 
 ### Later (not experiments)
 
@@ -120,6 +121,8 @@ Dev machine: GNU+Linux. SDK at `~/Android/Sdk` (has `platforms/android-36`,
 
 ```sh
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once; Gradle finds the SDK
+echo "lark.appId=cli_…" >> local.properties                # Layer 4: Lark app credentials
+echo "lark.appSecret=…" >> local.properties               #   (from lark-cli's keychain store)
 ./gradlew installDebug
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"

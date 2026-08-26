@@ -5,7 +5,7 @@ so the findings carry to `HttpURLConnection` on the phone. Scripts: `05/exp05.py
 (token, translate, combined call, sequential burst, bad token) and `05/exp05b.py`
 (mixed-text probes, missing field, concurrent burst). Run:
 `python3 docs/experiments/05/exp05.py <dir>` where `<dir>/app_secret` holds the secret.
-They live in this commit only; the Layer 4 commit removes them.
+They lived in the Experiment 05 commit only; this Layer 4 commit removed them.
 
 ## Questions
 

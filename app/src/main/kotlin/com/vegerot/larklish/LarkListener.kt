@@ -20,7 +20,7 @@ private const val RELAY_ID = 1 // one Relay per Original key (the tag), so the i
 /** Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws. */
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val translator: Translator = MlKitTranslator()
+    private val translator = defaultTranslator()
     private val recorder by lazy { Recorder(File(filesDir, "events.jsonl")) }
     private lateinit var manager: NotificationManager
 

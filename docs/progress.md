@@ -628,3 +628,29 @@ Next:
 Next:
 
 - Implement Layer 4 and verify on the phone.
+
+### 2026-08-26 — Layer 4: LarkApiTranslator with ML Kit fallback ✅
+
+- 🧩 `LarkApiTranslator.kt`: `HttpURLConnection` + `org.json`, in-memory tenant
+  token renewed a minute before `expire`, throws on non-200 / `code ≠ 0` / unchanged
+  output. `FallbackTranslator.kt`: ML Kit on failure, output prefixed `~`;
+  `defaultTranslator()` wires both. `LarkListener` and `MainActivity` use it.
+- 🔑 Credentials: `local.properties` (`lark.appId`, `lark.appSecret`, gitignored)
+  → `buildConfigField` → `BuildConfig`. `testOptions.unitTests.isReturnDefaultValues`
+  so `android.util.Log` works in JVM tests.
+- 🧪 `FallbackTranslatorTest` (2 JVM tests): primary result unmarked, fallback
+  marked `~`. All 11 JVM tests green.
+- ✅ Phone: hook `【高优】容灾建设专项-2026` → `[High priority] disaster recovery
+  construction special project -2026`; `陈昱萌😀: 先别发布…` → `Chen Yumeng 😀:
+  Don't release it yet…`; the Latin-heavy pass-through case →
+  `~Chenglong Song: OEC.supply_Chain…` (ML Kit, marked).
+- ✅ Bot DM through the listener → Relay `The fourth layer is online: Feishu
+  translation priority, ML Kit fallback 🚀`; row in `events.jsonl`.
+- ✅ Radios off → `UnknownHostException` in ~200 ms → `~Please complete the
+  grayscale release…`. Radios restored, host reachable again.
+- 📄 `plan.md`: Layer 4 done; `local.properties` keys in Commands.
+
+Next:
+
+- Soak Layer 4 on real traffic; count `~` rows in `events.jsonl`.
+- Later items unchanged (icon, onboarding, release-build check).

@@ -1,7 +1,13 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Lark app credentials live in local.properties (gitignored) and land in BuildConfig.
+// Embedded in the APK for now (Max, 2026-08-26); a production build needs a dedicated app.
+val local = Properties().apply { rootProject.file("local.properties").inputStream().use(::load) }
 
 android {
     namespace = "com.vegerot.larklish"
@@ -14,7 +20,11 @@ android {
         versionCode = 1
         versionName = "0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "LARK_APP_ID", "\"${local["lark.appId"]}\"")
+        buildConfigField("String", "LARK_APP_SECRET", "\"${local["lark.appSecret"]}\"")
     }
+
+    testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in JVM tests
 
     buildFeatures {
         compose = true
