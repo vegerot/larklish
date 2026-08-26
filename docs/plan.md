@@ -36,9 +36,10 @@ the settled decisions and `CONTEXT.md` for the words.
 | Pixel Live Translate | Not available (Tensor-only, and this is Lineage) | — |
 | Interception | A sideloaded listener receives Originals; `allow_listener` binds it at once, no restricted-settings gate | `docs/experiments/01-listener.md` |
 | Autogroup summary | Arrives as a second `posted` event with null title/text; Layer 3 skips `FLAG_GROUP_SUMMARY` | same |
-| Withdrawal | Did not happen with Lark desktop off; desktop-active is the likely trigger | same |
+| Withdrawal | Lark calls `cancelAll()` (`reason=9`) whenever Max reads the chat anywhere; 7–19 s after the post while Max is at a computer | `docs/experiments/04-soak.md` |
 | ML Kit quality | Gist OK in 7 of 14 rows; names, identifiers and mentions damaged in almost all; 6 rows change meaning | `docs/experiments/02-quality.md` |
 | Lark API quality | Better, but not perfect: one identifier changed, one Sender dropped; rate limit `99991400` hit 5 of 14 calls | same |
+| Overnight soak | 10 h, one process, 0 crashes, 9/9 Originals relayed, 0 stale Relays; ML Kit: 4 English pass-through ✅, 4 Han messages ⚠️, 1 Han title ❌ | `docs/experiments/04-soak.md` |
 | Real-message benchmark | 30 real Previews: ML Kit 6 ✅ / 18 ⚠️ / 6 ❌, Lark 27 ✅ / 3 ⚠️ / 0 ❌; ML Kit translates Chinese Sender names literally | `docs/experiments/02-quality.md` Benchmark 3 |
 | Message-read scopes | Granted on the CLI app under Max's user identity (`search:message`, `im:message.*_msg:get_as_user`, …). Handoff's "effectively blocked" is false for this app | same, "Scope finding" |
 | Romanization | Android ICU `Han-Latin/Names` works on the phone; `romanize()` is tested (`RomanizeTest`, instrumented) | `Romanize.kt` |

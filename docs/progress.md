@@ -566,3 +566,28 @@ Next:
 - Soak overnight; read `events.jsonl` in the morning.
 - Then `LarkApiTranslator` (plan discussion parked; Max denied the plan
   gate for now).
+
+### 2026-08-26 — Soak analysis
+
+- 📊 Read `events.jsonl` after 10 h of real traffic: 9 Relays, 9 removals. One
+  process the whole night (pid 10106, up 10:06:45), zero crash-log entries,
+  9/9 bound-window Originals relayed, zero stale Relays in the shade. Full
+  tables in `docs/experiments/04-soak.md`.
+- 📏 Withdrawal reason answered: always `9` (`REASON_APP_CANCEL_ALL`). Lark
+  calls `cancelAll()` when Max reads the chat on any device; 7–19 s after the
+  post while awake, 7 h for the Original that arrived after Max slept. The
+  Experiment 03 guess (`reason=8`) was wrong. `plan.md` table updated.
+- ⚠️ ML Kit on real traffic: English Previews pass through untouched (Han
+  gate works); Han messages keep the gist but lose name/identifier case
+  ("zhifu liu", "OEC.supply_Chain"); the group title 【高优】容灾建设专项-2026
+  became "[High excellent] Disaster-Disaster Construction Special -2026" four
+  times. Not unusably bad; `LarkApiTranslator` stays the first follow-up.
+- 🐛 Recorder defects seen in the data (not fixed yet): the `text` column is
+  rebuilt from `Preview` and drops `@you`/`@all`; removal rows include Lark's
+  autogroup summary key.
+
+Next:
+
+- Fix the two recorder defects (record raw `EXTRA_TEXT`; skip summary removals).
+- Then `LarkApiTranslator` (plan discussion parked; Max denied the plan
+  gate for now).
