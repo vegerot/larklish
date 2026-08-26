@@ -654,3 +654,23 @@ Next:
 
 - Soak Layer 4 on real traffic; count `~` rows in `events.jsonl`.
 - Later items unchanged (icon, onboarding, release-build check).
+
+### 2026-08-26 — Back on the Mac: toolchain verified, docs updated
+
+- 🔍 Dev machine is the Mac again, inside Android Studio. SDK at
+  `~/Library/Android/sdk` (Studio wrote `sdk.dir`); `sdk` here is SDKMAN, not
+  the Android SDK. Studio `build_project`: success, 0 problems.
+  `./gradlew testDebugUnitTest`: 10/10 green.
+- 📊 `events.jsonl` after Layer 4 (13 Relays): 0 `~` rows, so every call
+  reached Lark's engine. One Han message: `出1.5 k美金，换人民币🙏[FistBump]`
+  → `Sell 1.5k USD for RMB 🙏 [FistBump]` ✅. New removal reason `12`
+  (`REASON_GROUP_SUMMARY_CANCELED`, Max swiped the group away) mirrored fine.
+- 📄 Max removed `larklish-handoff.md` and `larklish-conversation.md`
+  (`69c66f0`). `CLAUDE.md` (a symlink to `AGENTS.md`) and `plan.md` now point
+  at `plan.md` + `progress.md` instead. `plan.md` Commands rewritten for macOS.
+
+Next:
+
+- Keep soaking Layer 4; the row to watch is a Han group title through Lark.
+- Later items unchanged: app icon, onboarding, release-build check, dedicated
+  `translation:text`-only Lark app.

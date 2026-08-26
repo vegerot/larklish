@@ -3,10 +3,10 @@
 Larklish is an Android app. It intercepts Lark notifications, translates the preview
 zh→en on-device, and posts an English notification in its place.
 
-Read `larklish-handoff.md` for the settled decisions. Avoid re-proposing the
-rejected alternatives listed there unless the situation changes and an
-alternative becomes more attractive. Read `CONTEXT.md` for the glossary and use
-its terms.
+Read `docs/plan.md` for the settled decisions and `docs/progress.md` (from the
+bottom) for the current state. Do not re-propose the rejected alternatives
+(lark-cli polling, bot event subscriptions, third-party cloud translation, Tasker)
+unless the situation changes. Read `CONTEXT.md` for the glossary and use its terms.
 
 ## 📱 Project facts
 

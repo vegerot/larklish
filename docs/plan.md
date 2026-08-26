@@ -1,8 +1,8 @@
 # 🗺️ Larklish — Build plan
 
 Larklish grows like an onion 🧅. Each layer is the smallest thing that answers one
-question. Commit every layer, even the ones we throw away. See `larklish-handoff.md` for
-the settled decisions and `CONTEXT.md` for the words.
+question. Commit every layer, even the ones we throw away. The settled decisions are in
+the table below; `CONTEXT.md` holds the words.
 
 ## Working rules
 
@@ -110,22 +110,32 @@ Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 - [ ] **2.0 idea (Max): longer notifications and/or AI-summarized notifications.** Lark cuts
   the Preview to the first clause (Experiment 01). Showing the whole message needs the
   message text, which the listener never gets: it would need the message-read API under
-  the user identity (see `larklish-handoff.md`, rejected polling: user-token scopes go
-  through ByteDance security review) or another source. A summary of the full message
+  the user identity (polling was rejected at the start; the scopes are granted now, see
+  "Message-read scopes" above) or another source. A summary of the full message
   needs the same access plus a summarizer. Record only; not in the current layers.
 
 ## Commands
 
-Dev machine: GNU+Linux. SDK at `~/Android/Sdk` (has `platforms/android-36`,
-`build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
+Dev machines (Max moves between them; `local.properties` is per machine):
+
+- macOS with Android Studio. SDK at `~/Library/Android/sdk` (Studio wrote `sdk.dir`
+  into `local.properties`; has `platforms/android-37.0`, `build-tools/36.0.0`,
+  `platform-tools`, `cmdline-tools`). Build through the Studio MCP (`build_project`) or
+  `./gradlew`; both work.  Prefer using Android Studio MCP over `./gradlew` generally,
+    but often the CLI will be more convenient than Studio MCP.
+- GNU+Linux (Debian). SDK at `~/Android/Sdk` (has `platforms/android-36`,
+  `build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
 
 ```sh
-echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once; Gradle finds the SDK
+echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
 echo "lark.appId=cli_…" >> local.properties                # Layer 4: Lark app credentials
 echo "lark.appSecret=…" >> local.properties               #   (from lark-cli's keychain store)
 ./gradlew installDebug
+./gradlew testDebugUnitTest                                # JVM tests
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
+adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
+adb exec-out run-as com.vegerot.larklish cat files/events.jsonl   # the Relay record
 lark-cli im +messages-send --as bot \
   --user-id ou_4d4c9ea3307c313a134ac3ea0821935e --text "中文"   # trigger an Original
 ```
