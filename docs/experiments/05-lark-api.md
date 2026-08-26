@@ -81,3 +81,33 @@ key in `master.key` beside it (`internal/keychain/keychain_other.go`); a 6-line
 - `FallbackTranslator(lark, mlKit)`: on exception, use ML Kit and prefix `~` so the Relay
   (and `events.jsonl`) show which engine produced the text.
 - Credentials from `local.properties` → `BuildConfig` (never committed).
+
+## Soak on real traffic (2026-08-26, 10:29 → 16:06 PDT)
+
+Source: `events.jsonl`, 36 Relays since the Layer 4 build went live. Times in the file
+are UTC.
+
+- ✅ **0 fallback rows.** No Relay text starts with `~`: every call reached Lark's engine.
+  28 pure-English Previews passed through untouched (Han gate).
+- 📏 Removals: `reason=9` ×11 (Lark `cancelAll`), `reason=12` ×4
+  (`REASON_GROUP_SUMMARY_CANCELED`: Max swiped Lark's group away on the phone). Both
+  mirrored; no stale Relays.
+- 📏 **Quality on the 8 Han rows (Claude's grades): 5 ✅ / 3 ⚠️ / 0 ❌.**
+
+| Original | Relay | Grade |
+| --- | --- | --- |
+| Lizzy Li: 出1.5 k美金，换人民币🙏[FistBump] | Lizzy Li: Sell 1.5k USD for RMB 🙏 [FistBump] | ✅ |
+| Mail Assistant: 【Triton】数据权限续期提醒 Data Permissions are going to expire! | Mail Assistant: [Triton] Data access permission renewal reminder Data Permissions are going to expire! | ✅ |
+| Shijian Tang: 想请问一下大家，有没有人遇到过类似情况：HR 在系统里修改我的 start date 时操作有误... | Shijian Tang: I would like to ask everyone if anyone has encountered a similar situation: HR made an error when modifying my start date in the system... | ✅ |
+| Max Coplan's Feishu CLI: 第四层上线了：飞书翻译优先，ML Kit 兜底 🚀 | …The fourth layer is online: Feishu translation priority, ML Kit fallback 🚀 | ✅ |
+| Max Coplan's Feishu CLI: Mac 部署测试：这条通知应该从飞书引擎翻译，不带波浪号 🍎 | …Mac deployment test: This notification should be translated from Feishu engine, without tilde 🍎 | ✅ |
+| title 商家经营 / Seller... | Merchant Operating/Seller... | ⚠️ first Han group title through Lark. Readable; 商家经营 = "Merchant Operations"; the spaces around `/` were dropped |
+| Yuning Xia: 充电挪个车遇到卧龙凤雏啊：一个用完充电头插回另一个station手搓 deadlock两边都解锁不开... | Yuning Xia: Charging and moving a car encountered a sleeping dragon and a phoenix: one used up the charging head and plugged it back into the other station, rubbing the deadlock on both sides and unable to unlock... | ⚠️ idiom 卧龙凤雏 ("two geniuses", ironic) and 手搓 ("hand-rolled") went literal; gist survives |
+| Sender Triton数据安全@you: Data permissions are going to expire! | Triton Shu Ju An Quan@you: Data permissions are going to expire! | ⚠️ not Lark: our `romanize()` turned a bot name into pinyin words. "Triton Data Security" is right (Benchmark 3 row 11) |
+
+### Finding: romanize only person names
+
+`romanize()` is right for bare 2–4-character Han names (陈昱萌 → Chen Yumeng) and wrong
+for bot or group Senders that mix Latin and Han (`Triton数据安全`, `Argos平台报警`), where
+pinyin carries no meaning. Lark's engine handles those well. Proposal (Max's call): romanize
+only bare Han names; send every other Han-containing Sender through the Translator.

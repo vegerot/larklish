@@ -699,3 +699,24 @@ Next:
 - Grade the 31 new Layer 4 rows (look for `~` rows and Han group titles).
 - Later items unchanged: app icon, onboarding, release-build check, dedicated
   `translation:text`-only Lark app.
+
+### 2026-08-26 — Layer 4 soak graded: 0 fallbacks, Lark 5 ✅ / 3 ⚠️ / 0 ❌
+
+- 📊 36 Relays since the Layer 4 build (10:29 PDT): no `~` rows, 28 English
+  pass-throughs untouched, removals `9` ×11 and `12` ×4 all mirrored.
+- 📏 8 Han rows graded (Claude): 5 ✅ / 3 ⚠️ / 0 ❌. First Han group title through
+  Lark (商家经营 / Seller… → "Merchant Operating/Seller…") is readable. Idioms go
+  literal (卧龙凤雏 → "sleeping dragon and a phoenix"). Tables in
+  `experiments/05-lark-api.md` "Soak".
+- 🚩 Finding: `romanize()` turns bot Senders with Han into pinyin words
+  (`Triton数据安全@you` → `Triton Shu Ju An Quan@you`). Lark's engine translates
+  those correctly. Proposal: romanize only bare 2–4-character Han names; send
+  other Han Senders through the Translator. Max's call.
+- 📄 `plan.md` settled-facts row added.
+
+Next:
+
+- Max decides on the Sender rule (romanize person names only?).
+- Decide `debug.keystore.base64` (commit or ignore); push the stack when Max says.
+- Later items unchanged: release-build check, onboarding, app icon, dedicated
+  `translation:text`-only Lark app.
