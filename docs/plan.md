@@ -135,6 +135,8 @@ Dev machines (Max moves between them; `local.properties` is per machine):
   `build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
 
 ```sh
+cp debug.keystore ~/.android/debug.keystore              # once per machine: same debug signer everywhere,
+                                                          #   so installDebug upgrades in place (keeps data + grants)
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
 echo "lark.appId=cli_…" >> local.properties                # Layer 4: Lark app credentials
 echo "lark.appSecret=…" >> local.properties               #   (from lark-cli's keychain store)

@@ -739,3 +739,11 @@ Next:
 
 - Max decides on the Sender rule (romanize person names only?).
 - Decide `debug.keystore.base64` (commit or ignore); push the stack when Max says.
+
+### 2026-08-26 — debug.keystore committed
+
+- 🔑 `debug.keystore` (the Linux debug signer, `CD:5B:25:F8…`) is in the repo
+  root. Decision (Max): a debug key is not a secret (password `android`,
+  debug builds only); sharing it stops the signature-mismatch trap between
+  machines. `plan.md` Commands: `cp debug.keystore ~/.android/debug.keystore`
+  once per machine. `local.properties` (Lark app secret) stays ignored.
