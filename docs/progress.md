@@ -344,3 +344,42 @@ Next:
   Previews into the benchmark.
 - 📄 Follow-up (Max): `plan.md` Later now lists a proper app icon — small
   (monochrome, shown on every Relay) and launcher — for a late stage.
+
+### 2026-08-25 — Real-message benchmark: verdict holds; message scopes granted
+
+- 🔑 Recipe: `lark-cli auth login --scope "search:message" --no-wait --json`
+  → open `verification_url` in Chrome (Claude drove Chrome Dev via the
+  browser tools; Max picked "Browser 2 (Linux)") → click Authorize →
+  `lark-cli auth login --device-code <code>`. User identity is now ready on
+  this machine (token to 23:57, refresh for 7 days).
+- 🚩 The token's "previously granted" scopes include `search:message`,
+  `im:message.group_msg:get_as_user`, `im:message.p2p_msg:get_as_user`,
+  `im:message:readonly`, `im:chat.user_setting:read`. The handoff's claim
+  that message-read scopes are "effectively blocked" is false for this app.
+  Noted in `../larklish-handoff.md` (dated update) and `plan.md`.
+- 🔍 `lark-cli im +messages-search --as user --is-at-me` (14 days): 50 hits,
+  38 Chinese. `--query 的 --chat-type group` (3 days): 50 hits. Many real
+  Senders have Chinese names (温天信, 王蓝翔, 弋鹏玮).
+- 🧪 Benchmark 3: 30 real messages flattened to Preview shape, both engines,
+  Lark calls spaced 3 s (0 rate-limit errors). Tables, grades, and the
+  revised assessment in `experiments/02-quality.md`.
+- 📏 Grades: ML Kit 6 ✅ / 18 ⚠️ / 6 ❌; Lark 27 ✅ / 3 ⚠️ / 0 ❌. ML Kit gist
+  is better on real plain chat than on jargon, but it translates Chinese
+  Sender names literally (夏银璐 → "Summer Silver", 幸湘熔 → "Fortunately")
+  and doubles or triples names in mentions. Lark romanizes or keeps them.
+- 📐 Verdict unchanged (Max's rule): ML Kit through Layer 3, Lark API as
+  the first follow-up. `Preview.parse` is now mandatory: the Sender must
+  never go through ML Kit.
+- 🐚 `lark-cli` message search needs `--as user`; the bot identity cannot see
+  Max's groups.
+
+Open:
+
+- Chinese Sender names in the Relay: keep the characters (as Lark shows
+  in-app) or romanize (as the Lark API does)? Max's call; keeping is free.
+
+Next:
+
+- ▶️ Layer 3 (Relay) on Max's go.
+- 2.0 "full message" idea is feasible now (message-read scopes granted);
+  still recorded only.

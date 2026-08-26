@@ -81,6 +81,9 @@ Blockers:
   exist only for bots.
 - User-token scopes for reading my own messages go through ByteDance security review and
   are reportedly effectively blocked for personal tools.
+  - **Update 2026-08-25:** false for my own CLI app. `lark-cli auth login` granted
+    `search:message` and the `im:message.*_msg:get_as_user` scopes with one click. The
+    other blockers above still stand. See `docs/experiments/02-quality.md`.
 - The real notification engine (true three-tier settings, unread counts) lives in an
   internal Lark service that is client-only RPC.
 
