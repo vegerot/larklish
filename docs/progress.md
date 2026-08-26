@@ -449,3 +449,16 @@ Next:
   `experiments/03-relay.md`.
 - Then the follow-ups in plan.md "Later": `LarkApiTranslator`, app icon,
   onboarding.
+- 🧱 Follow-up (Max): `cancelNotification` now runs only in release builds
+  (`!BuildConfig.DEBUG`); debug keeps the Original beside the Relay for
+  comparison. Verified: after a send, dumpsys shows 1 larksuite record and
+  1 larklish record.
+- 📏 Follow-up finding: Lark posts no notification for the chat that is open
+  in the foreground. The silent test run happened because the tap test left
+  the bot chat open; `input keyevent KEYCODE_HOME` fixed it.
+- 📏 Follow-up finding: the Original's id changed (948177842 → 948177873)
+  after the previous notification was tapped, so the id is per-chat only
+  while the notification lives.
+- ↩️ Correction: the Relay's `largeIcon` does carry over (avatar thumbnail
+  on the collapsed row); the expanded view just hides it. Only the small
+  icon is still the placeholder. `experiments/03-relay.md` corrected.

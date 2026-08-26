@@ -32,8 +32,9 @@ Date: 2026-08-25. Phone: Pixel 4a. Code: `LarkListener` + `Relay.kt` + `Preview`
 - 📏 **ML Kit inverted the message again**: `大家先别发布` ("nobody deploy yet") →
   "everyone is released" — same failure as Benchmark 2 row 26. The Relay plumbing is
   engine-independent; the engine swap is the recorded follow-up.
-- ⚠️ **The Original's `largeIcon` did not carry over** — the Relay shows the placeholder
-  droid. Cosmetic; investigate with the app-icon task.
+- ⚠️ ~~The Original's `largeIcon` did not carry over.~~ Correction (same day): it does.
+  The collapsed row shows the avatar thumbnail on the right; the expanded BigText view
+  hides it. The placeholder droid on the left is our **small icon** (the app-icon task).
 - ⏳ **Not yet observed:** a Relay for a real group message, and `onNotificationRemoved`
   mirroring when Lark itself withdraws an Original. Both need real traffic; the listener
   stays installed and logs.

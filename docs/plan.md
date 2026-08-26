@@ -67,6 +67,9 @@ See `docs/experiments/03-relay.md`. The Relay replaces the Original and the tap 
 the right chat. Pending observation with real traffic: a group-message Relay, and the
 withdrawal mirror (`onNotificationRemoved`). `POST_NOTIFICATIONS` is required.
 
+Cancel option (Max): debug builds keep the Original next to the Relay for comparison;
+release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
+
 ### Later (not experiments)
 
 - Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the

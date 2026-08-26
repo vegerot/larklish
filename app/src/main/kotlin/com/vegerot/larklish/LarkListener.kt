@@ -51,7 +51,9 @@ class LarkListener : NotificationListenerService() {
         scope.launch {
             val relay = buildRelay(this@LarkListener, sbn, englishOf(title), preview, englishOf(preview.message))
             manager.notify(sbn.key, RELAY_ID, relay)
-            cancelNotification(sbn.key)
+            // Debug builds keep the Original next to the Relay for comparison while we
+            // develop. Release builds cancel it (Max, 2026-08-25).
+            if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
             Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[${relay.extras.getCharSequence(Notification.EXTRA_TEXT)}]")
         }
     }
