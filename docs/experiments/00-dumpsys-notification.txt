@@ -1,0 +1,467 @@
+    NotificationRecord(0x087098ab: pkg=com.larksuite.suite user=UserHandle{0} id=0 tag=0|com.larksuite.suite|g:Aggregate_AlertingSection importance=4 key=0|com.larksuite.suite|0|0|com.larksuite.suite|g:Aggregate_AlertingSection|10229|0|com.larksuite.suite|g:Aggregate_AlertingSection: Notification(channel=normal_v2 shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=AUTO_CANCEL|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY|SILENT color=0x00000000 groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection vis=PRIVATE))
+      uid=10229 userId=0
+      opPkg=com.larksuite.suite
+      icon=Icon(typ=RESOURCE pkg=com.larksuite.suite id=0x7f0809ea)
+      flags=AUTO_CANCEL|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY|SILENT
+      originalFlags=AUTO_CANCEL|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY
+      pri=0
+      key=0|com.larksuite.suite|0|0|com.larksuite.suite|g:Aggregate_AlertingSection|10229|0|com.larksuite.suite|g:Aggregate_AlertingSection
+      seen=true
+      groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection
+      notification=
+            fullscreenIntent=null
+            contentIntent=PendingIntent{5b74b08: PendingIntentRecord{5c42cac com.larksuite.suite startActivity}}
+            deleteIntent=null
+            number=0
+            groupAlertBehavior=2
+            when=1787698973619/1787698973619
+            tickerText=null
+            vis=0
+            contentView=null
+            bigContentView=null
+            headsUpContentView=null
+            color=0x00000000
+            timeout=PT0S
+            extras={
+                android.reduced.images=Boolean (true)
+                android.appInfo=ApplicationInfo (ApplicationInfo{81792a1 com.larksuite.suite})
+                android.showWhen=Boolean (true)
+            }
+      publicNotification=
+            None
+      stats=SingleNotificationStats{posttimeElapsedMs=1664352636, posttimeToFirstClickMs=-1, posttimeToDismissMs=-1, airtimeCount=1, airtimeMs=0, currentAirtimeStartElapsedMs=1667433455, airtimeExpandedMs=0, posttimeToFirstVisibleExpansionMs=3083150, currentAirtimeExpandedStartElapsedMs=1667435786, requestedImportance=3, naturalImportance=4, isNoisy=true}
+      mContactAffinity=0.0
+      mPackagePriority=0
+      mPackageVisibility=-1000
+      mSystemImportance=UNSPECIFIED
+      mAsstImportance=UNSPECIFIED
+      mImportance=HIGH
+      mImportanceExplanation=user
+      mProposedImportance=UNSPECIFIED
+      mIsAppImportanceLocked=true
+      mSensitiveContent=false
+      mCanceledAfterLifetimeExtension=false
+      mIntercept=false
+      mHidden==false
+      mGlobalSortKey=crtcl=0x0002:intrsv=2:grnk=0x0004:gsmry=0:nsk:rnk=0x000f
+      mRankingTimeMs=1787698973620
+      mCreationTimeMs=1787698973620
+      mVisibleSinceMs=1787702054702
+      mUpdateTimeMs=1787698973620
+      mInterruptionTimeMs=1787698973620
+      mSuppressedVisualEffects= 0
+      mSound= android.resource://com.larksuite.suite/raw/notification
+      mVibration= Composed{segments=[Step{amplitude=0.0, frequencyHz=0.0, duration=0}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}, Step{amplitude=0.0, frequencyHz=0.0, duration=250}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}], repeat=-1}
+      mAttributes= AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null
+      mLight= Light{color=-16776961, onMs=500, offMs=2000}
+      mShowBadge=true
+      mColorized=false
+      mAllowBubble=false
+      isBubble=false
+      mIsInterruptive=false
+      effectiveNotificationChannel=NotificationChannel{mId='normal_v2', mName=Regular Messages, mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=android.resource://com.larksuite.suite/raw/notification, mLights=true, mLightColor=-16776961, mVibrationPattern=null, mVibrationEffect=null, mUserLockedFields=14, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+      mAdjustments=[]
+      shortcut=null found valid? false
+      mUserVisOverride=-1000
+      hasSummarization=false
+      bundleType=0
+    NotificationRecord(0x0a3cacc6: pkg=com.larksuite.suite user=UserHandle{0} id=1797328819 tag=null importance=4 key=0|com.larksuite.suite|1797328819|null|10229: Notification(channel=normal_v2 shortcut=null contentView=null vibrate=null sound=null tick defaults=0 flags=AUTO_CANCEL color=0x00000000 vis=PRIVATE))
+      uid=10229 userId=0
+      opPkg=com.larksuite.suite
+      icon=Icon(typ=RESOURCE pkg=com.larksuite.suite id=0x7f0809ea)
+      flags=AUTO_CANCEL
+      originalFlags=AUTO_CANCEL
+      pri=2
+      key=0|com.larksuite.suite|1797328819|null|10229
+      seen=true
+      groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection
+      notification=
+            fullscreenIntent=null
+            contentIntent=PendingIntent{f9e1487: PendingIntentRecord{684b89d com.larksuite.suite startActivity (allowlist: bd27eec:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
+            deleteIntent=null
+            number=0
+            groupAlertBehavior=0
+            when=1787701234164/1787701234164
+            tickerText=You have received a message.
+            vis=0
+            contentView=null
+            bigContentView=null
+            headsUpContentView=null
+            color=0x00000000
+            timeout=PT72H
+            extras={
+                android.title=String (San Jose 1199...)
+                android.reduced.images=Boolean (true)
+                android.subText=null
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.showChronometer=Boolean (false)
+                android.text=String (Daniel Chengyong: Hi everyone! Has anyone seen this Stanley cup...)
+                android.progress=Integer (0)
+                androidx.core.app.extra.COMPAT_TEMPLATE=String (androidx.core.app.NotificationCompat$BigTextStyle)
+                android.progressMax=Integer (0)
+                android.appInfo=ApplicationInfo (ApplicationInfo{7fa0fb4 com.larksuite.suite})
+                android.showWhen=Boolean (true)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=119x119))
+                android.bigText=String (Daniel Chengyong: Hi everyone! Has anyone seen this Stanley cup...)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.remoteInputHistory=null
+            }
+      publicNotification=
+            None
+      stats=SingleNotificationStats{posttimeElapsedMs=1664352371, posttimeToFirstClickMs=-1, posttimeToDismissMs=-1, airtimeCount=1, airtimeMs=0, currentAirtimeStartElapsedMs=1667433459, airtimeExpandedMs=0, posttimeToFirstVisibleExpansionMs=-1, currentAirtimeExpandedStartElapsedMs=-1, requestedImportance=4, naturalImportance=4, isNoisy=true}
+      mContactAffinity=0.0
+      mPackagePriority=0
+      mPackageVisibility=-1000
+      mSystemImportance=UNSPECIFIED
+      mAsstImportance=UNSPECIFIED
+      mImportance=HIGH
+      mImportanceExplanation=user
+      mProposedImportance=UNSPECIFIED
+      mIsAppImportanceLocked=true
+      mSensitiveContent=false
+      mCanceledAfterLifetimeExtension=false
+      mIntercept=false
+      mHidden==false
+      mGlobalSortKey=crtcl=0x0002:intrsv=2:grnk=0x0004:gsmry=1:nsk:rnk=0x0004
+      mRankingTimeMs=1787701234170
+      mCreationTimeMs=1787698973409
+      mVisibleSinceMs=1787702054706
+      mUpdateTimeMs=1787701234170
+      mInterruptionTimeMs=1787702054707
+      mSuppressedVisualEffects= 0
+      mSound= android.resource://com.larksuite.suite/raw/notification
+      mVibration= Composed{segments=[Step{amplitude=0.0, frequencyHz=0.0, duration=0}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}, Step{amplitude=0.0, frequencyHz=0.0, duration=250}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}], repeat=-1}
+      mAttributes= AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null
+      mLight= Light{color=-16776961, onMs=500, offMs=2000}
+      mShowBadge=true
+      mColorized=false
+      mAllowBubble=false
+      isBubble=false
+      mIsInterruptive=true
+      effectiveNotificationChannel=NotificationChannel{mId='normal_v2', mName=Regular Messages, mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=android.resource://com.larksuite.suite/raw/notification, mLights=true, mLightColor=-16776961, mVibrationPattern=null, mVibrationEffect=null, mUserLockedFields=14, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+      mAdjustments=[]
+      shortcut=null found valid? false
+      mUserVisOverride=-1000
+      hasSummarization=false
+      bundleType=0
+    NotificationRecord(0x0f79b7dd: pkg=com.larksuite.suite user=UserHandle{0} id=-1568461400 tag=null importance=4 key=0|com.larksuite.suite|-1568461400|null|10229: Notification(channel=normal_v2 shortcut=null contentView=null vibrate=null sound=null tick defaults=0 flags=AUTO_CANCEL color=0x00000000 vis=PRIVATE))
+      uid=10229 userId=0
+      opPkg=com.larksuite.suite
+      icon=Icon(typ=RESOURCE pkg=com.larksuite.suite id=0x7f0809ea)
+      flags=AUTO_CANCEL
+      originalFlags=AUTO_CANCEL
+      pri=2
+      key=0|com.larksuite.suite|-1568461400|null|10229
+      seen=true
+      groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection
+      notification=
+            fullscreenIntent=null
+            contentIntent=PendingIntent{ec6cf52: PendingIntentRecord{ff32804 com.larksuite.suite startActivity (allowlist: bd27eec:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
+            deleteIntent=null
+            number=0
+            groupAlertBehavior=0
+            when=1787699539394/1787699539394
+            tickerText=You have received a message.
+            vis=0
+            contentView=null
+            bigContentView=null
+            headsUpContentView=null
+            color=0x00000000
+            timeout=PT72H
+            extras={
+                android.title=String (Seller Center Oncall...)
+                android.reduced.images=Boolean (true)
+                android.subText=null
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.showChronometer=Boolean (false)
+                android.text=String (Yinghao Li: 哈喽@Jiarui Chen @Yufan Chen ， 我发现 oec.seller.assistant_api...)
+                android.progress=Integer (0)
+                androidx.core.app.extra.COMPAT_TEMPLATE=String (androidx.core.app.NotificationCompat$BigTextStyle)
+                android.progressMax=Integer (0)
+                android.appInfo=ApplicationInfo (ApplicationInfo{93d7223 com.larksuite.suite})
+                android.showWhen=Boolean (true)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=119x119))
+                android.bigText=String (Yinghao Li: 哈喽@Jiarui Chen @Yufan Chen ， 我发现 oec.seller.assistant_api...)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.remoteInputHistory=null
+            }
+      publicNotification=
+            None
+      stats=SingleNotificationStats{posttimeElapsedMs=1664918363, posttimeToFirstClickMs=-1, posttimeToDismissMs=-1, airtimeCount=1, airtimeMs=0, currentAirtimeStartElapsedMs=1667433457, airtimeExpandedMs=0, posttimeToFirstVisibleExpansionMs=-1, currentAirtimeExpandedStartElapsedMs=-1, requestedImportance=4, naturalImportance=4, isNoisy=true}
+      mContactAffinity=0.0
+      mPackagePriority=0
+      mPackageVisibility=-1000
+      mSystemImportance=UNSPECIFIED
+      mAsstImportance=UNSPECIFIED
+      mImportance=HIGH
+      mImportanceExplanation=user
+      mProposedImportance=UNSPECIFIED
+      mIsAppImportanceLocked=true
+      mSensitiveContent=false
+      mCanceledAfterLifetimeExtension=false
+      mIntercept=false
+      mHidden==false
+      mGlobalSortKey=crtcl=0x0002:intrsv=2:grnk=0x0004:gsmry=1:nsk:rnk=0x000b
+      mRankingTimeMs=1787699539394
+      mCreationTimeMs=1787699539402
+      mVisibleSinceMs=1787702054704
+      mUpdateTimeMs=1787699539402
+      mInterruptionTimeMs=1787702054704
+      mSuppressedVisualEffects= 0
+      mSound= android.resource://com.larksuite.suite/raw/notification
+      mVibration= Composed{segments=[Step{amplitude=0.0, frequencyHz=0.0, duration=0}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}, Step{amplitude=0.0, frequencyHz=0.0, duration=250}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}], repeat=-1}
+      mAttributes= AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null
+      mLight= Light{color=-16776961, onMs=500, offMs=2000}
+      mShowBadge=true
+      mColorized=false
+      mAllowBubble=false
+      isBubble=false
+      mIsInterruptive=true
+      effectiveNotificationChannel=NotificationChannel{mId='normal_v2', mName=Regular Messages, mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=android.resource://com.larksuite.suite/raw/notification, mLights=true, mLightColor=-16776961, mVibrationPattern=null, mVibrationEffect=null, mUserLockedFields=14, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+      mAdjustments=[]
+      shortcut=null found valid? false
+      mUserVisOverride=-1000
+      hasSummarization=false
+      bundleType=0
+    NotificationRecord(0x02027320: pkg=com.larksuite.suite user=UserHandle{0} id=-1236558393 tag=null importance=4 key=0|com.larksuite.suite|-1236558393|null|10229: Notification(channel=normal_v2 shortcut=null contentView=null vibrate=null sound=null tick defaults=0 flags=AUTO_CANCEL color=0x00000000 vis=PRIVATE))
+      uid=10229 userId=0
+      opPkg=com.larksuite.suite
+      icon=Icon(typ=RESOURCE pkg=com.larksuite.suite id=0x7f0809ea)
+      flags=AUTO_CANCEL
+      originalFlags=AUTO_CANCEL
+      pri=2
+      key=0|com.larksuite.suite|-1236558393|null|10229
+      seen=true
+      groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection
+      notification=
+            fullscreenIntent=null
+            contentIntent=PendingIntent{4def4d9: PendingIntentRecord{ee557cb com.larksuite.suite startActivity (allowlist: bd27eec:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
+            deleteIntent=null
+            number=0
+            groupAlertBehavior=0
+            when=1787699132018/1787699132018
+            tickerText=You have received a message.
+            vis=0
+            contentView=null
+            bigContentView=null
+            headsUpContentView=null
+            color=0x00000000
+            timeout=PT72H
+            extras={
+                android.title=String (Lark)
+                android.reduced.images=Boolean (true)
+                android.subText=null
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.showChronometer=Boolean (false)
+                android.text=String (Bits@you: Sync Task Conflicted)
+                android.progress=Integer (0)
+                androidx.core.app.extra.COMPAT_TEMPLATE=String (androidx.core.app.NotificationCompat$BigTextStyle)
+                android.progressMax=Integer (0)
+                android.appInfo=ApplicationInfo (ApplicationInfo{a5e8e9e com.larksuite.suite})
+                android.showWhen=Boolean (true)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=119x119))
+                android.bigText=String (Bits@you: Sync Task Conflicted)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.remoteInputHistory=null
+            }
+      publicNotification=
+            None
+      stats=SingleNotificationStats{posttimeElapsedMs=1664562072, posttimeToFirstClickMs=-1, posttimeToDismissMs=-1, airtimeCount=1, airtimeMs=0, currentAirtimeStartElapsedMs=1667433455, airtimeExpandedMs=0, posttimeToFirstVisibleExpansionMs=-1, currentAirtimeExpandedStartElapsedMs=-1, requestedImportance=4, naturalImportance=4, isNoisy=true}
+      mContactAffinity=0.0
+      mPackagePriority=0
+      mPackageVisibility=-1000
+      mSystemImportance=UNSPECIFIED
+      mAsstImportance=UNSPECIFIED
+      mImportance=HIGH
+      mImportanceExplanation=user
+      mProposedImportance=UNSPECIFIED
+      mIsAppImportanceLocked=true
+      mSensitiveContent=false
+      mCanceledAfterLifetimeExtension=false
+      mIntercept=false
+      mHidden==false
+      mGlobalSortKey=crtcl=0x0002:intrsv=2:grnk=0x0004:gsmry=1:nsk:rnk=0x000c
+      mRankingTimeMs=1787699183107
+      mCreationTimeMs=1787699183107
+      mVisibleSinceMs=1787702054702
+      mUpdateTimeMs=1787699183107
+      mInterruptionTimeMs=1787702054702
+      mSuppressedVisualEffects= 0
+      mSound= android.resource://com.larksuite.suite/raw/notification
+      mVibration= Composed{segments=[Step{amplitude=0.0, frequencyHz=0.0, duration=0}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}, Step{amplitude=0.0, frequencyHz=0.0, duration=250}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}], repeat=-1}
+      mAttributes= AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null
+      mLight= Light{color=-16776961, onMs=500, offMs=2000}
+      mShowBadge=true
+      mColorized=false
+      mAllowBubble=false
+      isBubble=false
+      mIsInterruptive=true
+      effectiveNotificationChannel=NotificationChannel{mId='normal_v2', mName=Regular Messages, mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=android.resource://com.larksuite.suite/raw/notification, mLights=true, mLightColor=-16776961, mVibrationPattern=null, mVibrationEffect=null, mUserLockedFields=14, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+      mAdjustments=[]
+      shortcut=null found valid? false
+      mUserVisOverride=-1000
+      hasSummarization=false
+      bundleType=0
+    NotificationRecord(0x05eb0d7f: pkg=com.larksuite.suite user=UserHandle{0} id=-1568813092 tag=null importance=4 key=0|com.larksuite.suite|-1568813092|null|10229: Notification(channel=normal_v2 shortcut=null contentView=null vibrate=null sound=null tick defaults=0 flags=AUTO_CANCEL color=0x00000000 vis=PRIVATE))
+      uid=10229 userId=0
+      opPkg=com.larksuite.suite
+      icon=Icon(typ=RESOURCE pkg=com.larksuite.suite id=0x7f0809ea)
+      flags=AUTO_CANCEL
+      originalFlags=AUTO_CANCEL
+      pri=2
+      key=0|com.larksuite.suite|-1568813092|null|10229
+      seen=true
+      groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection
+      notification=
+            fullscreenIntent=null
+            contentIntent=PendingIntent{26ba14c: PendingIntentRecord{afd3488 com.larksuite.suite startActivity (allowlist: bd27eec:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
+            deleteIntent=null
+            number=0
+            groupAlertBehavior=0
+            when=1787699077314/1787699077314
+            tickerText=You have received a message.
+            vis=0
+            contentView=null
+            bigContentView=null
+            headsUpContentView=null
+            color=0x00000000
+            timeout=PT72H
+            extras={
+                android.title=String (US Global E-Commerce)
+                android.reduced.images=Boolean (true)
+                android.subText=null
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.showChronometer=Boolean (false)
+                android.text=String (Rachel Lam@all: Hello @all Please join us next Tuesday, 9/1 from 2:00...)
+                android.progress=Integer (0)
+                androidx.core.app.extra.COMPAT_TEMPLATE=String (androidx.core.app.NotificationCompat$BigTextStyle)
+                android.progressMax=Integer (0)
+                android.appInfo=ApplicationInfo (ApplicationInfo{fc10595 com.larksuite.suite})
+                android.showWhen=Boolean (true)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=119x119))
+                android.bigText=String (Rachel Lam@all: Hello @all Please join us next Tuesday, 9/1 from 2:00...)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.remoteInputHistory=null
+            }
+      publicNotification=
+            None
+      stats=SingleNotificationStats{posttimeElapsedMs=1664456281, posttimeToFirstClickMs=-1, posttimeToDismissMs=-1, airtimeCount=1, airtimeMs=0, currentAirtimeStartElapsedMs=1667436256, airtimeExpandedMs=0, posttimeToFirstVisibleExpansionMs=-1, currentAirtimeExpandedStartElapsedMs=-1, requestedImportance=4, naturalImportance=4, isNoisy=true}
+      mContactAffinity=0.0
+      mPackagePriority=0
+      mPackageVisibility=-1000
+      mSystemImportance=UNSPECIFIED
+      mAsstImportance=UNSPECIFIED
+      mImportance=HIGH
+      mImportanceExplanation=user
+      mProposedImportance=UNSPECIFIED
+      mIsAppImportanceLocked=true
+      mSensitiveContent=false
+      mCanceledAfterLifetimeExtension=false
+      mIntercept=false
+      mHidden==false
+      mGlobalSortKey=crtcl=0x0002:intrsv=2:grnk=0x0004:gsmry=1:nsk:rnk=0x000d
+      mRankingTimeMs=1787699077320
+      mCreationTimeMs=1787699077320
+      mVisibleSinceMs=1787702057503
+      mUpdateTimeMs=1787699077320
+      mInterruptionTimeMs=1787702057503
+      mSuppressedVisualEffects= 0
+      mSound= android.resource://com.larksuite.suite/raw/notification
+      mVibration= Composed{segments=[Step{amplitude=0.0, frequencyHz=0.0, duration=0}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}, Step{amplitude=0.0, frequencyHz=0.0, duration=250}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}], repeat=-1}
+      mAttributes= AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null
+      mLight= Light{color=-16776961, onMs=500, offMs=2000}
+      mShowBadge=true
+      mColorized=false
+      mAllowBubble=false
+      isBubble=false
+      mIsInterruptive=true
+      effectiveNotificationChannel=NotificationChannel{mId='normal_v2', mName=Regular Messages, mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=android.resource://com.larksuite.suite/raw/notification, mLights=true, mLightColor=-16776961, mVibrationPattern=null, mVibrationEffect=null, mUserLockedFields=14, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+      mAdjustments=[]
+      shortcut=null found valid? false
+      mUserVisOverride=-1000
+      hasSummarization=false
+      bundleType=0
+    NotificationRecord(0x0b20f6aa: pkg=com.larksuite.suite user=UserHandle{0} id=889320714 tag=null importance=4 key=0|com.larksuite.suite|889320714|null|10229: Notification(channel=normal_v2 shortcut=null contentView=null vibrate=null sound=null tick defaults=0 flags=AUTO_CANCEL color=0x00000000 vis=PRIVATE))
+      uid=10229 userId=0
+      opPkg=com.larksuite.suite
+      icon=Icon(typ=RESOURCE pkg=com.larksuite.suite id=0x7f0809ea)
+      flags=AUTO_CANCEL
+      originalFlags=AUTO_CANCEL
+      pri=2
+      key=0|com.larksuite.suite|889320714|null|10229
+      seen=true
+      groupKey=0|com.larksuite.suite|g:Aggregate_AlertingSection
+      notification=
+            fullscreenIntent=null
+            contentIntent=PendingIntent{9ad029b: PendingIntentRecord{2dff0be com.larksuite.suite startActivity (allowlist: bd27eec:+30s0ms/0/NOTIFICATION_SERVICE/NotificationManagerService)}}
+            deleteIntent=null
+            number=0
+            groupAlertBehavior=0
+            when=1787698032221/1787698032221
+            tickerText=You have received a message.
+            vis=0
+            contentView=null
+            bigContentView=null
+            headsUpContentView=null
+            color=0x00000000
+            timeout=PT72H
+            extras={
+                android.title=String (Lark)
+                android.reduced.images=Boolean (true)
+                android.subText=null
+                android.template=String (android.app.Notification$BigTextStyle)
+                android.showChronometer=Boolean (false)
+                android.text=String (Calendar Assistant: Rachel Lam's invitation)
+                android.progress=Integer (0)
+                androidx.core.app.extra.COMPAT_TEMPLATE=String (androidx.core.app.NotificationCompat$BigTextStyle)
+                android.progressMax=Integer (0)
+                android.appInfo=ApplicationInfo (ApplicationInfo{4578638 com.larksuite.suite})
+                android.showWhen=Boolean (true)
+                android.largeIcon=Icon (Icon(typ=BITMAP size=119x119))
+                android.bigText=String (Calendar Assistant: Rachel Lam's invitation)
+                android.infoText=null
+                android.progressIndeterminate=Boolean (false)
+                android.remoteInputHistory=null
+            }
+      publicNotification=
+            None
+      stats=SingleNotificationStats{posttimeElapsedMs=1663411190, posttimeToFirstClickMs=-1, posttimeToDismissMs=-1, airtimeCount=1, airtimeMs=0, currentAirtimeStartElapsedMs=1667436255, airtimeExpandedMs=0, posttimeToFirstVisibleExpansionMs=-1, currentAirtimeExpandedStartElapsedMs=-1, requestedImportance=4, naturalImportance=4, isNoisy=true}
+      mContactAffinity=0.0
+      mPackagePriority=0
+      mPackageVisibility=-1000
+      mSystemImportance=UNSPECIFIED
+      mAsstImportance=UNSPECIFIED
+      mImportance=HIGH
+      mImportanceExplanation=user
+      mProposedImportance=UNSPECIFIED
+      mIsAppImportanceLocked=true
+      mSensitiveContent=false
+      mCanceledAfterLifetimeExtension=false
+      mIntercept=false
+      mHidden==false
+      mGlobalSortKey=crtcl=0x0002:intrsv=2:grnk=0x0004:gsmry=1:nsk:rnk=0x0011
+      mRankingTimeMs=1787698032228
+      mCreationTimeMs=1787698032228
+      mVisibleSinceMs=1787702057502
+      mUpdateTimeMs=1787698032228
+      mInterruptionTimeMs=1787702057502
+      mSuppressedVisualEffects= 0
+      mSound= android.resource://com.larksuite.suite/raw/notification
+      mVibration= Composed{segments=[Step{amplitude=0.0, frequencyHz=0.0, duration=0}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}, Step{amplitude=0.0, frequencyHz=0.0, duration=250}, Step{amplitude=-1.0, frequencyHz=0.0, duration=350}], repeat=-1}
+      mAttributes= AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null
+      mLight= Light{color=-16776961, onMs=500, offMs=2000}
+      mShowBadge=true
+      mColorized=false
+      mAllowBubble=false
+      isBubble=false
+      mIsInterruptive=true
+      effectiveNotificationChannel=NotificationChannel{mId='normal_v2', mName=Regular Messages, mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000, mSound=android.resource://com.larksuite.suite/raw/notification, mLights=true, mLightColor=-16776961, mVibrationPattern=null, mVibrationEffect=null, mUserLockedFields=14, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true, mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION content=CONTENT_TYPE_SONIFICATION flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false, mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null, mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+      mAdjustments=[]
+      shortcut=null found valid? false
+      mUserVisOverride=-1000
+      hasSummarization=false
+      bundleType=0
