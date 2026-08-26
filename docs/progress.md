@@ -203,3 +203,36 @@ Next:
 - ▶️ Layer 2, awaiting Max's go: Compose translator screen, ML Kit zh→en,
   quality table `experiments/02-quality.md` (~10 Previews, ML Kit vs the
   Lark API, calls spaced out because of the rate limit).
+
+### 2026-08-25 — Studio build clean; SDK bump reverted; JVM file absorbed
+
+- 🔍 Claude Code now runs inside Android Studio on the Linux machine.
+  `build_project` from the IDE: success, 0 problems. Inspections:
+  `LarkListener.kt` and `build.gradle.kts` clean; `AndroidManifest.xml`
+  warns "Should explicitly set `android:icon`"; `settings.gradle.kts` notes
+  `dependencyResolutionManagement.repositories` is `@Incubating` (Gradle
+  API, not actionable).
+- ⏸️ Icon warning deferred to Layer 3, which needs a small icon for the
+  Relay anyway (Claude's call, Max informed).
+- 🐛→✅ The working copy had `compileSdk`/`targetSdk` bumped 36 → 37 (Studio
+  import or a hand edit; not by Claude). Reverted to 36 with `sl revert`
+  (Max's call: support only the SDK 36 test phone).
+- 🧱 `gradle/gradle-daemon-jvm.properties` (Studio-generated, pins the Gradle
+  daemon to JVM 21) amended into the Layer 1 commit with `sl amend --to`.
+- ↩️ Correction: that amend changed two hashes cited above. Layer 1 is now
+  `79ac30d` (was `0009aed`); the progress-log commit is `cba943a` (was
+  `f2be037`).
+- 📐 Decision (Max): use Sapling (`sl`) in this repo. `.git/sl` is present;
+  `sl ssl` shows the stack above `origin/main` at `f7d6d00`. Nothing pushed.
+- 🐚 Gotcha: `sl absorb` only absorbs edits to files already in the stack. For
+  a new file use `sl add FILE && sl amend --to REV FILE`. After the amend,
+  `sl status` showed a stale `M` on the file; `sl diff` was empty.
+- 🧪 Test status of `LarkListener`: manual end-to-end only (Experiment 01,
+  real bot DM → logcat). Compiled by the CLI and by Studio. No unit or
+  instrumented tests exist yet.
+
+Next:
+
+- ▶️ Layer 2, awaiting Max's go. Add unit tests when Layer 3 introduces
+  logic (skip summaries, parse Sender, relay, cancel); the phone stays the
+  integration test.
