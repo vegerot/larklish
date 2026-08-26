@@ -136,7 +136,8 @@ echo "lark.appSecret=…" >> local.properties               #   (from lark-cli's
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
-adb exec-out run-as com.vegerot.larklish cat files/events.jsonl   # the Relay record
+tools/events stats                                     # the Relay record (see tools/events --help)
+tools/events --since 2026-08-26T17:29 --han list       #   views: list, stats, table, pull
 lark-cli im +messages-send --as bot \
   --user-id ou_4d4c9ea3307c313a134ac3ea0821935e --text "中文"   # trigger an Original
 ```

@@ -720,3 +720,22 @@ Next:
 - Decide `debug.keystore.base64` (commit or ignore); push the stack when Max says.
 - Later items unchanged: release-build check, onboarding, app icon, dedicated
   `translation:text`-only Lark app.
+
+### 2026-08-26 — tools/events: the Relay record, with views
+
+- 🧱 `tools/events` (stdlib Python): pulls `events.jsonl` from the phone
+  (`adb exec-out run-as … cat`) or reads a saved copy (`--file`). Views:
+  `list` (Original → Relay pairs, removals with reason names, local time),
+  `stats` (Relays, fallbacks, Han text/title, English pass-through, removal
+  reasons, time span), `table` (Markdown `Original | Relay | Grade` for the
+  experiment docs), `pull OUT`. Filters: `--since ISO-UTC`, `--han`,
+  `--fallback`, `--no-removed`, `--utc`.
+- ✅ Verified on the phone: `--since 2026-08-26T17:29 stats` reproduces the soak
+  grade inputs (36 relayed, 0 fallback, 8 Han rows). Extend it when a new view
+  is needed (Max).
+- 📄 `plan.md` Commands: the raw `adb exec-out` line replaced by the tool.
+
+Next:
+
+- Max decides on the Sender rule (romanize person names only?).
+- Decide `debug.keystore.base64` (commit or ignore); push the stack when Max says.
