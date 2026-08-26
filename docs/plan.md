@@ -61,11 +61,12 @@ See `docs/experiments/02-quality.md`. Compose `MainActivity` (text field → ML 
 plus an `am start --es text` debug hook), `Translator` interface, `MlKitTranslator`.
 The quality table has 14 rows (5 real, 9 made up). Max's judgment is pending.
 
-### Layer 3 — Relay ✅ core done (bot DM)
+### Layer 3 — Relay ✅ done
 
-See `docs/experiments/03-relay.md`. The Relay replaces the Original and the tap opens
-the right chat. Pending observation with real traffic: a group-message Relay, and the
-withdrawal mirror (`onNotificationRemoved`). `POST_NOTIFICATIONS` is required.
+See `docs/experiments/03-relay.md`. Verified for a bot DM and a synthesized group chat:
+the Relay carries the translated title, romanized-safe text, group avatar and tap intent;
+the withdrawal mirror handles `REASON_CLICK` and `REASON_APP_CANCEL_ALL`. Recall does not
+withdraw — Lark updates the Original in place. `POST_NOTIFICATIONS` is required.
 
 Cancel option (Max): debug builds keep the Original next to the Relay for comparison;
 release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).

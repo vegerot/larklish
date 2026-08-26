@@ -46,3 +46,28 @@ adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb logcat -s LarkListener:I
 ```
+
+## Synthetic completion of the pending paths (same day, 22:36–22:40)
+
+Max asked why these needed real traffic. They did not; both were synthesized:
+
+- ✅ **Group Relay.** Created a throwaway group with the user identity
+  (`lark-cli im +chat-create --as bot --name "Larklish 测试群" --users ou_…`,
+  chat `oc_e2feee77ba20b6c5285d22fb8aa90eb4`), bot posted Chinese. The Original came with
+  title `Larklish 测试群`; the Relay posted title `LarkLish Test Group` (the title goes
+  through `englishOf`) with the group avatar as `largeIcon`. Tap on the group Original →
+  `ChatWindowActivity`, the right chat.
+- 🚩 **Recall does not withdraw.** `lark-cli im messages delete` (bot's own message,
+  Max-confirmed `--yes`) made Lark **update the Original in place** to
+  "Max Coplan's Feishu CLI recalled a message." — same key, a `posted` event, no removal.
+  The listener relayed the update; `englishOf` passed the English text through.
+- ✅ **Withdrawal mirror.** Tapping the group Original fired `onNotificationRemoved`
+  `reason=1` (`REASON_CLICK`) → Relay canceled. Opening Lark then canceled all its
+  notifications: two `reason=9` (`REASON_APP_CANCEL_ALL`) events (DM Original + autogroup
+  summary) → mirrored. Canceling a Relay tag that never existed is a no-op. End state:
+  zero records for both packages.
+- 📏 Android auto-groups **our** Relays too: with two Relays live, `com.vegerot.larklish`
+  had its own autogroup summary. The summary-skip guard applies to Lark's side only; our
+  own summary is Android's business.
+- 📏 Observed removal reasons so far: 1 (click), 9 (app cancel all). Still unseen: the
+  Experiment 00 desktop-active withdrawal (probably 8, app cancel).

@@ -462,3 +462,28 @@ Next:
 - ↩️ Correction: the Relay's `largeIcon` does carry over (avatar thumbnail
   on the collapsed row); the expanded view just hides it. Only the small
   icon is still the placeholder. `experiments/03-relay.md` corrected.
+
+### 2026-08-25 — Pending Layer 3 paths closed synthetically; recall surprise
+
+- 📐 Max challenged "needs real traffic". Correct: both paths were
+  synthesizable with granted scopes.
+- 🧪 Group Relay: `+chat-create` made `Larklish 测试群`
+  (`oc_e2feee77ba20b6c5285d22fb8aa90eb4`, Max + bot), bot posted Chinese.
+  Relay title `LarkLish Test Group` (title goes through `englishOf`), group
+  avatar carried, tap → `ChatWindowActivity` (the right chat).
+- 🚩 Recall does **not** withdraw: `im messages delete` (Max confirmed the
+  high-risk `--yes`) made Lark update the Original in place to "… recalled
+  a message." Same key, a posted event, no removal. The Relay updated too.
+- ✅ Withdrawal mirror: tap on the Original → `reason=1` (click) → Relay
+  canceled. Opening Lark → two `reason=9` (app cancel all) → mirrored,
+  including the harmless no-op cancel for the summary key. End state: zero
+  records both sides.
+- 📏 Android auto-groups our Relays as well (own summary appears at 2+).
+- 🐚 Gotcha: a collapsed notification group swallows child taps; tap the
+  `2 ⌄` expander first (`input tap` on its coordinates), then the child.
+- 📄 `experiments/03-relay.md` + `plan.md`: Layer 3 marked done.
+
+Next:
+
+- Follow-ups from plan.md "Later": `LarkApiTranslator`, app icon,
+  onboarding. The test group stays for future experiments.
