@@ -16,6 +16,9 @@ the settled decisions and `CONTEXT.md` for the words.
 | Lark withdraws Originals | Yes, on its own (desktop active). Relay must follow. | same |
 | Lark translation API | Works via `lark-cli api --as bot` (scope `translation:text` granted); English input passes through unchanged | `docs/experiments/00-adb.md` |
 | Pixel Live Translate | Not available (Tensor-only, and this is Lineage) | — |
+| Interception | A sideloaded listener receives Originals; `allow_listener` binds it at once, no restricted-settings gate | `docs/experiments/01-listener.md` |
+| Autogroup summary | Arrives as a second `posted` event with null title/text; Layer 3 skips `FLAG_GROUP_SUMMARY` | same |
+| Withdrawal | Did not happen with Lark desktop off; desktop-active is the likely trigger | same |
 
 ## Layers
 
@@ -23,17 +26,10 @@ the settled decisions and `CONTEXT.md` for the words.
 
 See `docs/experiments/00-adb.md`.
 
-### Layer 1 — Listener (is interception possible?)
+### Layer 1 — Listener ✅ done
 
-- Scaffold one Gradle project, package `com.vegerot.larklish`, Kotlin, Compose, `minSdk 36`.
-- `LarkListener : NotificationListenerService`. Filter `packageName == com.larksuite.suite`.
-- `onNotificationPosted`: log key, title, text, bigText, text length, `contentIntent != null`.
-- `onNotificationRemoved`: log key and `reason` — this shows how Lark withdraws Originals.
-- Grant: `adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener`.
-- Trigger: `lark-cli im +messages-send --as bot --user-id ou_… --text "中文"`.
-- Pass: logcat shows the Original within seconds. Also learn: is the text longer than the
-  64-char `dumpsys` cut? Which removal reason does Lark use?
-- No UI yet. Observe with `adb logcat --pid=$(adb shell pidof com.vegerot.larklish)`.
+See `docs/experiments/01-listener.md`. Gradle project (AGP 9.3.2, built-in Kotlin,
+`minSdk 36`), `LarkListener` logs every Lark Original. Interception works.
 
 ### Layer 2 — Translator screen (is on-device quality good enough?)
 
