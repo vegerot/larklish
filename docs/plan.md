@@ -74,7 +74,21 @@ The quality table has 14 rows (5 real, 9 made up). Max's judgment is pending.
 - Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
   Android 13+ "Allow restricted settings" step for sideloaded apps.
 - Debug UI: list of recent Original → Relay pairs.
-- `LarkApiTranslator` behind a setting, if ML Kit quality disappoints.
+- **`LarkApiTranslator` behind a setting.** Experiment 02 shows Lark's engine is clearly
+  better on ByteDance/TikTok/Lark jargon (see `docs/experiments/02-quality.md`,
+  "Benchmark 2"). Decision (Max, 2026-08-25): stay on ML Kit for faster iteration; add
+  the Lark API as a follow-up feature; abandon ML Kit only if it is unusably bad.
+  Constraints: tenant token only, rate limit `99991400` seen on back-to-back calls
+  (3 s spacing avoided it), 1,000 chars per call.
+- **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
+  write the Sender/message split test-first. Cases: plain `Sender: message`,
+  `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
+- **2.0 idea (Max): longer notifications and/or AI-summarized notifications.** Lark cuts
+  the Preview to the first clause (Experiment 01). Showing the whole message needs the
+  message text, which the listener never gets: it would need the message-read API under
+  the user identity (see `larklish-handoff.md`, rejected polling: user-token scopes go
+  through ByteDance security review) or another source. A summary of the full message
+  needs the same access plus a summarizer. Record only; not in the current layers.
 
 ## Commands
 

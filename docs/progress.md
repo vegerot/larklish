@@ -307,3 +307,38 @@ Next:
 - Max writes `Preview.parse` in `Preview.kt` (stub in the working copy): the
   rule that splits `Sender: message`. It decides what the Translator sees.
 - ▶️ Layer 3 (Relay) after Max's go.
+
+### 2026-08-25 — Benchmark 2 graded: Lark clearly better; ML Kit stays for now
+
+- 📐 Decision (Max): Claude writes the assessment (Max does not read Chinese).
+  Rule: stick to ML Kit for faster iteration; record the Lark API as a
+  follow-up if clearly better; abandon ML Kit only if unusably bad.
+- 🧪 Benchmark 2: 30 made-up Previews in the register of Max's groups, dense
+  with ByteDance/TikTok/Lark jargon. Same debug hook for ML Kit. Lark calls
+  spaced 3 s apart: 0 rate-limit errors in 30 (vs 5 of 14 back-to-back).
+- 📏 Grades (Claude): ML Kit 3 ✅ / 13 ⚠️ / 14 ❌; Lark 26 ✅ / 4 ⚠️ / 0 ❌.
+  Row 26 `大家先别发布` ("nobody deploy yet") → ML Kit "everyone is released
+  first": inverted, in fluent English. Table, readings, and assessment in
+  `experiments/02-quality.md` ("Benchmark 2", "Assessment").
+- 📐 Verdict (Claude, under Max's rule): ML Kit is usable as a hint (who,
+  where, roughly what), not as a reading of engineering chat. Borderline,
+  not unusable. Keep ML Kit through Layer 3; `LarkApiTranslator` is the
+  first follow-up after Layer 3 and is expected to become the default.
+- 📏 "Damage the Sender", defined: with `Sender: ` inside the sentence, ML Kit
+  re-cases or misspells the name and splits `@you` → `@ you`; Lark dropped
+  `Yufan Chen: ` twice (rows 11 and 23, both messages start with 收到).
+- 📄 `plan.md` Later: `LarkApiTranslator` follow-up with constraints; TDD
+  tests for `Preview.parse` after the experiments (Max's call); 2.0 idea
+  (Max): longer and/or AI-summarized notifications — needs message text the
+  listener never gets (user-identity message-read API).
+- 🧱 `Preview.kt` committed as a documented stub (`data class Preview`,
+  `parse` = `TODO()`), to be written test-first later.
+- ⚠️ Caveat: Benchmark 2 is Claude's corpus, not real messages. Reading real
+  group messages needs the `lark-cli` user identity (`search:message` and
+  message-read scopes), missing on this machine, maybe tenant-gated.
+
+Next:
+
+- ▶️ Layer 3 (Relay) on Max's go, with ML Kit behind `Translator`.
+- Optional: Max runs `lark-cli auth login` for `search:message` to pull real
+  Previews into the benchmark.
