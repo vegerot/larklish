@@ -30,6 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
@@ -47,6 +49,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val recorder = Recorder(File(filesDir, "events.jsonl"))
+        // Debug hook (Layer 5): `am start --es debug user|refresh` logs whose token the app holds.
+        intent.getStringExtra("debug")?.let { what -> CoroutineScope(Dispatchers.IO).launch { debugUserToken(what) } }
         setContent {
             MaterialTheme {
                 Screen(translator, recorder, initialText = intent.getStringExtra("text").orEmpty())
@@ -54,6 +58,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+private fun MainActivity.debugUserToken(what: String) = runCatching {
+    val token = defaultUserToken(this)
+    if (what == "refresh") token.refresh()
+    val user = LarkHttp.getJson("/open-apis/authen/v1/user_info", emptyMap(), token.bearer()).getJSONObject("data")
+    Log.i(TAG, "debug $what: user token belongs to ${user.optString("open_id")} (${user.optString("name")})")
+}.onFailure { Log.w(TAG, "debug $what failed: $it") }
 
 @Composable
 private fun Screen(translator: Translator, recorder: Recorder, initialText: String) {

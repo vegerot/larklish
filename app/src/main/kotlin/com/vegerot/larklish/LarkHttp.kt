@@ -42,7 +42,8 @@ object LarkHttp {
         val stream = if (status == 200) conn.inputStream else conn.errorStream
         val json = JSONObject(stream.bufferedReader().readText())
         if (status != 200 || json.optInt("code") != 0) {
-            throw IOException("Lark $path: http $status code ${json.optInt("code")} ${json.optString("msg")}")
+            val msg = json.optString("msg", json.optString("error_description")) // OAuth endpoints use error_description
+            throw IOException("Lark $path: http $status code ${json.optInt("code")} $msg")
         }
         return json
     }

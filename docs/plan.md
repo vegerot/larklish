@@ -49,6 +49,8 @@ the table below; `CONTEXT.md` holds the words.
 | Deep links | Lark's tap target lives in unreadable intent extras; copying the `PendingIntent` inherits it. Documented AppLinks (`client/chat/open?openChatId=`, `openId=`, `client/bot/open?appId=`) work when we fire them; no AppLink opens a message or thread | `docs/experiments/07-deep-links.md` |
 | Layer 4 soak | 36 Relays on real traffic: 0 fallback rows; 8 Han rows graded 5 ✅ / 3 ⚠️ / 0 ❌; first Han group title readable; `romanize()` mangles bot Senders with Han (`Triton数据安全` → pinyin) | `docs/experiments/05-lark-api.md` "Soak" |
 | Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
+| lark-cli token store | AES-256-GCM blobs (12-byte IV \| ciphertext \| tag) under one master key: macOS keychain `lark-cli` / `master.key` (`go-keyring-base64:` + base64 of the base64 key), Linux raw `~/.local/share/lark-cli/master.key`. User token blob `<appId>_<openId>.enc` = JSON `StoredUAToken`; app secret `appsecret_<appId>.enc`. A second `auth login` (Debian) did not invalidate the Mac's token | `tools/lark-token`; lark-cli `internal/keychain` |
+| User-token refresh on the phone | `POST authen/v2/oauth/token` (JSON, `grant_type=refresh_token`) from the seed works; every refresh rotates the refresh token; the pair persists in `filesDir/user-token.json` | `UserToken.kt`, debug hook `--es debug refresh` |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
 
 ## Layers
@@ -191,18 +193,22 @@ Dev machines (Max moves between them; `local.properties` is per machine):
     but often the CLI will be more convenient than Studio MCP.
 - GNU+Linux (Debian). SDK at `~/Android/Sdk` (has `platforms/android-36`,
   `build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
+  `uv` in `~/.local/bin` (installed 2026-08-27 for `tools/lark-token`).
 
 ```sh
 cp debug.keystore ~/.android/debug.keystore              # once per machine: same debug signer everywhere,
                                                           #   so installDebug upgrades in place (keeps data + grants)
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
-echo "lark.appId=cli_…" >> local.properties                # Layer 4: Lark app credentials
-echo "lark.appSecret=…" >> local.properties               #   (from lark-cli's keychain store)
+tools/lark-token --write                                  # Layers 4–5: lark.appId, lark.appSecret,
+                                                          #   lark.userRefreshToken from lark-cli's store
+                                                          #   (needs uv; Debian: curl -LsSf https://astral.sh/uv/install.sh | sh)
 ./gradlew installDebug
 ./gradlew testDebugUnitTest                                # JVM tests
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
+adb shell am start -n com.vegerot.larklish/.MainActivity -f 0x10008000 \
+  --es debug refresh                                      # Layer 5: force a user-token refresh, log the user
 tools/events stats                                     # the Relay record (see tools/events --help)
 tools/events --since 2026-08-26T17:29 --han list       #   views: list, stats, table, pull
 tools/phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # fire a deep link; also top, shade, shot, home

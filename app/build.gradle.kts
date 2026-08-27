@@ -5,8 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Lark app credentials live in local.properties (gitignored) and land in BuildConfig.
-// Embedded in the APK for now (Max, 2026-08-26); a production build needs a dedicated app.
+// Lark credentials live in local.properties (gitignored; written by tools/lark-token) and land
+// in BuildConfig. Embedded in the APK for now — see plan.md "Shortcuts".
 val local = Properties().apply { rootProject.file("local.properties").inputStream().use(::load) }
 
 android {
@@ -22,6 +22,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "LARK_APP_ID", "\"${local["lark.appId"]}\"")
         buildConfigField("String", "LARK_APP_SECRET", "\"${local["lark.appSecret"]}\"")
+        buildConfigField("String", "LARK_USER_REFRESH_TOKEN", "\"${local["lark.userRefreshToken"]}\"") // Layer 5 seed
     }
 
     testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in JVM tests

@@ -1,0 +1,118 @@
+#!/usr/bin/env -S uv run --script --quiet --native-tls
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["cryptography"]
+# ///
+"""Copy Lark credentials from lark-cli's encrypted store into `local.properties`.
+
+    tools/lark-token            # show what the store holds (masked); write nothing
+    tools/lark-token --write    # write lark.appId, lark.appSecret, lark.userRefreshToken
+
+lark-cli encrypts every secret with AES-256-GCM (12-byte IV | ciphertext | 16-byte tag)
+under one master key:
+  macOS  key: keychain item service `lark-cli`, account `master.key`, value
+              `go-keyring-base64:` + base64(base64(key)); blobs in
+              ~/Library/Application Support/lark-cli/
+  Linux  key: raw 32-byte file `master.key`; blobs in ~/.local/share/lark-cli/
+              (or $LARKSUITE_CLI_DATA_DIR/lark-cli)
+The user token blob is `<appId>_<openId>.enc` (JSON `StoredUAToken`, see lark-cli
+`internal/auth/token_store.go`); the app secret is `appsecret_<appId>.enc`.
+Secrets are never printed. Runs under `uv` (macOS: `brew install uv`; Debian:
+`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+"""
+
+import argparse
+import base64
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+REPO = Path(__file__).resolve().parent.parent
+LOCAL = REPO / "local.properties"
+DARWIN = sys.platform == "darwin"
+
+
+def store_dir():
+    if DARWIN:
+        return Path.home() / "Library/Application Support/lark-cli"
+    return Path(os.environ.get("LARKSUITE_CLI_DATA_DIR", Path.home() / ".local/share")) / "lark-cli"
+
+
+def master_key(store):
+    if not DARWIN:
+        return (store / "master.key").read_bytes()
+    out = subprocess.run(
+        ["security", "find-generic-password", "-s", "lark-cli", "-a", "master.key", "-w"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    prefix = "go-keyring-base64:"
+    assert out.startswith(prefix), "unexpected keychain value format"  # go-keyring v0.2.8 always prefixes
+    return base64.b64decode(base64.b64decode(out[len(prefix):]))
+
+
+def decrypt(blob, key):
+    return AESGCM(key).decrypt(blob[:12], blob[12:], None).decode()
+
+
+def mask(secret):
+    return "****" + secret[-4:]
+
+
+def when(ms):
+    return datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d %H:%M")
+
+
+def read_store():
+    """Return (appId, appSecret, token-or-None)."""
+    store = store_dir()
+    key = master_key(store)
+    users = sorted(store.glob("cli_*_ou_*.enc"))
+    assert len(users) <= 1, f"more than one user token in {store}: {[u.name for u in users]}"  # one login per machine
+    token = json.loads(decrypt(users[0].read_bytes(), key)) if users else None
+    if token:
+        app_id = token["appId"]
+    else:
+        # No user login yet: the app id comes from the only real app-secret blob.
+        secrets = [p for p in store.glob("appsecret_cli_*.enc") if len(p.stem) == len("appsecret_cli_") + 16]
+        assert len(secrets) == 1, f"cannot pick the app id in {store}: {[p.name for p in secrets]}"
+        app_id = secrets[0].stem.removeprefix("appsecret_")
+    app_secret = decrypt((store / f"appsecret_{app_id}.enc").read_bytes(), key)
+    return app_id, app_secret, token
+
+
+def write_local(values):
+    lines = LOCAL.read_text().splitlines() if LOCAL.exists() else []
+    kept = [line for line in lines if not line.startswith("lark.")]
+    LOCAL.write_text("\n".join(kept + [f"{k}={v}" for k, v in values.items()]) + "\n")
+    print(f"wrote {LOCAL.relative_to(REPO)}: {', '.join(values)}")
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--write", action="store_true", help="update local.properties (default: only show)")
+    args = p.parse_args()
+
+    app_id, app_secret, token = read_store()
+    print(f"store {store_dir()}")
+    print(f"app {app_id}  secret {mask(app_secret)}")
+    values = {"lark.appId": app_id, "lark.appSecret": app_secret}
+    if token:
+        expired = token["refreshExpiresAt"] < datetime.now().timestamp() * 1000
+        print(f"user {token['userOpenId']}  refresh token {mask(token['refreshToken'])} "
+              f"({len(token['refreshToken'])} chars) valid to {when(token['refreshExpiresAt'])}"
+              + ("  EXPIRED — run `lark-cli auth login`" if expired else ""))
+        if not expired:
+            values["lark.userRefreshToken"] = token["refreshToken"]
+    else:
+        print("no user token — run `lark-cli auth login` first (only the app secret is available)")
+    if args.write:
+        write_local(values)
+
+
+if __name__ == "__main__":
+    main()

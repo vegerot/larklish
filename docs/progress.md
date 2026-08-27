@@ -835,3 +835,28 @@ Next:
 Next:
 
 - Commit 2: extract `LarkHttp.kt` from `LarkApiTranslator` (no behavior change).
+
+### 2026-08-27 — Layer 5 commits 2–3: `LarkHttp`, `UserToken`, `tools/lark-token`
+
+- 🔧 `LarkHttp.kt` (`postJson`, `getJson`) extracted from `LarkApiTranslator`;
+  debug hook still gives Lark-quality output.
+- 🔍 Experiment: lark-cli's store decrypts with ~20 lines of Python (`cryptography`,
+  AES-GCM). macOS master key = keychain item with a `go-keyring-base64:` prefix
+  (double base64); Linux = raw `master.key`. Verified on the Mac and on the Debian
+  box (`ssh 10.251.236.182`; Debian's app-secret blob decrypts to the same secret).
+- 🧱 `tools/lark-token [--write]`: masked summary; `--write` puts `lark.appId`,
+  `lark.appSecret`, `lark.userRefreshToken` into `local.properties`. A `uv` script
+  (inline `cryptography` dep); `uv` installed on Debian for it.
+- 🔑 `UserToken.kt`: seed from `BuildConfig.LARK_USER_REFRESH_TOKEN`, refresh 5 min
+  early, persist rotations in `filesDir/user-token.json`, a new seed replaces the
+  file. Verified on the phone: seed → refresh → `user_info` = Max's open_id;
+  a forced second refresh rotated again (`…yDLg` → `…lddQ`).
+- 📎 Max ran `lark-cli auth login` on Debian mid-experiment: the Mac's token kept
+  working, so Lark allows concurrent user tokens per user+app (at least across
+  logins).
+
+Next:
+
+- Commit 4: `MessageFetcher.kt` + `pickMessage` / `resolveMentions` tests (test-first).
+- Check after 15:57 PDT that the Mac's lark-cli still refreshes (its access token
+  expires then) — i.e. the phone's rotations did not break the Mac's chain.
