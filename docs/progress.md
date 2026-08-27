@@ -783,3 +783,23 @@ Next:
 
 - Max decides: pursue the full-message layer (sketch), or park it.
 - Parked: push the stack (9 commits above `origin/main`); Later items.
+
+### 2026-08-27 — Experiment 07: deep links
+
+- 🔍 Lark's tap: `NotificationTransferActivity (has extras)` → `MainActivity` →
+  the chat activity. The extras hold the target; nothing prints them (root or
+  not) and a `PendingIntent` is opaque. Copying it (Layer 3) is the only way.
+- ✅ AppLinks fired by us (`am start VIEW`): `client/chat/open?openChatId=`
+  (group → `ChatWindowActivity`, topic group → `ThreadWindowActivity`),
+  `openId=` (DM), `client/bot/open?appId=` (bot) — all four URL forms work.
+- ❌ No AppLink opens a message or thread; `messageId=` is ignored and the
+  `client/message/link/open?token=` token is client-minted (no API). The API
+  does expose `thread_id`, `root_id`, `parent_id`, `mentions` per message.
+- 🧱 `tools/phone` (`top`, `open URL [shot]`, `shade [shot]`, `shot`, `home`)
+  from the experiment's one-liners (Max's ask).
+- 📄 `experiments/07-deep-links.md`; `plan.md` settled-facts row + Commands.
+
+Next:
+
+- Max decides on the full-message layer; the tap target stays Lark's
+  `PendingIntent` either way.

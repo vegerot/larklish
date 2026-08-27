@@ -44,6 +44,7 @@ the table below; `CONTEXT.md` holds the words.
 | Message-read scopes | Granted on the CLI app under Max's user identity (`search:message`, `im:message.*_msg:get_as_user`, …). Handoff's "effectively blocked" is false for this app | same, "Scope finding" |
 | Romanization | Android ICU `Han-Latin/Names` works on the phone; `romanize()` is tested (`RomanizeTest`, instrumented) | `Romanize.kt` |
 | Lark Preview budget | 45 characters of message text, cut back to a space/punctuation, `...` appended; no boundary before 45 → empty Preview; newline ends it | `docs/experiments/06-full-message.md` |
+| Deep links | Lark's tap target lives in unreadable intent extras; copying the `PendingIntent` inherits it. Documented AppLinks (`client/chat/open?openChatId=`, `openId=`, `client/bot/open?appId=`) work when we fire them; no AppLink opens a message or thread | `docs/experiments/07-deep-links.md` |
 | Layer 4 soak | 36 Relays on real traffic: 0 fallback rows; 8 Han rows graded 5 ✅ / 3 ⚠️ / 0 ❌; first Han group title readable; `romanize()` mangles bot Senders with Han (`Triton数据安全` → pinyin) | `docs/experiments/05-lark-api.md` "Soak" |
 | Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
@@ -150,6 +151,7 @@ adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
 tools/events stats                                     # the Relay record (see tools/events --help)
 tools/events --since 2026-08-26T17:29 --han list       #   views: list, stats, table, pull
+tools/phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # fire a deep link; also top, shade, shot, home
 lark-cli im +messages-send --as bot \
   --user-id ou_4d4c9ea3307c313a134ac3ea0821935e --text "中文"   # trigger an Original
 ```
