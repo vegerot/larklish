@@ -111,12 +111,16 @@ fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
   (53 % of real Previews do — Experiment 08).
 - Show the whole translated text in `BigTextStyle`; input capped at 1,000 chars (the
   translation API limit). An AI summary is a 2.0 idea.
-- `text` messages only. Record the `msg_type` of every candidate so the soak shows how
-  common `post`, cards and images are. Any other type → `skipped`.
+- `text` and `post` messages (`post` flattened: title, one line per paragraph, `[image]`,
+  `@name` — commit 7, after Experiment 08 showed `post` is the everyday type). Any other
+  type → `skipped type:<msg_type>`; `no-message` = nothing in the window, `no-match` =
+  a text there did not start with the stem.
 - Groups: title → `chats/search` (exact name, or name prefix when the title ends in
   `...`). DMs: `messages/search` around the Original's time, the `is_p2p_chat` hit whose
   peer name (first line of `display_info`) is the Sender; polled up to 4 × 5 s for the
-  index lag; cached per Sender (`dm:<Sender>`). A bot DM's title is `Lark`.
+  index lag; cached per Sender (`dm:<Sender>`). A DM is recognised by its title: `Lark`
+  (bots) or the Sender's own name (people — shape still unverified, none in the record).
+  The group and DM caches never cross (a bot that DMs Max also posts in groups).
 - Lark reuses one Original key per chat, so a newer Original on the same key cancels
   the in-flight fetch. Otherwise the older Full text could overwrite the newer Relay.
 - Mismatch rule: newest message inside `[when − 15 s, when + 5 s]` whose text starts

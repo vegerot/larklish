@@ -27,7 +27,7 @@ class PickMessageTest {
     @Test
     fun messagesOutsideTheWindowNeverMatch() {
         val items = listOf(text("future", at + 6_000, "x"), text("past", at - 16_000, "x"))
-        assertEquals(Pick.Skipped("no-match"), pickMessage(items, stem = "", whenMs = at))
+        assertEquals(Pick.Skipped("no-message"), pickMessage(items, stem = "", whenMs = at))
     }
 
     @Test
@@ -37,9 +37,16 @@ class PickMessageTest {
     }
 
     @Test
-    fun aNonTextMessageInTheWindowReportsItsType() {
-        val items = listOf(Candidate("p", "post", at - 1_000, deleted = false, text = ""))
-        assertEquals(Pick.Skipped("type:post"), pickMessage(items, stem = "标题", whenMs = at))
+    fun aTextlessMessageInTheWindowReportsItsType() {
+        val items = listOf(Candidate("i", "image", at - 1_000, deleted = false, text = ""))
+        assertEquals(Pick.Skipped("type:image"), pickMessage(items, stem = "标题", whenMs = at))
+    }
+
+    @Test
+    fun aFlattenedPostMatchesThePreviewThatDroppedItsNewlines() {
+        // Lark's Preview for an image-then-text post: `[image]Cool performance by …` (Experiment 08).
+        val post = Candidate("p", "post", at - 1_000, deleted = false, text = "[image]\nCool performance by Sofia Alise in the courtyard!! Swing by!!!!")
+        assertEquals(Pick.Found(post), pickMessage(listOf(post), stem = "[image]Cool performance by Sofia Alise in the courtyard!!", whenMs = at))
     }
 
     @Test

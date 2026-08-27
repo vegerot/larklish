@@ -951,3 +951,24 @@ Next:
 - Finish the Mac re-login (`lark-cli auth login --device-code …` after Max confirms).
 - Commit 7: flatten `post` messages in `MessageFetcher`; whitespace-insensitive stem
   match (two-line Previews); verify with a bot `post` into the test group.
+
+### 2026-08-27 — Layer 5 commit 7: `post` messages ✅
+
+- 🧱 `postText()` flattens a `post` (title, one line per paragraph; `text`/`a` → text,
+  `at` → `@user_name`, `img` → `[image]`); `pickMessage` compares whitespace-free
+  (a two-line Preview or a flattened post still starts with the stem); new reason
+  `no-message` (empty window) next to `no-match`; the fetcher logs its candidates.
+- 🐛 Found on the way: the `dm:<Sender>` cache was consulted before the group path, so a
+  group post by the bot (which also DMs Max) listed the *DM* chat. Now the Original's
+  shape decides (title `Lark` or title == Sender → DM), and the caches never cross.
+- ✅ Bot `post` (title + 2 paragraphs + `@Max`) into the test group → Relay shows the
+  title (Lark's Preview for a post) → Update shows all three lines in English with the
+  mention resolved.
+- ❓ Person DMs: none in the record yet; assumed title == Sender. Watch for `no-chat`
+  rows with a person's name as title.
+
+Next:
+
+- Soak on real traffic (Layer 5 is complete: 7 commits). Grade with
+  `tools/events --since 2026-08-27T23:09 stats` after ≥ 1 day.
+- Finish the Mac lark-cli re-login (device code pending Max's confirmation).

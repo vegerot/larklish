@@ -32,26 +32,31 @@ data class Candidate(
     val msgType: String,
     val createTime: Long, // epoch ms
     val deleted: Boolean,
-    val text: String, // `text` messages only; "" for every other type
+    val text: String, // `text` and flattened `post` messages; "" for every other type
 )
 
 sealed interface Pick {
     data class Found(val candidate: Candidate) : Pick
 
-    /** `no-chat`, `no-match`, or `type:<msg_type>` — recorded so the soak shows why. */
+    /** `no-chat`, `no-message` (nothing in the window), `no-match`, or `type:<msg_type>` — recorded so the soak shows why. */
     data class Skipped(val reason: String) : Pick
 }
 
 /**
- * The newest `text` message inside `[when − 15 s, when + 5 s]` whose text starts with the
- * Preview stem. A non-`text` message there is reported by type (`post`, `image`, …).
+ * The newest message with text inside `[when − 15 s, when + 5 s]` whose text starts with
+ * the Preview stem, whitespace ignored (Lark's Preview drops the newlines of a `post` and
+ * keeps those of a `text`, Experiment 08). A textless message there is reported by type
+ * (`image`, `sticker`, `interactive`, …).
  */
 fun pickMessage(items: List<Candidate>, stem: String, whenMs: Long): Pick {
     val window = items.filter { !it.deleted && it.createTime in (whenMs - BEFORE_MS)..(whenMs + AFTER_MS) }
-    window.firstOrNull { it.msgType == "text" && it.text.startsWith(stem) }?.let { return Pick.Found(it) }
-    val newest = window.firstOrNull() ?: return Pick.Skipped("no-match")
-    return Pick.Skipped(if (newest.msgType == "text") "no-match" else "type:${newest.msgType}")
+    val squashedStem = stem.squash()
+    window.firstOrNull { it.text.isNotEmpty() && it.text.squash().startsWith(squashedStem) }?.let { return Pick.Found(it) }
+    val newest = window.firstOrNull() ?: return Pick.Skipped("no-message")
+    return Pick.Skipped(if (newest.text.isNotEmpty()) "no-match" else "type:${newest.msgType}")
 }
+
+private fun String.squash() = filterNot { it.isWhitespace() }
 
 /** `@_user_1` placeholders → `@Name`, from the message's `mentions` (key → name). */
 fun resolveMentions(text: String, mentions: Map<String, String>): String =
@@ -78,14 +83,21 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
             ),
             token.bearer(),
         ).getJSONObject("data").getJSONArray("items").objects().map(::candidateOf)
+        Log.i(TAG, "[$title] candidates: " + items.joinToString { "${it.msgType} ${(whenMs - it.createTime) / 1000}s ago" })
         pickMessage(items, preview.stem, whenMs).also { Log.i(TAG, "[$title] → $it") }
     }
 
+    /**
+     * A DM Original has title `Lark` (bots) or the Sender's own name (people, expected — none
+     * seen yet, Experiment 08); everything else is a group. The two caches never cross: the
+     * bot that DMs Max also posts in groups.
+     */
     private suspend fun chatId(title: String, preview: Preview, whenMs: Long): String? {
-        chats[title]?.let { return it }
-        chats["dm:" + preview.sender]?.let { return it }
-        if (title != BOT_DM_TITLE) groupChatId(title)?.let { return remember(title, it) }
-        return dmChatId(preview, whenMs)?.let { remember("dm:" + preview.sender, it) }
+        val isDm = title == BOT_DM_TITLE || title == preview.sender
+        val key = if (isDm) "dm:" + preview.sender else title
+        chats[key]?.let { return it }
+        val found = if (isDm) dmChatId(preview, whenMs) else groupChatId(title)
+        return found?.let { remember(key, it) }
     }
 
     /** Lark truncates long titles with `...`; then any group whose name starts with the stem, else the exact name. */
@@ -136,8 +148,33 @@ private fun candidateOf(m: JSONObject): Candidate {
     val type = m.getString("msg_type")
     val deleted = m.optBoolean("deleted") // a recalled message stays in the list as "This message was recalled"
     val mentions = m.optJSONArray("mentions")?.objects().orEmpty().associate { it.getString("key") to it.getString("name") }
-    val raw = if (type == "text" && !deleted) JSONObject(m.getJSONObject("body").getString("content")).getString("text") else ""
+    val raw = when {
+        deleted -> ""
+        type == "text" -> JSONObject(m.getJSONObject("body").getString("content")).getString("text")
+        type == "post" -> postText(JSONObject(m.getJSONObject("body").getString("content")))
+        else -> ""
+    }
     return Candidate(m.getString("message_id"), type, m.getString("create_time").toLong(), deleted, resolveMentions(raw, mentions))
+}
+
+/**
+ * A `post` is `title` + paragraphs of tagged elements (Experiment 08):
+ * `{"title": "", "content": [[{"tag": "text", "text": "…"}], [{"tag": "img", "image_key": "…"}]]}`.
+ * One line per paragraph; images become `[image]` like Lark's own Preview.
+ */
+private fun postText(post: JSONObject): String {
+    val paragraphs = post.getJSONArray("content").let { ps -> (0 until ps.length()).map { ps.getJSONArray(it) } }
+    val lines = paragraphs.map { p ->
+        p.objects().joinToString("") { e ->
+            when (val tag = e.getString("tag")) {
+                "text", "a" -> e.getString("text")
+                "at" -> "@" + e.optString("user_name")
+                "img" -> "[image]"
+                else -> "[$tag]"
+            }
+        }
+    }
+    return (listOf(post.optString("title")) + lines).filter { it.isNotEmpty() }.joinToString("\n")
 }
 
 fun defaultMessageFetcher(context: Context) =
