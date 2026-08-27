@@ -860,3 +860,26 @@ Next:
 - Commit 4: `MessageFetcher.kt` + `pickMessage` / `resolveMentions` tests (test-first).
 - Check after 15:57 PDT that the Mac's lark-cli still refreshes (its access token
   expires then) — i.e. the phone's rotations did not break the Mac's chain.
+
+### 2026-08-27 — Layer 5 commit 4: `MessageFetcher`
+
+- 🧪 Test-first: `PickMessageTest` (6 cases: stem match, empty stem, window
+  edges, recalled messages, `type:post`, no-match) and `MentionsTest` (3),
+  plus `Preview.parse("Bits:...")` → sender `Bits`, message `...`, stem `""`.
+  The record holds 6 such empty-Preview rows (all from the E5 probes).
+- 🔍 Live shapes via `lark-cli api --as user … --params '{…}'` (inline `?query`
+  is dropped by lark-cli — that cost 10 minutes): `messages` items carry
+  `msg_type`, `create_time` (string ms), `body.content` (JSON string),
+  `deleted` (a recalled message stays in the list), `mentions[].key/name`
+  for `@_user_N` placeholders.
+- 🧱 `MessageFetcher.kt`: `Candidate`, `Pick.Found/Skipped(reason)`,
+  `pickMessage` (window `[when − 15 s, when + 5 s]`, newest `text` whose text
+  starts with the stem; else `no-match` or `type:<msg_type>`), `resolveMentions`,
+  chat-id cache `filesDir/chats.json`. Debug hook `--es debug fetch --es title T`.
+- ✅ On the phone: 60-char bot message → hook → `Found(…full text…)`, cache written.
+
+Next:
+
+- Commit 5: the Update in `LarkListener` (+ cancel per key), `Recorder`
+  `updated`/`skipped`, `tools/events` `U`/`S` rows and stats, debug UI, error
+  notification in debug builds.

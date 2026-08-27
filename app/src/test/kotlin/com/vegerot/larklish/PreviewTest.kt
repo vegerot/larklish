@@ -41,6 +41,14 @@ class PreviewTest {
     }
 
     @Test
+    fun emptyPreviewIsSenderColonDots() {
+        // No boundary in the first 45 characters → Lark posts `Sender:...` (Experiment 06 E5).
+        assertEquals(Preview(sender = "Bits", mention = null, message = "..."), Preview.parse("Bits:..."))
+        assertEquals("", Preview.parse("Bits:...").stem)
+        assertEquals("这是一条很长的消息，", Preview.parse("Bits: 这是一条很长的消息，...").stem)
+    }
+
+    @Test
     fun emojiSurvivesInSenderAndMessage() {
         assertEquals(
             Preview(sender = "夏银璐😀", mention = null, message = "好的👍🏼 收到"),

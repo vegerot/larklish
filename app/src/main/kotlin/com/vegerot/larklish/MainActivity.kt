@@ -49,8 +49,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val recorder = Recorder(File(filesDir, "events.jsonl"))
-        // Debug hook (Layer 5): `am start --es debug user|refresh` logs whose token the app holds.
-        intent.getStringExtra("debug")?.let { what -> CoroutineScope(Dispatchers.IO).launch { debugUserToken(what) } }
+        // Debug hooks (Layer 5): `am start --es debug user|refresh` logs whose token the app holds;
+        // `--es debug fetch --es title <group>` logs the Full text of the group's newest message.
+        intent.getStringExtra("debug")?.let { what ->
+            CoroutineScope(Dispatchers.IO).launch { debugHook(what, intent.getStringExtra("title").orEmpty()) }
+        }
         setContent {
             MaterialTheme {
                 Screen(translator, recorder, initialText = intent.getStringExtra("text").orEmpty())
@@ -59,7 +62,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private fun MainActivity.debugUserToken(what: String) = runCatching {
+private suspend fun MainActivity.debugHook(what: String, title: String) = runCatching {
+    if (what == "fetch") {
+        val pick = defaultMessageFetcher(this).fullTextOf(title, Preview.parse("..."), System.currentTimeMillis())
+        Log.i(TAG, "debug fetch [$title]: $pick")
+        return@runCatching
+    }
     val token = defaultUserToken(this)
     if (what == "refresh") token.refresh()
     val user = LarkHttp.getJson("/open-apis/authen/v1/user_info", emptyMap(), token.bearer()).getJSONObject("data")
