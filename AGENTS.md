@@ -33,6 +33,8 @@ unless the situation changes. Read `CONTEXT.md` for the glossary and use its ter
 - The phone is connected over `adb`. Use it directly for experiments.
 - Prefer running commands through the Android Studio MCP unless running `./gradlew` is a lot easier.
 - Do not search the home directory or `/` broadly.
+- Turn frequently-run one-liners into tools in `./tools`
+  + note: don't immediately do it.  Only for common tasks that you have done many times, like `./tools/events`.
 
 ## 📖 Output Standard 🏁 Goal: text that is clear, unambiguous, and easy for all readers.
 
