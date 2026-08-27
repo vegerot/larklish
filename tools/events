@@ -41,7 +41,8 @@ def has_han(s):
 
 
 def is_fallback(e):
-    return e["relayText"].startswith("~") or e["relayTitle"].startswith("~")
+    # The `~` marks the translated part: the title, or the message after `Sender: `.
+    return e["relayTitle"].startswith("~") or e["relayText"].split(": ", 1)[-1].startswith("~")
 
 
 def when(e, utc):

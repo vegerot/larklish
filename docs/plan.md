@@ -53,6 +53,10 @@ the table below; `CONTEXT.md` holds the words.
 | User-token refresh on the phone | `POST authen/v2/oauth/token` (JSON, `grant_type=refresh_token`) from the seed works; every refresh rotates the refresh token; the pair persists in `filesDir/user-token.json` | `UserToken.kt`, debug hook `--es debug refresh` |
 | `messages/search` for DMs | Without `query` the `chat_type` filter is ignored (mixed hits), so filter on `meta_data.is_p2p_chat`; `display_info` = `<peer name>\n<Sender>: <text>` (HTML-escaped). Bot DM Originals have title `Lark`; the Sender is the bot | `MessageFetcher.dmChatId`; commit 6 test |
 | Layer 5 on the phone | Group: Relay `Sender: ...` → Update with the full English 4 s later; a newer Original on the key cancels the older Update; bot DM: first Update 7 s (search), cached 3 s | `docs/progress.md` 2026-08-27 |
+| A day of real traffic | 73 Relays: 53 % of Previews truncated, 0 empty; 23 % DM-shaped (title `Lark`); Previews can span two lines; same-key re-posts < 10 s: 4 %; withdrawal median 11.5 min, p90 90 min | `docs/experiments/08-soak.md` |
+| `post` messages | Everyday type (4 of 12 newest in the busiest group; a plain sentence from the mobile editor is a `post`). `body.content` = `{title, content: [[{tag, text|image_key|user_name…}]]}` | same |
+| Fallback on Latin-heavy text | Both real ML Kit fallback rows made the English worse (`customFetch` → `CustomEtch`, shouting). `tools/events` had hidden them (`~` after `Sender: `) | same |
+| User refresh tokens | Single-use: the phone's first refresh killed the Mac's lark-cli chain 35 min later (`token_missing`). A separate `auth login` (Debian) is a separate chain and survives | same, "Layer 5's first hours" |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
 
 ## Layers
@@ -103,7 +107,8 @@ list, `ByCreateTimeDesc`) → pick by time window and Preview stem → translate
 the Relay. Two-phase Relay: post from the Preview at once, Update the same key when the
 fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
 
-- Fetch for every Original. Later optimization: fetch only when the Preview ends in `...`.
+- Fetch for every Original. Later optimization: fetch only when the Preview ends in `...`
+  (53 % of real Previews do — Experiment 08).
 - Show the whole translated text in `BigTextStyle`; input capped at 1,000 chars (the
   translation API limit). An AI summary is a 2.0 idea.
 - `text` messages only. Record the `msg_type` of every candidate so the soak shows how
@@ -161,9 +166,13 @@ fetcher behind one interface so it can move.
 - [ ] **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
   write the Sender/message split test-first. Cases: plain `Sender: message`,
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
-- [ ] **Update for `post` and the other message types.** Layer 5 Updates `text`
-  messages only. `post` (shape: locale → `title` + paragraphs of tagged elements) comes
-  first; then cards, images, files. The soak's `msg_type` counts set the order.
+- [ ] **Update for the other message types.** After `text` and `post` (Layer 5),
+  cards (`interactive`), images, stickers, files. The soak's `msg_type` counts set the order.
+- [ ] **Translate only the Han runs when Lark passes text through.** Both real fallback
+  rows of the soak were Latin-heavy sentences with a few Han words; ML Kit damaged the
+  English (`customFetch` → `CustomEtch`). Instead of the whole sentence, send each Han run
+  (`权限申请`) to the Translator and splice the results back. Evidence:
+  `docs/experiments/08-soak.md`.
 - [ ] **Fetch only when the Preview ends in `...`.** A performance optimization for
   Layer 5: a Preview without `...` already holds the Full text.
 - [ ] **Image in the Relay (far future, Max).** Lark's Original for an image says only
@@ -186,7 +195,8 @@ gap, not an oversight. The future backend removes most of them.
   build needs a dedicated app with only `translation:text` + `im:message` scopes.
 - Max's user refresh token is bootstrapped into the APK the same way
   (`tools/lark-token`). The app persists rotations in `filesDir`, so the APK copy is
-  only a seed.
+  only a seed — and a consumed one: refresh tokens are single-use, so the machine that
+  ran `tools/lark-token --write` needs `lark-cli auth login` again (Experiment 08).
 - No sign-in screen. A public build needs the device-code flow lark-cli uses. It is also
   the fix the day the seed token dies (7 days without a refresh).
 - Everything runs on-device. The backend takes the secrets, the tokens, and maybe the
@@ -212,6 +222,8 @@ echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; St
 tools/lark-token --write                                  # Layers 4–5: lark.appId, lark.appSecret,
                                                           #   lark.userRefreshToken from lark-cli's store
                                                           #   (needs uv; Debian: curl -LsSf https://astral.sh/uv/install.sh | sh)
+lark-cli auth login                                       #   …then log lark-cli in again: the phone consumes
+                                                          #   that refresh token (single-use, Experiment 08)
 ./gradlew installDebug
 ./gradlew testDebugUnitTest                                # JVM tests
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener

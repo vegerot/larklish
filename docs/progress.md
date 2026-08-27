@@ -931,3 +931,23 @@ Next:
 - Check after 15:57 PDT that the Mac's lark-cli still refreshes its own token (the
   phone rotated its chain twice today).
 - Parked: push the stack (now 19 commits above `origin/main`); Later items in `plan.md`.
+
+### 2026-08-27 — Soak review (the one we skipped): Experiment 08
+
+- 📊 `docs/experiments/08-soak.md`: 73 real Relays in a day. 53 % truncated Previews,
+  0 empty, 23 % DM-shaped, Previews can span two lines, withdrawal median 11.5 min.
+  Han rows: Lark 12 ✅ / 4 ⚠️ / 0 ❌; ML Kit fallback 2 ❌; romanize 2 ❌.
+- 🐛 `tools/events` hid every fallback (`~` after `Sender: `) — fixed; the two real
+  fallbacks are Latin-heavy sentences ML Kit made worse → Later item "translate only
+  the Han runs".
+- 🔍 `post` is the everyday type (4 of 12 newest in `San Jose 1199…`; a plain mobile
+  sentence is a `post`); its content is text paragraphs → Q6 rule → commit 7.
+- 🔑 Refresh tokens are single-use: at 15:57 the Mac's lark-cli lost its user token
+  (`token_missing`) because the phone had rotated the copied one. Re-login started
+  (device code, Max confirms in the browser). Shortcuts + Commands + tool docstring say so.
+
+Next:
+
+- Finish the Mac re-login (`lark-cli auth login --device-code …` after Max confirms).
+- Commit 7: flatten `post` messages in `MessageFetcher`; whitespace-insensitive stem
+  match (two-line Previews); verify with a bot `post` into the test group.

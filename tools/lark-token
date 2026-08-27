@@ -19,6 +19,10 @@ The user token blob is `<appId>_<openId>.enc` (JSON `StoredUAToken`, see lark-cl
 `internal/auth/token_store.go`); the app secret is `appsecret_<appId>.enc`.
 Secrets are never printed. Runs under `uv` (macOS: `brew install uv`; Debian:
 `curl -LsSf https://astral.sh/uv/install.sh | sh`).
+
+Refresh tokens are single-use: once the app refreshes from the copied token, this
+machine's lark-cli can no longer refresh its own. Run `lark-cli auth login` again after
+`--write` + install (Experiment 08).
 """
 
 import argparse
