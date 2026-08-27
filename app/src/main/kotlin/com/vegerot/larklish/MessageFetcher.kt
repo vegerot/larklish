@@ -9,13 +9,22 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "MessageFetcher"
-private const val BEFORE_MS = 15_000L // the message is posted before its Original (E2: ~3 s)
-private const val AFTER_MS = 5_000L // clock slack between the phone and Lark
-private const val BOT_DM_TITLE = "Lark" // a bot DM's Original has this title; the Sender is the bot
-private const val SEARCH_TRIES = 4 // the search index lags ~15 s behind the list (E2 continued)
-private const val SEARCH_GAP_MS = 5_000L
+
+/** the message is posted before its Original (E2: ~3 s)*/
+private const val BEFORE_MS = 15_000L
+
+/** clock slack between the phone and Lark*/
+private const val AFTER_MS = 5_000L
+
+/** a bot DM's Original has this title; the Sender is the bot*/
+private const val BOT_DM_TITLE = "Lark"
+
+/** the search index lags ~15 s behind the list (E2 continued) */
+private const val SEARCH_TRIES = 4
+private const val SEARCH_GAP_MS = 2_000L
 
 /** One message from the `messages` list, reduced to what [pickMessage] needs. Mentions resolved. */
 data class Candidate(
@@ -100,7 +109,7 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
             .put("page_size", 20)
         if (preview.stem.isNotEmpty()) body.put("query", preview.stem)
         repeat(SEARCH_TRIES) { attempt ->
-            if (attempt > 0) delay(SEARCH_GAP_MS)
+            if (attempt > 0) delay(SEARCH_GAP_MS.milliseconds*attempt)
             val hits = LarkHttp.postJson("/open-apis/im/v1/messages/search", body, token.bearer())
                 .getJSONObject("data").getJSONArray("items").objects()
             hits.firstOrNull {
