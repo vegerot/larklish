@@ -971,4 +971,4 @@ Next:
 
 - Soak on real traffic (Layer 5 is complete: 7 commits). Grade with
   `tools/events --since 2026-08-27T23:09 stats` after ≥ 1 day.
-- Finish the Mac lark-cli re-login (device code pending Max's confirmation).
+- ~~Finish the Mac lark-cli re-login~~ ✅ done (Max logged in again; `--as user` works).
