@@ -33,6 +33,7 @@ fun buildRelay(
         .setContentIntent(n.contentIntent)
         .setWhen(n.`when`)
         .setShowWhen(true)
+        .setOnlyAlertOnce(true) // the Update (Layer 5) replaces the text without a second alert
         .setAutoCancel(true)
         .build()
 }

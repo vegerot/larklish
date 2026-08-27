@@ -3,7 +3,7 @@
 
     tools/events list                 # every event, newest last, local time
     tools/events list --han --since 2026-08-26T10:29  # only rows with Han text
-    tools/events stats                # counts: Relays, fallbacks, pass-throughs, removal reasons
+    tools/events stats                # counts: Relays, Updates, skips by reason, removal reasons
     tools/events table --han          # Markdown table (Original | Relay | Grade) for docs
     tools/events pull events.jsonl    # save a copy; later: --file events.jsonl
 
@@ -61,7 +61,7 @@ def select(events, args):
         if args.since and e["at"] < args.since:
             continue
         relayed = e["event"] == "relayed"
-        if not relayed and args.no_removed:
+        if e["event"] == "removed" and args.no_removed:
             continue
         if args.han and not (relayed and (has_han(e["text"]) or has_han(e["title"]))):
             continue
@@ -73,10 +73,17 @@ def select(events, args):
 
 def cmd_list(events, args):
     for e in select(events, args):
-        if e["event"] == "relayed":
+        kind = e["event"]
+        if kind == "relayed":
             mark = "~" if is_fallback(e) else " "
             print(f"{when(e, args.utc)} R{mark} [{e['title']}] {e['text']}")
             print(f"{'':11}  → [{e['relayTitle']}] {e['relayText']}")
+        elif kind == "updated":
+            mark = "~" if e["relayText"].startswith("~") else " "
+            print(f"{when(e, args.utc)} U{mark} ({e['msgType']}) {e['fullText']}")
+            print(f"{'':11}  → {e['relayText']}")
+        elif kind == "skipped":
+            print(f"{when(e, args.utc)} S  {e['reason']}")
         else:
             r = e["reason"]
             print(f"{when(e, args.utc)} X  reason={r} ({REASONS.get(r, '?')}) chat {chat_id(e)}")
@@ -89,8 +96,15 @@ def cmd_stats(events, args):
     han_text = [e for e in relayed if has_han(e["text"])]
     han_title = [e for e in relayed if has_han(e["title"])]
     han_any = {id(e) for e in han_text} | {id(e) for e in han_title}
-    print(f"relayed {len(relayed)}  removed {len(removed)}")
+    updated = [e for e in rows if e["event"] == "updated"]
+    skipped = [e for e in rows if e["event"] == "skipped"]
+    print(f"relayed {len(relayed)}  updated {len(updated)}  skipped {len(skipped)}  removed {len(removed)}")
     print(f"fallback (~) {sum(map(is_fallback, relayed))}")
+    if updated or skipped:
+        types = Counter(e["msgType"] for e in updated)
+        reasons = Counter(e["reason"].split(":")[0] if e["reason"].startswith("error") else e["reason"] for e in skipped)
+        print("updated types:", ", ".join(f"{t} ×{n}" for t, n in types.most_common()) or "-")
+        print("skipped reasons:", ", ".join(f"{r} ×{n}" for r, n in reasons.most_common()) or "-")
     print(f"han in text {len(han_text)}  han in title {len(han_title)}  english pass-through {len(relayed) - len(han_any)}")
     print("removal reasons:", ", ".join(f"{r} ({REASONS.get(r, '?')}) ×{n}" for r, n in sorted(Counter(e['reason'] for e in removed).items())))
     if relayed:

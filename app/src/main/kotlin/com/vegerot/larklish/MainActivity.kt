@@ -134,6 +134,19 @@ private fun EventRow(event: JSONObject) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            "updated" -> {
+                Text(
+                    "$at  updated (${event.optString("msgType")})",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+                Text(event.optString("relayText"), style = MaterialTheme.typography.bodyMedium)
+            }
+            "skipped" -> Text(
+                "$at  skipped: ${event.optString("reason")}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             "removed" -> Text(
                 "$at  removed (reason ${event.optInt("reason")})  ${event.optString("key").substringAfter("suite|").substringBefore("|")}",
                 style = MaterialTheme.typography.labelMedium,

@@ -883,3 +883,25 @@ Next:
 - Commit 5: the Update in `LarkListener` (+ cancel per key), `Recorder`
   `updated`/`skipped`, `tools/events` `U`/`S` rows and stats, debug UI, error
   notification in debug builds.
+
+### 2026-08-27 — Layer 5 commit 5: the Update ✅ end-to-end
+
+- 🧱 `LarkListener.update()`: after the Preview Relay, `fetcher.fullTextOf(title,
+  preview, sbn.postTime)` → `englishOf(fullText.take(1000))` → `notify` on the same
+  key → `recorder.updated`; `Pick.Skipped` → `recorder.skipped(reason)`; any
+  exception → `skipped("error: …")` + an "Errors (debug)" notification in debug
+  builds. One `Job` per Original key; a newer Original cancels the older Update.
+- 🔕 `Relay.kt`: `setOnlyAlertOnce(true)` so the Update replaces the text silently.
+- 📊 `tools/events`: `U` rows (`msgType`, Full text → Relay text), `S` rows
+  (reason); `stats` prints updated/skipped counts, message types, skip reasons.
+  `MainActivity` lists Updates and skips under their Relay.
+- ✅ Phone, test group: 61-char Han bot message → Relay `Sender: ...` → 4 s later
+  the Relay shows the full English text (two sentences, second line kept).
+  Two sends 2.5 s apart: message 2's fetch returned `Found` but its Update was
+  cancelled by Original 3; only message 3's Update landed (`tools/events list`).
+
+Next:
+
+- Commit 6: DMs — `messages/search` (`chat_type=p2p`) for the chat id, cached
+  per Sender in `chats.json`.
+- Then soak ≥ 1 day; grade with `tools/events stats`.
