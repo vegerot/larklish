@@ -51,6 +51,8 @@ the table below; `CONTEXT.md` holds the words.
 | Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
 | lark-cli token store | AES-256-GCM blobs (12-byte IV \| ciphertext \| tag) under one master key: macOS keychain `lark-cli` / `master.key` (`go-keyring-base64:` + base64 of the base64 key), Linux raw `~/.local/share/lark-cli/master.key`. User token blob `<appId>_<openId>.enc` = JSON `StoredUAToken`; app secret `appsecret_<appId>.enc`. A second `auth login` (Debian) did not invalidate the Mac's token | `tools/lark-token`; lark-cli `internal/keychain` |
 | User-token refresh on the phone | `POST authen/v2/oauth/token` (JSON, `grant_type=refresh_token`) from the seed works; every refresh rotates the refresh token; the pair persists in `filesDir/user-token.json` | `UserToken.kt`, debug hook `--es debug refresh` |
+| `messages/search` for DMs | Without `query` the `chat_type` filter is ignored (mixed hits), so filter on `meta_data.is_p2p_chat`; `display_info` = `<peer name>\n<Sender>: <text>` (HTML-escaped). Bot DM Originals have title `Lark`; the Sender is the bot | `MessageFetcher.dmChatId`; commit 6 test |
+| Layer 5 on the phone | Group: Relay `Sender: ...` → Update with the full English 4 s later; a newer Original on the key cancels the older Update; bot DM: first Update 7 s (search), cached 3 s | `docs/progress.md` 2026-08-27 |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
 
 ## Layers
@@ -91,7 +93,7 @@ No pacing: Experiment 05 saw no rate limit. Verified on the phone 2026-08-26: (1
 debug hook shows Lark-quality output; (2) a bot DM relays through the listener; (3) the
 Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 
-### Layer 5 — Full text in the Relay 🚧 in progress
+### Layer 5 — Full text in the Relay ✅ built, soaking
 
 Lark's Preview is at most 45 characters and often empty (Experiment 06). The Original
 cannot carry more (E1) and no AppLink opens a message (Experiment 07), so the Full text
@@ -106,8 +108,10 @@ fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
   translation API limit). An AI summary is a 2.0 idea.
 - `text` messages only. Record the `msg_type` of every candidate so the soak shows how
   common `post`, cards and images are. Any other type → `skipped`.
-- Groups first (title → `chats/search`). DMs next: `messages/search` gives the p2p chat
-  id (15 s index latency); cache it per Sender.
+- Groups: title → `chats/search` (exact name, or name prefix when the title ends in
+  `...`). DMs: `messages/search` around the Original's time, the `is_p2p_chat` hit whose
+  peer name (first line of `display_info`) is the Sender; polled up to 4 × 5 s for the
+  index lag; cached per Sender (`dm:<Sender>`). A bot DM's title is `Lark`.
 - Lark reuses one Original key per chat, so a newer Original on the same key cancels
   the in-flight fetch. Otherwise the older Full text could overwrite the newer Relay.
 - Mismatch rule: newest message inside `[when − 15 s, when + 5 s]` whose text starts
@@ -209,6 +213,8 @@ adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
 adb shell am start -n com.vegerot.larklish/.MainActivity -f 0x10008000 \
   --es debug refresh                                      # Layer 5: force a user-token refresh, log the user
+adb shell run-as com.vegerot.larklish rm files/chats.json \
+  && adb shell am force-stop com.vegerot.larklish         # Layer 5: reset the chat-id cache (the service keeps it in memory)
 tools/events stats                                     # the Relay record (see tools/events --help)
 tools/events --since 2026-08-26T17:29 --han list       #   views: list, stats, table, pull
 tools/phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # fire a deep link; also top, shade, shot, home

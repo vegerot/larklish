@@ -905,3 +905,29 @@ Next:
 - Commit 6: DMs — `messages/search` (`chat_type=p2p`) for the chat id, cached
   per Sender in `chats.json`.
 - Then soak ≥ 1 day; grade with `tools/events stats`.
+
+### 2026-08-27 — Layer 5 commit 6: DMs ✅ — Layer 5 built, soak starts
+
+- 🔍 Probe: `messages/search` ignores `chat_type` when `query` is empty (15 mixed
+  hits), but every hit has `meta_data.is_p2p_chat` and a `display_info` whose first
+  line is the peer name (`Argos平台报警`, `Max Coplan's Feishu CLI`) — the Sender.
+  Bot DM Originals carry title `Lark`.
+- 🐛 Prefix match bit: the commit-5 build cached `Lark` → `Larklish 测试群`. Group
+  lookup is now exact unless the title ends in `...`. A stale entry survives an
+  `rm chats.json` because the service holds the map in memory → `force-stop`
+  (Commands).
+- 🧱 `MessageFetcher.dmChatId`: search `[when − 60 s, when + 60 s]` (+ `query` = stem
+  when non-empty), first `is_p2p_chat` hit whose peer name == Sender, up to 4 tries
+  5 s apart; cached as `dm:<Sender>`.
+- ✅ Phone: bot DM with an empty Preview → Update 7 s after the Relay (search); second
+  DM → 3 s (cache). Group and cancel paths unchanged (commit 5).
+- 📌 Layer 5 is built: 6 commits (`869059`…). The soak runs on real traffic from now.
+
+Next:
+
+- Soak ≥ 1 day, then `tools/events --since 2026-08-27T22:38 stats`: updated vs
+  skipped by reason (`no-chat` = DM lookups that missed, `no-match` = picker misses,
+  `type:*` = non-text traffic), and read the `U` rows for wrong picks (Q11).
+- Check after 15:57 PDT that the Mac's lark-cli still refreshes its own token (the
+  phone rotated its chain twice today).
+- Parked: push the stack (now 19 commits above `origin/main`); Later items in `plan.md`.

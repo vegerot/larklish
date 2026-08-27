@@ -1,8 +1,10 @@
 package com.vegerot.larklish
 
 import android.content.Context
+import android.text.Html
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -11,6 +13,9 @@ import java.io.File
 private const val TAG = "MessageFetcher"
 private const val BEFORE_MS = 15_000L // the message is posted before its Original (E2: ~3 s)
 private const val AFTER_MS = 5_000L // clock slack between the phone and Lark
+private const val BOT_DM_TITLE = "Lark" // a bot DM's Original has this title; the Sender is the bot
+private const val SEARCH_TRIES = 4 // the search index lags ~15 s behind the list (E2 continued)
+private const val SEARCH_GAP_MS = 5_000L
 
 /** One message from the `messages` list, reduced to what [pickMessage] needs. Mentions resolved. */
 data class Candidate(
@@ -44,9 +49,10 @@ fun resolveMentions(text: String, mentions: Map<String, String>): String =
     Regex("@_user_\\d+").replace(text) { m -> mentions[m.value]?.let { "@$it" } ?: m.value }
 
 /**
- * Finds the Full text behind an Original (Layer 5): title → chat id (`chats/search`,
- * cached in [cacheFile]) → newest messages of the chat → [pickMessage].
- * Groups only; DMs come in the next commit. Throws on HTTP failure.
+ * Finds the Full text behind an Original (Layer 5): chat id → newest messages of the chat
+ * → [pickMessage]. Groups: title → `chats/search`. DMs: `messages/search` around the
+ * Original's time, the p2p hit whose peer name is the Sender. Chat ids are cached in
+ * [cacheFile] (`title` for groups, `dm:<Sender>` for DMs). Throws on HTTP failure.
  */
 class MessageFetcher(private val token: UserToken, private val cacheFile: File) {
     private val chats: MutableMap<String, String> = HashMap<String, String>().apply {
@@ -54,7 +60,7 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
     }
 
     suspend fun fullTextOf(title: String, preview: Preview, whenMs: Long): Pick = withContext(Dispatchers.IO) {
-        val chatId = chatId(title) ?: return@withContext Pick.Skipped("no-chat")
+        val chatId = chatId(title, preview, whenMs) ?: return@withContext Pick.Skipped("no-chat")
         val items = LarkHttp.getJson(
             "/open-apis/im/v1/messages",
             mapOf(
@@ -66,16 +72,52 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
         pickMessage(items, preview.stem, whenMs).also { Log.i(TAG, "[$title] → $it") }
     }
 
-    /** Lark truncates long titles with `...` too; search by the stem, keep the hit that starts with it. */
-    private fun chatId(title: String): String? {
+    private suspend fun chatId(title: String, preview: Preview, whenMs: Long): String? {
         chats[title]?.let { return it }
+        chats["dm:" + preview.sender]?.let { return it }
+        if (title != BOT_DM_TITLE) groupChatId(title)?.let { return remember(title, it) }
+        return dmChatId(preview, whenMs)?.let { remember("dm:" + preview.sender, it) }
+    }
+
+    /** Lark truncates long titles with `...`; then any group whose name starts with the stem, else the exact name. */
+    private fun groupChatId(title: String): String? {
         val stem = title.removeSuffix("...")
         val hits = LarkHttp.getJson("/open-apis/im/v1/chats/search", mapOf("query" to stem, "page_size" to "20"), token.bearer())
             .getJSONObject("data").getJSONArray("items").objects()
-        val id = hits.firstOrNull { it.getString("name").startsWith(stem) }?.getString("chat_id") ?: return null
-        chats[title] = id
+        val match: (String) -> Boolean = if (title.endsWith("...")) { n -> n.startsWith(stem) } else { n -> n == title }
+        return hits.firstOrNull { match(it.getString("name")) }?.getString("chat_id")
+    }
+
+    /**
+     * `messages/search` (user identity) around the Original's time; the p2p hit whose peer
+     * name (first line of `display_info`) is the Sender. `chat_type` is ignored without a
+     * `query`, so filter on `is_p2p_chat`. Polls because the index lags ~15 s.
+     */
+    private suspend fun dmChatId(preview: Preview, whenMs: Long): String? {
+        val body = JSONObject()
+            .put("start_time", ((whenMs - 60_000) / 1000).toString())
+            .put("end_time", ((whenMs + 60_000) / 1000).toString())
+            .put("page_size", 20)
+        if (preview.stem.isNotEmpty()) body.put("query", preview.stem)
+        repeat(SEARCH_TRIES) { attempt ->
+            if (attempt > 0) delay(SEARCH_GAP_MS)
+            val hits = LarkHttp.postJson("/open-apis/im/v1/messages/search", body, token.bearer())
+                .getJSONObject("data").getJSONArray("items").objects()
+            hits.firstOrNull {
+                it.getJSONObject("meta_data").getBoolean("is_p2p_chat") && peerName(it) == preview.sender
+            }?.let { return it.getJSONObject("meta_data").getString("chat_id") }
+            Log.i(TAG, "dm search for [${preview.sender}]: ${hits.size} hits, no peer match (try ${attempt + 1})")
+        }
+        return null
+    }
+
+    private fun peerName(hit: JSONObject): String =
+        Html.fromHtml(hit.getString("display_info").substringBefore("\n"), 0).toString()
+
+    private fun remember(key: String, chatId: String): String {
+        chats[key] = chatId
         cacheFile.writeText(JSONObject(chats as Map<*, *>).toString())
-        return id
+        return chatId
     }
 }
 
