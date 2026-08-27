@@ -166,6 +166,12 @@ fetcher behind one interface so it can move.
   first; then cards, images, files. The soak's `msg_type` counts set the order.
 - [ ] **Fetch only when the Preview ends in `...`.** A performance optimization for
   Layer 5: a Preview without `...` already holds the Full text.
+- [ ] **Image in the Relay (far future, Max).** Lark's Original for an image says only
+  `[image]`. Android can show the picture (`Notification.BigPictureStyle().bigPicture(bitmap)`).
+  The Layer 5 fetch already sees these messages (`msg_type` `image`, today a
+  `skipped type:image` row): `body.content` is `{"image_key": "img_…"}` and
+  `GET /open-apis/im/v1/messages/{message_id}/resources/{image_key}?type=image` downloads
+  it under the user identity (scope `im:resource`). Same for stickers and, later, files.
 - [ ] **AI summary of the Full text (2.0 idea, Max).** For long messages, show a summary
   instead of the whole translation.
 - [ ] **Tighten the Layer 5 match rule** if the soak shows mismatches (wrong message
