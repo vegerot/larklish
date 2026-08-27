@@ -94,3 +94,44 @@ and whose text starts with the Preview stem → translate the full text → Rela
 `BigTextStyle` (≤ ~450 characters shown expanded; Lark's translate limit is 1,000).
 Otherwise relay as today. A user token on the phone: device-code sign-in screen in
 `MainActivity`, refresh weekly.
+
+## E2 continued (2026-08-27) — DMs, the search API, and `position`
+
+- ❌ **`chats/search` never returns p2p chats.** By a bot's name (`Argos平台报警`): 0 hits.
+  By a person's name (`Cong Xiao`): 10 hits, all *groups* whose name or members match;
+  `张家兴`: 0. A DM's chat id must come from somewhere else.
+- ✅ **`POST /open-apis/im/v1/messages/search`** (user identity; body `query`,
+  `chat_ids`, `from_ids`, `chat_type`, `start_time`, `end_time`) returns per hit
+  `meta_data.chat_id`, `is_p2p_chat`, `from_id`, `create_time`, `position`, `message_id`.
+  That is the way to learn a DM's chat id: search by sender (`from_ids`) or by the
+  Preview text with `chat_type=p2p`. Cache the chat id per Sender afterwards.
+- 📏 **Search index latency: 15 s** (bot DM sent, `messages/search` polled every 3 s,
+  hit on poll 3). The list endpoint had the same message in 3 s (E2e). So: list for
+  known chats (groups by title, cached DMs), search only for the first DM from a Sender.
+- ✅ The **list** endpoint also returns `message_position` per item (missed in E2d).
+
+## E2 continued — `position` in AppLinks
+
+`messages/search` results carry `message_app_link`:
+`client/chat/open?openChatId=oc_…&position=N` for chat messages and
+`client/thread/open?open_chat_id=…&open_thread_id=omt_…&thread_position=1` for thread
+messages (lark-cli prefers the API's link; `shortcuts/im/convert_lib/content_convert.go`).
+Fired from the phone (`tools/phone open`):
+
+| AppLink | Result |
+| --- | --- |
+| `client/chat/open?openChatId=oc_b0e6…&position=623` (message of 08-26 08:36) | opened the group at its unread divider (Aug 18); **`position` not honored** on this client ❌ |
+| `client/thread/open?open_chat_id=…&open_thread_id=omt_…&thread_position=1` | nothing opened; Lark showed the previously open chat ❌ |
+
+So the API knows a message's position and even mints a link for it, but the phone client
+(international Lark on the test phone) ignores `position` and does not handle
+`client/thread/open`. Lark's own notification tap still reaches the message via its private
+extras (Experiment 07). Copying the `PendingIntent` stays the right tap target.
+
+## Design update
+
+Two-phase Relay: post the Relay at once from the Preview (as today), then fetch the full
+text and **update** the same Relay (`notify(key, RELAY_ID)` again, as Lark updates its
+Original). Group: title → `chats/search` (cached) → list, ~1 s raw HTTP. DM: cached chat id
+→ list; first DM from a Sender: `messages/search` by Sender (15 s), then cache. The tap
+target stays Lark's copied `PendingIntent`.

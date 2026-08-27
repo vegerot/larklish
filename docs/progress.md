@@ -803,3 +803,22 @@ Next:
 
 - Max decides on the full-message layer; the tap target stays Lark's
   `PendingIntent` either way.
+
+### 2026-08-27 — Full-message experiments continued: DMs, search API, `position`
+
+- ❌ `chats/search` returns groups only, never p2p chats (bot name: 0 hits; person
+  name: group hits only).
+- ✅ `POST /im/v1/messages/search` (user identity) returns `meta_data.chat_id`,
+  `is_p2p_chat`, `position`, `message_app_link` per hit — the way to learn a DM's
+  chat id, then cache it per Sender. Index latency **15 s** (list endpoint: 3 s).
+- ❌ `position` in `client/chat/open` and the `client/thread/open` link are not
+  honored by the phone client (opened at the unread divider / did nothing).
+  Lark's own tap keeps its private extras; copying the `PendingIntent` stays.
+- 📐 Design update: two-phase Relay — post from the Preview now, update the same
+  Relay with the full text when the fetch returns. Recorded in
+  `experiments/06-full-message.md`; two settled-facts rows in `plan.md`.
+
+Next:
+
+- Layer 5 plan (Max's go): sign-in screen + token store → `MessageFetcher`
+  (group by title, DM by cached chat id / search) → full-text Relay update.
