@@ -28,3 +28,11 @@ _Avoid_: level, mode, preference, rule
 **Translator**:
 The component that turns Chinese text into English text.
 _Avoid_: engine, backend, provider
+
+**Full text**:
+The whole message body that the Lark Open API returns for one message.
+_Avoid_: body, content, full message
+
+**Update**:
+A second `notify` on the same Relay key that replaces the Preview with the Full text.
+_Avoid_: refresh, re-post, second post

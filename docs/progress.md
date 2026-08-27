@@ -822,3 +822,16 @@ Next:
 
 - Layer 5 plan (Max's go): sign-in screen + token store → `MessageFetcher`
   (group by title, DM by cached chat id / search) → full-text Relay update.
+
+### 2026-08-27 — Layer 5 plan settled; docs
+
+- 📐 Grilling done (19 questions, Max's answers). Decisions in `plan.md` Layer 5;
+  words **Full text** and **Update** in `CONTEXT.md`; new `plan.md` section
+  **Shortcuts** (what to fix before a public app); four new Later items (`post`
+  and other types, fetch-only-when-truncated, AI summary, match-rule tightening).
+- 🗂️ Commits planned: docs → `LarkHttp` extraction → `UserToken` +
+  `tools/lark-token` → `MessageFetcher` + tests → Update in `LarkListener` → DMs.
+
+Next:
+
+- Commit 2: extract `LarkHttp.kt` from `LarkApiTranslator` (no behavior change).

@@ -89,6 +89,43 @@ No pacing: Experiment 05 saw no rate limit. Verified on the phone 2026-08-26: (1
 debug hook shows Lark-quality output; (2) a bot DM relays through the listener; (3) the
 Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 
+### Layer 5 — Full text in the Relay 🚧 in progress
+
+Lark's Preview is at most 45 characters and often empty (Experiment 06). The Original
+cannot carry more (E1) and no AppLink opens a message (Experiment 07), so the Full text
+comes from the Open API under Max's user identity, **one lookup per Original**: title →
+chat id (`chats/search`, cached in `filesDir/chats.json`) → newest messages (`messages`
+list, `ByCreateTimeDesc`) → pick by time window and Preview stem → translate → **Update**
+the Relay. Two-phase Relay: post from the Preview at once, Update the same key when the
+fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
+
+- Fetch for every Original. Later optimization: fetch only when the Preview ends in `...`.
+- Show the whole translated text in `BigTextStyle`; input capped at 1,000 chars (the
+  translation API limit). An AI summary is a 2.0 idea.
+- `text` messages only. Record the `msg_type` of every candidate so the soak shows how
+  common `post`, cards and images are. Any other type → `skipped`.
+- Groups first (title → `chats/search`). DMs next: `messages/search` gives the p2p chat
+  id (15 s index latency); cache it per Sender.
+- Lark reuses one Original key per chat, so a newer Original on the same key cancels
+  the in-flight fetch. Otherwise the older Full text could overwrite the newer Relay.
+- Mismatch rule: newest message inside `[when − 15 s, when + 5 s]` whose text starts
+  with the Preview stem. Count mismatches during the soak before tightening it.
+- Debug builds post every error as an "Errors" notification.
+- Token: `tools/lark-token` copies Max's refresh token from lark-cli's store into
+  `local.properties` → `BuildConfig`; the app persists rotations in
+  `filesDir/user-token.json` (2 h access, 7-day sliding refresh, Experiment 06 E4).
+
+Files: `LarkHttp.kt` (HTTP shared with `LarkApiTranslator`), `UserToken.kt`,
+`MessageFetcher.kt` (pure `pickMessage` + `resolveMentions`, tested), the Update path in
+`LarkListener`, `Recorder` events `updated` / `skipped`, `tools/events` `U` / `S` rows.
+Commits: docs → `LarkHttp` → `UserToken` + `tools/lark-token` → `MessageFetcher` → Update →
+DMs. Then a soak ≥ 1 day graded by `tools/events stats` (updated vs skipped by reason,
+mismatches, share of `post`). The plan may change mid-flight; record each change here
+and in `progress.md` with the reason.
+
+Far future: a backend holds the secrets and tokens and maybe runs the fetch. Keep the
+fetcher behind one interface so it can move.
+
 ### Later (not experiments)
 
 - [ ] Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
@@ -100,8 +137,7 @@ Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 - [x] ~~`LarkApiTranslator` behind a setting.~~ → Layer 4. Decision history: Max
   (2026-08-25) kept ML Kit for faster iteration; Experiments 04–05 showed Lark's engine
   fixes every ML Kit failure seen in the soak, so Layer 4 makes Lark primary with ML Kit
-  as fallback. A production build needs a dedicated `translation:text`-only app instead
-  of the fat CLI app's secret.
+  as fallback. The fat CLI app's secret in the APK is a Shortcut (see below).
 - [ ] **Romanize only person names.** `romanize()` is right for bare 2–4-character Han
   names (陈昱萌 → Chen Yumeng) and wrong for bot or group Senders that mix Latin and Han
   (`Triton数据安全` → "Triton Shu Ju An Quan", `Argos平台报警` → "Argos Ping Tai Bao
@@ -119,14 +155,30 @@ Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
 - [ ] **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
   write the Sender/message split test-first. Cases: plain `Sender: message`,
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
-- [ ] **2.0 idea (Max): full-message notifications.** Lark's Preview is at most 45
-  characters, cut back to a boundary, and **empty when the first 45 characters hold no
-  boundary** (Experiment 06). The Original cannot carry more (E1). The text must come
-  from the Open API under the user identity, keyed by chat: `chats/search` by title →
-  `messages` list gives the full text ~3 s after the post (E2); the user refresh token
-  lives 7 days sliding, so a phone-side sign-in is workable (E4). Open: DM lookup by
-  person name; and Max's call — the handoff rejected *polling*, this is one lookup per
-  Original. Sketch at the end of `docs/experiments/06-full-message.md`.
+- [ ] **Update for `post` and the other message types.** Layer 5 Updates `text`
+  messages only. `post` (shape: locale → `title` + paragraphs of tagged elements) comes
+  first; then cards, images, files. The soak's `msg_type` counts set the order.
+- [ ] **Fetch only when the Preview ends in `...`.** A performance optimization for
+  Layer 5: a Preview without `...` already holds the Full text.
+- [ ] **AI summary of the Full text (2.0 idea, Max).** For long messages, show a summary
+  instead of the whole translation.
+- [ ] **Tighten the Layer 5 match rule** if the soak shows mismatches (wrong message
+  picked for an Original): compare more of the text, or use `messages/search`.
+
+## Shortcuts (fix before Larklish is a public app)
+
+Taken for velocity while Larklish serves Max and maybe Max's team. Each one is a known
+gap, not an oversight. The future backend removes most of them.
+
+- The fat CLI app's secret is in the APK (`local.properties` → `BuildConfig`). A public
+  build needs a dedicated app with only `translation:text` + `im:message` scopes.
+- Max's user refresh token is bootstrapped into the APK the same way
+  (`tools/lark-token`). The app persists rotations in `filesDir`, so the APK copy is
+  only a seed.
+- No sign-in screen. A public build needs the device-code flow lark-cli uses. It is also
+  the fix the day the seed token dies (7 days without a refresh).
+- Everything runs on-device. The backend takes the secrets, the tokens, and maybe the
+  fetch.
 
 ## Commands
 
