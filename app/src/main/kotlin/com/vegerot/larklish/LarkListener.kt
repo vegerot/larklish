@@ -106,7 +106,7 @@ class LarkListener : NotificationListenerService() {
 
     private fun errorNotification(e: Exception): Notification =
         Notification.Builder(this, ERRORS_CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Larklish Update failed")
             .setContentText(e.toString())
             .setStyle(Notification.BigTextStyle().bigText(e.toString()))

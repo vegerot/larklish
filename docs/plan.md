@@ -160,13 +160,16 @@ fetcher behind one interface so it can move.
   Data Security"). Change: in `Relay.kt`, romanize a Sender only when it is a bare Han
   name; send every other Han-containing Sender through `englishOf`. Add a `RomanizeTest`
   case. Evidence: `docs/experiments/05-lark-api.md` "Soak".
-- [ ] **App icon (Max, late stage).** Every Relay shows Larklish's icons, not Lark's: the
-  **small icon** (monochrome glyph in the status bar and shade header) is mandatory for a
-  notification, and the **large icon** (right side of the row) is optional — Layer 3 copies
-  the Original's group avatar there. The launcher icon is the same asset family. Today it is
-  the system default (`@android:drawable/sym_def_app_icon`). Design a proper adaptive
-  launcher icon + monochrome small icon once the Relay is stable; 译鸟 (translation bird) is
-  the theme.
+- [ ] **App icon: finish the 译鸟 mark.** 2026-08-27: an AI-generated flat bird (navy
+  body, orange belly, two chirp arcs, teal disc; `docs/logo/larklish-v1.png`) is in use as
+  the adaptive launcher icon and, as an alpha silhouette, the notification small icon.
+  Todo before it is final: (1) two **bold chirp arcs** about the size of the head — the
+  current ones vanish at 24 dp; (2) a **rounded, fuller wing tip** (the taper fades at small
+  sizes; rounded ends also echo Lark's strokes); (3) scale the bird ~15 % down so it fits the
+  adaptive-icon **66 % safe zone** (the wing tip is at ~75 % of the radius); (4) optional: a
+  lighter aqua upper wing behind the navy one as a Lark-family cue. Produce it as an SVG →
+  `VectorDrawable`, replacing the raster. The **large icon** (row avatar) stays the
+  Original's group avatar (Layer 3).
 - [ ] **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
   write the Sender/message split test-first. Cases: plain `Sender: message`,
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.

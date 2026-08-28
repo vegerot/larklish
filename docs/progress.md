@@ -972,3 +972,19 @@ Next:
 - Soak on real traffic (Layer 5 is complete: 7 commits). Grade with
   `tools/events --since 2026-08-27T23:09 stats` after ≥ 1 day.
 - ~~Finish the Mac lark-cli re-login~~ ✅ done (Max logged in again; `--as user` works).
+
+### 2026-08-27 — App icon v1 (译鸟)
+
+- 🎨 Max picked an AI-generated flat bird (navy body, orange belly, two chirp arcs on a
+  teal `#00d3b2` disc): `docs/logo/larklish-v1.png`. Cut the bird out of the disc
+  (pillow/numpy under `uv`), placed it at 60 dp inside the 108 dp adaptive canvas →
+  `res/drawable-xxxhdpi/ic_launcher_foreground.png`; solid-color background; the same
+  alpha silhouette as `ic_launcher_monochrome.png` (themed icons) and as the 24 dp
+  notification small icon `ic_notification.png` (Relay + error notification).
+- ✅ `dumpsys notification`: the Relay's icon is now an app resource; installed in place.
+- 📝 The finish-line todo (bold arcs, rounded wing tip, 66 % safe zone, aqua wing,
+  SVG → `VectorDrawable`) is the "App icon" item in `plan.md` Later.
+
+Next:
+
+- Soak continues; icon polish per the todo when the artist delivers a vector.

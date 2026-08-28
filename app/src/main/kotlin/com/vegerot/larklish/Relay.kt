@@ -17,7 +17,7 @@ fun buildRelay(
     preview: Preview,
     message: String,
 ): Notification {
-    val n = original.notification
+    val originalNotification = original.notification
     val sender = romanize(preview.sender) + when (preview.mention) {
         Mention.YOU -> "@you"
         Mention.ALL -> "@all"
@@ -25,13 +25,13 @@ fun buildRelay(
     }
     val text = if (sender.isEmpty()) message else "$sender: $message"
     return Notification.Builder(context, RELAY_CHANNEL)
-        .setSmallIcon(android.R.drawable.stat_notify_chat) // placeholder; see plan.md "App icon"
-        .setLargeIcon(n.getLargeIcon())
+        .setSmallIcon(R.drawable.ic_notification) // 译鸟 silhouette; see plan.md "App icon"
+        .setLargeIcon(originalNotification.getLargeIcon())
         .setContentTitle(title)
         .setContentText(text)
         .setStyle(Notification.BigTextStyle().bigText(text))
-        .setContentIntent(n.contentIntent)
-        .setWhen(n.`when`)
+        .setContentIntent(originalNotification.contentIntent)
+        .setWhen(originalNotification.`when`)
         .setShowWhen(true)
         .setOnlyAlertOnce(true) // the Update (Layer 5) replaces the text without a second alert
         .setAutoCancel(true)

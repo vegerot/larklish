@@ -8,7 +8,7 @@
 
     <application
         android:label="Larklish"
-        android:icon="@android:drawable/sym_def_app_icon">
+        android:icon="@mipmap/ic_launcher">
 
         <!-- Layer 2: translator screen. Also the debug hook: `am start` with a
              string extra named `text` translates at once (see MainActivity). -->
