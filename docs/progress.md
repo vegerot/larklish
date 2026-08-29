@@ -1075,3 +1075,21 @@ Next:
 
 - Soak ≥ 1 day and re-grade: `tools/events --since 2026-08-29T00:30 stats`. Watch the new
   `fallback` reasons, and whether `no-chat` and `no-match` fall as the replay predicts.
+
+### 2026-08-28 — tools/probe, tools/chats, and what a spotty wifi showed
+
+- 🛠️ `tools/probe` (post to the test group, wait, print the Relay and the Update; also the
+  MainActivity debug hooks) and `tools/chats` (show / reset the chat-id cache). They replace
+  the two rituals this session ran most: 28 sends, 37 logcat calls and 19 installs out of
+  359 Bash calls, and the reset that `plan.md` had to spell out in prose.
+- 🐞 Four bugs found while verifying them, all fixed: a missing phone read as a missing
+  cache; `adb logcat` blocks on `- waiting for device -` forever; `--debug` did nothing when
+  MainActivity was already running (needs `-f 0x10008000`, the flag the documented command
+  had); and `adb exec-out` folds the device's stderr into stdout, so a missing file arrives
+  as text and broke `json.loads`.
+- 📶 **A delayed push defeats any window.** The phone's wifi went spotty for ~8 minutes;
+  Lark then delivered the backed-up Originals at 18:15 for messages sent at 18:11 and 18:13,
+  so both were `no-message` — the message is minutes older than `sbn.postTime`. Experiment 11
+  measured max 43.9 s on a normal day and no gain past 60 s, so **do not widen the window
+  for this**: it only appears when push is delayed, and a wider window costs a worse pick on
+  every ordinary Original. Let the next soak say how often it really happens.
