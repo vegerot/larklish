@@ -159,7 +159,7 @@ private fun candidateOf(m: JSONObject): Candidate {
     val mentions = m.optJSONArray("mentions")?.objects().orEmpty().associate { it.getString("key") to it.getString("name") }
     val raw = when {
         deleted -> ""
-        type == "text" -> JSONObject(m.getJSONObject("body").getString("content")).getString("text")
+        type == "text" -> unwrapHtml(JSONObject(m.getJSONObject("body").getString("content")).getString("text"))
         type == "post" -> postText(JSONObject(m.getJSONObject("body").getString("content")))
         else -> ""
     }
@@ -167,11 +167,21 @@ private fun candidateOf(m: JSONObject): Candidate {
 }
 
 /**
+ * Lark's editor wraps a `text` body in paragraphs — `<p>line</p><p>line</p>` — and Lark's own
+ * Preview shows none of it (11 of 198 text messages, Experiment 11).
+ */
+fun unwrapHtml(text: String): String {
+    if (!text.startsWith("<p>")) return text
+    return text.replace("</p><p>", "\n").replace(Regex("</?[a-z][^>]*>"), "")
+        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&") // `&amp;` last, or `&amp;lt;` decodes twice
+}
+
+/**
  * A `post` is `title` + paragraphs of tagged elements (Experiment 08):
  * `{"title": "", "content": [[{"tag": "text", "text": "…"}], [{"tag": "img", "image_key": "…"}]]}`.
- * One line per paragraph; images become `[image]` like Lark's own Preview.
+ * One line per paragraph; images become `[image]` and emoji `[Delighted]`, like Lark's own Preview.
  */
-private fun postText(post: JSONObject): String {
+fun postText(post: JSONObject): String {
     val paragraphs = post.getJSONArray("content").let { ps -> (0 until ps.length()).map { ps.getJSONArray(it) } }
     val lines = paragraphs.map { p ->
         p.objects().joinToString("") { e ->
@@ -179,6 +189,7 @@ private fun postText(post: JSONObject): String {
                 "text", "a" -> e.getString("text")
                 "at" -> "@" + e.optString("user_name")
                 "img" -> "[image]"
+                "emotion" -> "[" + e.optString("emoji_type", tag) + "]"
                 else -> "[$tag]"
             }
         }
