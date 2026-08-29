@@ -25,6 +25,9 @@ private const val MATCH_CHARS = 12
 /** a bot DM's Original has this title; the Sender is the bot*/
 private const val BOT_DM_TITLE = "Lark"
 
+/** chats to re-try when the title names no chat; two is the whole prize (Experiment 10) */
+private const val RECENT_TRIES = 2
+
 /** the search index lags ~15 s behind the list (E2 continued) */
 private const val SEARCH_TRIES = 4
 private const val SEARCH_GAP_MS = 2_000L
@@ -78,8 +81,22 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
         if (cacheFile.exists()) JSONObject(cacheFile.readText()).let { j -> j.keys().forEach { put(it, j.getString(it)) } }
     }
 
+    /** Chats that produced a Full text, most recent first. Feeds the thread fallback below. */
+    private val recent = ArrayDeque<String>()
+
     suspend fun fullTextOf(title: String, preview: Preview, whenMs: Long): Pick = withContext(Dispatchers.IO) {
-        val chatId = chatId(title, preview, whenMs) ?: return@withContext Pick.Skipped("no-chat")
+        chatId(title, preview, whenMs)?.let { return@withContext pickIn(it, title, preview, whenMs) }
+        // A reply inside a topic chat carries the *thread's* root text as its title, so no chat
+        // search can ever find it (Experiment 09). Such a reply follows other traffic in the same
+        // chat, so the chat is almost always one Larklish just used (Experiment 10).
+        for (chatId in recent.take(RECENT_TRIES)) {
+            val pick = pickIn(chatId, title, preview, whenMs)
+            if (pick is Pick.Found) return@withContext pick
+        }
+        Pick.Skipped("no-chat")
+    }
+
+    private fun pickIn(chatId: String, title: String, preview: Preview, whenMs: Long): Pick {
         val items = LarkHttp.getJson(
             "/open-apis/im/v1/messages",
             // Bound the request by the same window [pickMessage] uses, so a burst in a busy
@@ -92,8 +109,14 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
             ),
             token.bearer(),
         ).getJSONObject("data").getJSONArray("items").objects().map(::candidateOf)
-        Log.i(TAG, "[$title] candidates: " + items.joinToString { "${it.msgType} ${(whenMs - it.createTime) / 1000}s ago" })
-        pickMessage(items, preview.stem, whenMs).also { Log.i(TAG, "[$title] → $it") }
+        Log.i(TAG, "[$title] $chatId candidates: " + items.joinToString { "${it.msgType} ${(whenMs - it.createTime) / 1000}s ago" })
+        return pickMessage(items, preview.stem, whenMs).also {
+            Log.i(TAG, "[$title] $chatId → $it")
+            if (it is Pick.Found) {
+                recent.remove(chatId)
+                recent.addFirst(chatId)
+            }
+        }
     }
 
     /**

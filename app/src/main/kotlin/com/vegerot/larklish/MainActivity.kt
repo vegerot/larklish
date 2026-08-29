@@ -50,9 +50,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val recorder = Recorder(File(filesDir, "events.jsonl"))
         // Debug hooks (Layer 5): `am start --es debug user|refresh` logs whose token the app holds;
-        // `--es debug fetch --es title <group>` logs the Full text of the group's newest message.
+        // `--es debug fetch --es title <group> [--es text "<Sender>: <message>"]` logs the Full text.
+        // `--es debug thread` repeats that fetch under a title that names no chat (Layer 6 fix 5).
         intent.getStringExtra("debug")?.let { what ->
-            CoroutineScope(Dispatchers.IO).launch { debugHook(what, intent.getStringExtra("title").orEmpty()) }
+            CoroutineScope(Dispatchers.IO).launch {
+                debugHook(what, intent.getStringExtra("title").orEmpty(), intent.getStringExtra("text").orEmpty())
+            }
         }
         setContent {
             MaterialTheme {
@@ -62,10 +65,17 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private suspend fun MainActivity.debugHook(what: String, title: String) = runCatching {
-    if (what == "fetch") {
-        val pick = defaultMessageFetcher(this).fullTextOf(title, Preview.parse("..."), System.currentTimeMillis())
-        Log.i(TAG, "debug fetch [$title]: $pick")
+private suspend fun MainActivity.debugHook(what: String, title: String, text: String) = runCatching {
+    if (what == "fetch" || what == "thread") {
+        val fetcher = defaultMessageFetcher(this)
+        val preview = Preview.parse(text.ifEmpty { "..." })
+        val now = System.currentTimeMillis()
+        Log.i(TAG, "debug fetch [$title]: " + fetcher.fullTextOf(title, preview, now))
+        // A thread reply's title names no chat. The same fetcher must still find the message
+        // through the chats it just used (Layer 6 fix 5).
+        if (what == "thread") {
+            Log.i(TAG, "debug thread [no chat]: " + fetcher.fullTextOf("no chat named this $now", preview, now))
+        }
         return@runCatching
     }
     val token = defaultUserToken(this)
