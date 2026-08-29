@@ -149,7 +149,7 @@ and in `progress.md` with the reason.
 Far future: a backend holds the secrets and tokens and maybe runs the fetch. Keep the
 fetcher behind one interface so it can move.
 
-### Layer 6 — Make the Update land 🚧 next
+### Layer 6 — Make the Update land ✅ built, soaking
 
 Layer 5's first day Updated **34 of 91** real Relays (Experiment 09). The fetch works; the
 chat resolver and the match rule lose the rest. Every fix below is measured on an offline
@@ -175,7 +175,14 @@ value, not by guess. Baseline 101 → **119 of 210** stacked.
 Rejected: **retrying the message list** — worth 0. The forward edge of the window is
 already generous, so a retry cannot find anything the first call missed.
 
-Then soak again and re-grade with `tools/events stats`.
+Built 2026-08-28, one commit per fix, each verified on the phone. Two changes the replay
+did not predict: the messages list now carries `start_time`/`end_time` so a burst cannot
+push the message off the page, and `unwrapHtml` strips the markup Lark adds to an **edited**
+message. The chat cache now holds only what a message confirmed, so the one poisoned entry
+was cleared once (`rm files/chats.json`, force-stop) and cannot come back.
+
+Then soak again and re-grade with `tools/events stats` — now including `fallback` rows,
+which say whether the Translator hit an outage or an input Lark will not translate.
 
 ### Later (not experiments)
 

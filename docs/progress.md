@@ -1047,3 +1047,31 @@ Next:
 
 - Layer 6 in the measured order: window 60 s → prefix match → emotion → translate retry →
   LRU 2 → (optional) disambiguate. Drop the message-list retry.
+
+### 2026-08-28 — Layer 6 built: make the Update land
+
+Six commits, one per fix, each built, installed and verified on the phone.
+
+- **fix 1** — the match window reaches back **60 s**, not 15 s (the delay runs to 43.9 s).
+  The messages list now carries the same window as `start_time`/`end_time`, so a burst in a
+  busy chat cannot push the message off the page. The forward edge stays 5 s.
+- **fix 2** — the stem match folds case and compares only the first 12 whitespace-free
+  characters. Lark's Preview is not a faithful prefix of the Full text.
+- **fix 3** — `unwrapHtml` strips the `<p>` markup Lark adds when a sender **edits** a
+  message, and a `post`'s `emotion` element reads `[Delighted]` from `emoji_type`.
+- **fix 4** — Lark is retried once before ML Kit takes over, and every fallback appends its
+  reason to `events.jsonl` (`tools/events` shows `F` rows). The one deterministic failure —
+  Lark returning Latin-heavy input unchanged — is `NotTranslated` and is not retried.
+- **fix 5** — when a title names no chat, the two most recently used chats are asked. This
+  is the only way to reach a reply inside a thread. New `--es debug thread` hook proves it.
+- **fix 6** — every chat a truncated title names is asked (up to 5), and only the one that
+  answers is cached. The poisoned `【bytedcli MR 处理】...` entry was cleared once.
+
+Verified end to end on the phone after each commit; the debug hook resolved a title that
+names no chat through the chat just used, and the ambiguous title asked 5 chats and cached
+nothing. Replay says 101 → 119 of 210 Relays (48 % → 56 %).
+
+Next:
+
+- Soak ≥ 1 day and re-grade: `tools/events --since 2026-08-29T00:30 stats`. Watch the new
+  `fallback` reasons, and whether `no-chat` and `no-match` fall as the replay predicts.
