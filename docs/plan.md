@@ -66,6 +66,7 @@ the table below; `CONTEXT.md` holds the words.
 | HTML in `text` bodies | 11 of 198 `text` messages carry tags (`<p>…`). Lark's Preview strips them | same |
 | Translate failures | Transport-level and clustered: 0 of 60 sequential calls failed, yet one failed inside a 20-call batch and its near-twin succeeded. 16 of 18 Han fragments behind the ML Kit fallbacks translate fine — one retry keeps Lark's quality for 10 of 11 Relays | same |
 | Person DMs | Also carry the title `Lark`. `title == Sender` never happened in 210 Relays | `docs/experiments/09-soak.md` |
+| `chats/search` is not deterministic | The same query can omit a chat that exists: 4 of 11 lookups for `Zhifu Liu, Max Coplan, Yonghao Cao` missed it, at `page_size` 20, 50 **and** 100 — the page is full every time, so this is not a paging cutoff. A title therefore resolves or not, run to run, and some `no-chat` rows are the API, not the rule. The Layer 6 LRU fallback catches these too | `docs/progress.md` 2026-08-28 |
 
 ## Layers
 

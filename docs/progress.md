@@ -1127,3 +1127,33 @@ Next:
   matters: the real rules do at least as well as the estimate, so Layer 6's numbers hold.
 - 🐍 `tools/lark-token` stays Python by decision: it runs rarely, and moving it would buy
   only the loss of the `uv` + `cryptography` dependency.
+
+### 2026-08-28 — `chats/search` is not deterministic
+
+Found while proving a lint fix was behaviour-preserving: re-fetching the replay corpus gave a
+byte-identical result except one line — the member-named group `Zhifu Liu, Max Coplan, Yonghao Cao`
+resolved to a chat in one run and to nothing in the other.
+
+It is not the refactor. The same query, repeated:
+
+| `page_size` | 4 lookups |
+| --- | --- |
+| 20 | miss, hit, hit, hit |
+| 50 | miss, miss, error, hit |
+| 100 | miss, hit, hit, hit |
+
+**4 of 11 lookups missed a chat that exists**, and the page came back full every time — so a
+larger page does not fix it and `page_token` would not either. The server simply omits the chat
+sometimes.
+
+Consequences:
+
+- Some `no-chat` rows in every soak are the API, not the match rule. The Layer 6 numbers are a
+  floor, not a ceiling.
+- The LRU fallback (fix 5) is worth more than the replay measured: it rescues these intermittent
+  misses as well as thread replies.
+- Corpus regeneration is not perfectly reproducible. `ReplayTest` reads a pulled corpus, so a
+  re-pull can move the score by a Relay or two.
+
+Not worth a retry loop on its own — the LRU fallback already covers it, and a retry would double
+the search cost of every unresolved title for a ~1-in-3 chance.
