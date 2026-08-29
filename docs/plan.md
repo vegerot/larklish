@@ -58,6 +58,14 @@ the table below; `CONTEXT.md` holds the words.
 | Fallback on Latin-heavy text | Both real ML Kit fallback rows made the English worse (`customFetch` → `CustomEtch`, shouting). `tools/events` had hidden them (`~` after `Sender: `) | same |
 | User refresh tokens | Single-use: the phone's first refresh killed the Mac's lark-cli chain 35 min later (`token_missing`). A separate `auth login` (Debian) is a separate chain and survives | same, "Layer 5's first hours" |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
+| Message → Original delay | p50 5.1 s, p90 10.2 s, p95 24.3 s, **max 43.9 s** over 116 matched Relays. No message ever arrives *after* its Original, so only the backward edge matters | `docs/experiments/11-layer6-fixes.md` |
+| Topic chats | `San Jose 1199…`, `Seller Center - FE Oncall` are `chat_mode: topic`. A reply in a thread puts the **thread's root text** in the Original's title, so `chats/search` finds nothing — but `im/v1/messages` on the chat returns the thread replies | `docs/experiments/09-soak.md` |
+| Ambiguous titles | A truncated title can match many chats (`【bytedcli MR 处理】` → 6). Caching the first hit poisons the entry for good | same |
+| Preview vs. Full text | The Preview is **not** a faithful prefix: `emotion` tags read `[Delighted]` not `[emotion]`, `@All` reads `@all`, and a trailing bold run can be dropped. A case-insensitive 12-character prefix match inside the window is unambiguous (0 of 114 stems matched two of 35 chats) | `docs/experiments/11-layer6-fixes.md` |
+| Messages get edited | The API returns the edited text and Lark re-posts the Original. A stem match against an edited message can never succeed | same |
+| HTML in `text` bodies | 11 of 198 `text` messages carry tags (`<p>…`). Lark's Preview strips them | same |
+| Translate failures | Transport-level and clustered: 0 of 60 sequential calls failed, yet one failed inside a 20-call batch and its near-twin succeeded. 16 of 18 Han fragments behind the ML Kit fallbacks translate fine — one retry keeps Lark's quality for 10 of 11 Relays | same |
+| Person DMs | Also carry the title `Lark`. `title == Sender` never happened in 210 Relays | `docs/experiments/09-soak.md` |
 
 ## Layers
 
@@ -140,6 +148,34 @@ and in `progress.md` with the reason.
 
 Far future: a backend holds the secrets and tokens and maybe runs the fetch. Keep the
 fetcher behind one interface so it can move.
+
+### Layer 6 — Make the Update land 🚧 next
+
+Layer 5's first day Updated **34 of 91** real Relays (Experiment 09). The fetch works; the
+chat resolver and the match rule lose the rest. Every fix below is measured on an offline
+replay of 210 Relays (`tools/replay/`, Experiments 10–11), so the order is by measured
+value, not by guess. Baseline 101 → **119 of 210** stacked.
+
+1. **Window `BEFORE_MS` 15 s → 60 s** (+6, no extra calls). The delay from message to
+   Original runs to 43.9 s; 15 s throws away the top 7 %. It saturates at 60 s. Leave
+   `AFTER_MS` at 5 s — widening it to 60 s recovers nothing.
+2. **Case-insensitive prefix match** (+8 stacked): compare the first 12 whitespace-free
+   characters, case-folded, instead of the whole stem. 0 false positives across 35 chats.
+3. **`emotion` → `[emoji_type]`** in `postText` (+0 matches, but the Relay should read
+   `[Delighted]` like Lark). Strip HTML tags from `text` bodies in the same commit.
+4. **Retry Lark once before ML Kit, and record the reason** in the `relayed` event. All 11
+   fallbacks in the record were one 2.5 h block of transport errors, and ML Kit made the
+   English worse every time.
+5. **LRU 2 on `no-chat`** (+3, ~180 extra GETs): try the two most recently used chats and
+   take the stem match. This is the only way to reach a thread reply. Scanning every
+   cached chat finds the same 3 for 4× the calls; a thread-root cache alone finds 0.
+6. **Disambiguate prefix titles** (+1, optional): when a truncated title matches several
+   chats, try each and cache only the one a message confirms.
+
+Rejected: **retrying the message list** — worth 0. The forward edge of the window is
+already generous, so a retry cannot find anything the first call missed.
+
+Then soak again and re-grade with `tools/events stats`.
 
 ### Later (not experiments)
 
