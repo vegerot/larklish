@@ -28,6 +28,9 @@ private const val BOT_DM_TITLE = "Lark"
 /** chats to re-try when the title names no chat; two is the whole prize (Experiment 10) */
 private const val RECENT_TRIES = 2
 
+/** a truncated title can name many chats (`【bytedcli MR 处理】` names 6); try this many (Experiment 11) */
+private const val PREFIX_TRIES = 5
+
 /** the search index lags ~15 s behind the list (E2 continued) */
 private const val SEARCH_TRIES = 4
 private const val SEARCH_GAP_MS = 2_000L
@@ -85,7 +88,20 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
     private val recent = ArrayDeque<String>()
 
     suspend fun fullTextOf(title: String, preview: Preview, whenMs: Long): Pick = withContext(Dispatchers.IO) {
-        chatId(title, preview, whenMs)?.let { return@withContext pickIn(it, title, preview, whenMs) }
+        val key = if (isDm(title, preview)) "dm:" + preview.sender else title
+        val candidates = chats[key]?.let { listOf(it) } ?: searchChats(title, preview, whenMs)
+        var outcome: Pick = Pick.Skipped("no-chat")
+        // A truncated title can name several chats. Only the one holding the message is right,
+        // so ask each in turn and remember that one — never a guess (Experiment 09).
+        candidates.forEachIndexed { i, chatId ->
+            val pick = pickIn(chatId, title, preview, whenMs)
+            if (i == 0) outcome = pick
+            if (pick is Pick.Found) {
+                remember(key, chatId)
+                return@withContext pick
+            }
+        }
+        if (candidates.size == 1) remember(key, candidates[0]) // unambiguous: keep it even on a miss
         // A reply inside a topic chat carries the *thread's* root text as its title, so no chat
         // search can ever find it (Experiment 09). Such a reply follows other traffic in the same
         // chat, so the chat is almost always one Larklish just used (Experiment 10).
@@ -93,7 +109,7 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
             val pick = pickIn(chatId, title, preview, whenMs)
             if (pick is Pick.Found) return@withContext pick
         }
-        Pick.Skipped("no-chat")
+        outcome
     }
 
     private fun pickIn(chatId: String, title: String, preview: Preview, whenMs: Long): Pick {
@@ -120,25 +136,22 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
     }
 
     /**
-     * A DM Original has title `Lark` (bots) or the Sender's own name (people, expected — none
-     * seen yet, Experiment 08); everything else is a group. The two caches never cross: the
-     * bot that DMs Max also posts in groups.
+     * A DM Original has title `Lark` — bots and people alike (Experiment 09) — or, in theory,
+     * the Sender's own name; everything else is a group. The two caches never cross: the bot
+     * that DMs Max also posts in groups.
      */
-    private suspend fun chatId(title: String, preview: Preview, whenMs: Long): String? {
-        val isDm = title == BOT_DM_TITLE || title == preview.sender
-        val key = if (isDm) "dm:" + preview.sender else title
-        chats[key]?.let { return it }
-        val found = if (isDm) dmChatId(preview, whenMs) else groupChatId(title)
-        return found?.let { remember(key, it) }
-    }
+    private fun isDm(title: String, preview: Preview) = title == BOT_DM_TITLE || title == preview.sender
 
-    /** Lark truncates long titles with `...`; then any group whose name starts with the stem, else the exact name. */
-    private fun groupChatId(title: String): String? {
+    private suspend fun searchChats(title: String, preview: Preview, whenMs: Long): List<String> =
+        if (isDm(title, preview)) listOfNotNull(dmChatId(preview, whenMs)) else groupChatIds(title)
+
+    /** Lark truncates long titles with `...`; then every group whose name starts with the stem, else the exact name. */
+    private fun groupChatIds(title: String): List<String> {
         val stem = title.removeSuffix("...")
         val hits = LarkHttp.getJson("/open-apis/im/v1/chats/search", mapOf("query" to stem, "page_size" to "20"), token.bearer())
             .getJSONObject("data").getJSONArray("items").objects()
         val match: (String) -> Boolean = if (title.endsWith("...")) { n -> n.startsWith(stem) } else { n -> n == title }
-        return hits.firstOrNull { match(it.getString("name")) }?.getString("chat_id")
+        return hits.filter { match(it.getString("name")) }.take(PREFIX_TRIES).map { it.getString("chat_id") }
     }
 
     /**
@@ -167,10 +180,10 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
     private fun peerName(hit: JSONObject): String =
         Html.fromHtml(hit.getString("display_info").substringBefore("\n"), 0).toString()
 
-    private fun remember(key: String, chatId: String): String {
+    private fun remember(key: String, chatId: String) {
+        if (chats[key] == chatId) return
         chats[key] = chatId
         cacheFile.writeText(JSONObject(chats as Map<*, *>).toString())
-        return chatId
     }
 }
 
