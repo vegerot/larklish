@@ -1157,3 +1157,42 @@ Consequences:
 
 Not worth a retry loop on its own — the LRU fallback already covers it, and a retry would double
 the search cost of every unresolved title for a ~1-in-3 chance.
+
+### 2026-08-28 — the window now reaches as far as the stem allows (correcting the entry above)
+
+Max asked why one Relay stayed truncated. The Update ran and recorded `no-message`:
+
+| | |
+| --- | --- |
+| Emily's message sent | 03:12:25Z |
+| Lark's Original arrived | 03:16:24Z |
+| window then | `[Original − 60 s, +5 s]` |
+
+**3 m 59 s late.** A batch: three Originals inside two seconds, two of them `no-message`. The
+chat was cached correctly, so this was never a resolver problem.
+
+Rejected on evidence: anchoring the window on `notification.when` instead of `sbn.postTime`.
+Lark sets `when` to the delivery time (`1787973383914` = 03:16:23.9Z), not the message time.
+Nothing on the notification reveals the real age.
+
+**The earlier entry — "do not widen the window for this… a wider window costs a worse pick on
+every ordinary Original" — was wrong**, and asserted a cost that was never measured. The
+Experiment 11 sweep already said 60 s, 120 s and 300 s all score 115: no gain on that corpus,
+and **no loss**. Widening is monotonic — the wider window is a superset that adds only *older*
+messages, and `pickMessage` takes the newest match, so a window that already had a match keeps
+the same one. It can only turn a miss into a hit.
+
+Measured before changing anything:
+
+- **Latency: none.** 65 s vs 305 s over four calls each: 1140–1349 ms vs 1182–1376 ms. The
+  window is a filter on a call already made, and `pickMessage` is pure.
+- **Page overflow: no.** Worst case in 29 chats is 7 messages per 65 s and 10 per 305 s,
+  against `page_size = 20`.
+- **Ambiguity: only for short stems.** Of 210 Originals, 185 carry a full 12-character needle;
+  9 are under 8 characters and 7 are empty (`Sender:...`, Experiment 06 E5). With an empty
+  needle `startsWith` always matches, so the window is the *only* identifier.
+
+So the reach follows the needle: **`BEFORE_DELAYED_MS = 300_000` when the folded stem fills all
+12 characters, `BEFORE_MS = 60_000` otherwise.** The request carries the wider bound; the
+narrowing happens in `pickMessage`. Replay is unchanged at 122 of 210, as monotonicity predicts,
+with `no-message` 19 → 16 and `no-match` 11 → 14 — the same outcomes, reported more truthfully.

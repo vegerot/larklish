@@ -67,6 +67,7 @@ the table below; `CONTEXT.md` holds the words.
 | Translate failures | Transport-level and clustered: 0 of 60 sequential calls failed, yet one failed inside a 20-call batch and its near-twin succeeded. 16 of 18 Han fragments behind the ML Kit fallbacks translate fine — one retry keeps Lark's quality for 10 of 11 Relays | same |
 | Person DMs | Also carry the title `Lark`. `title == Sender` never happened in 210 Relays | `docs/experiments/09-soak.md` |
 | `chats/search` is not deterministic | The same query can omit a chat that exists: 4 of 11 lookups for `Zhifu Liu, Max Coplan, Yonghao Cao` missed it, at `page_size` 20, 50 **and** 100 — the page is full every time, so this is not a paging cutoff. A title therefore resolves or not, run to run, and some `no-chat` rows are the API, not the rule. The Layer 6 LRU fallback catches these too | `docs/progress.md` 2026-08-28 |
+| Delayed pushes | Lark delivers a backlog minutes late: 3 m 59 s observed, three Originals inside two seconds, two of them `no-message`. `notification.when` is the *delivery* time, not the message time, so nothing on the notification reveals it. The match window reaches back 5 min for a full-length stem and 60 s for a short or empty one | `docs/progress.md` 2026-08-28 |
 
 ## Layers
 
@@ -159,7 +160,8 @@ value, not by guess. Baseline 101 → **119 of 210** stacked.
 
 1. **Window `BEFORE_MS` 15 s → 60 s** (+6, no extra calls). The delay from message to
    Original runs to 43.9 s; 15 s throws away the top 7 %. It saturates at 60 s. Leave
-   `AFTER_MS` at 5 s — widening it to 60 s recovers nothing.
+   `AFTER_MS` at 5 s — widening it to 60 s recovers nothing. *Later the same day: a
+   full-length stem reaches back 5 min, for delayed pushes — see the entry below.*
 2. **Case-insensitive prefix match** (+8 stacked): compare the first 12 whitespace-free
    characters, case-folded, instead of the whole stem. 0 false positives across 35 chats.
 3. **`emotion` → `[emoji_type]`** in `postText` (+0 matches, but the Relay should read

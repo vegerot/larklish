@@ -16,6 +16,13 @@ private const val TAG = "MessageFetcher"
 /** the message is posted before its Original: p50 5 s, p95 24 s, max 44 s (Experiment 11) */
 private const val BEFORE_MS = 60_000L
 
+/**
+ * Lark can deliver a backlog minutes late — 3 m 59 s observed, three Originals in two seconds.
+ * Only a full-length needle may reach that far back: it names one message on its own, so the
+ * extra reach cannot mistake a neighbour for it.
+ */
+private const val BEFORE_DELAYED_MS = 300_000L
+
 /** clock slack between the phone and Lark. No message ever arrives after its Original (Experiment 11). */
 private const val AFTER_MS = 5_000L
 
@@ -52,15 +59,21 @@ sealed interface Pick {
 }
 
 /**
- * The newest message with text inside `[when − 60 s, when + 5 s]` whose text opens with the
- * Preview stem. Only the first [MATCH_CHARS] folded characters must agree: the Preview is
- * not a faithful prefix of the Full text — it writes `[Delighted]` for an emoji, lower-cases
+ * The newest message with text just before the Original whose text opens with the Preview
+ * stem. Only the first [MATCH_CHARS] folded characters must agree: the Preview is not a
+ * faithful prefix of the Full text — it writes `[Delighted]` for an emoji, lower-cases
  * `@All`, and can drop a trailing bold run (Experiment 11). A textless message in the window
  * is reported by type (`image`, `sticker`, `interactive`, …).
+ *
+ * How far back the window reaches depends on how much needle there is. A full-length one
+ * identifies the message by itself, so it may look past a delayed push; a short or empty stem
+ * — `Sender:...` with no boundary in 45 characters — leans on the window to tell messages
+ * apart, so it stays close to the Original.
  */
 fun pickMessage(items: List<Candidate>, stem: String, whenMs: Long): Pick {
-    val window = items.filter { !it.deleted && it.createTime in (whenMs - BEFORE_MS)..(whenMs + AFTER_MS) }
     val needle = stem.fold().take(MATCH_CHARS)
+    val before = if (needle.length == MATCH_CHARS) BEFORE_DELAYED_MS else BEFORE_MS
+    val window = items.filter { !it.deleted && it.createTime in (whenMs - before)..(whenMs + AFTER_MS) }
     window.firstOrNull { it.text.isNotEmpty() && it.text.fold().startsWith(needle) }?.let { return Pick.Found(it) }
     val newest = window.firstOrNull() ?: return Pick.Skipped("no-message")
     return Pick.Skipped(if (newest.text.isNotEmpty()) "no-match" else "type:${newest.msgType}")
@@ -120,7 +133,7 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
             mapOf(
                 "container_id_type" to "chat", "container_id" to chatId,
                 "sort_type" to "ByCreateTimeDesc", "page_size" to "20",
-                "start_time" to ((whenMs - BEFORE_MS) / 1000).toString(),
+                "start_time" to ((whenMs - BEFORE_DELAYED_MS) / 1000).toString(),
                 "end_time" to ((whenMs + AFTER_MS) / 1000).toString(),
             ),
             token.bearer(),

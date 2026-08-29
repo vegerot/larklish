@@ -52,6 +52,27 @@ class PickMessageTest {
     }
 
     @Test
+    fun aFullLengthStemReachesPastADelayedPush() {
+        // Lark delivered a backlog 3 m 59 s late on 2026-08-28; the stem still names the message.
+        val late = text("late", at - 239_000, "How cool would it be if you could search lark and docs")
+        assertEquals(Pick.Found(late), pickMessage(listOf(late), stem = "How cool would it be if you could search lark and docs...".dropLast(3), whenMs = at))
+    }
+
+    @Test
+    fun aShortStemDoesNotReachThatFar() {
+        // With too little needle the window is the only identifier, so it stays near the Original.
+        val late = text("late", at - 239_000, "Yo")
+        assertEquals(Pick.Skipped("no-message"), pickMessage(listOf(late), stem = "Yo", whenMs = at))
+    }
+
+    @Test
+    fun anEmptyStemNeverReachesPastTheMinute() {
+        // `Sender:...` matches anything, so a wide window could take the wrong message.
+        val late = text("late", at - 120_000, "任意内容")
+        assertEquals(Pick.Skipped("no-message"), pickMessage(listOf(late), stem = "", whenMs = at))
+    }
+
+    @Test
     fun aShortStemStillHasToAgreeInFull() {
         val items = listOf(text("other", at - 1_000, "好的"))
         assertEquals(Pick.Skipped("no-match"), pickMessage(items, stem = "不好", whenMs = at))
