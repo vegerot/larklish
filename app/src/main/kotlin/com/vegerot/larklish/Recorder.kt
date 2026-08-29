@@ -40,6 +40,11 @@ class Recorder(private val file: File) {
         append(JSONObject().put("event", "skipped").put("key", key).put("reason", reason))
     }
 
+    /** Layer 6: the Translator fell back to ML Kit. `reason` separates an outage from an untranslatable input. */
+    fun fallback(reason: String) {
+        append(JSONObject().put("event", "fallback").put("reason", reason))
+    }
+
     fun removed(key: String, reason: Int) {
         append(JSONObject().put("event", "removed").put("key", key).put("reason", reason))
     }

@@ -3,7 +3,7 @@
 
     tools/events list                 # every event, newest last, local time
     tools/events list --han --since 2026-08-26T10:29  # only rows with Han text
-    tools/events stats                # counts: Relays, Updates, skips by reason, removal reasons
+    tools/events stats                # counts: Relays, Updates, skips and fallbacks by reason
     tools/events table --han          # Markdown table (Original | Relay | Grade) for docs
     tools/events pull events.jsonl    # save a copy; later: --file events.jsonl
 
@@ -85,6 +85,8 @@ def cmd_list(events, args):
             print(f"{'':11}  → {e['relayText']}")
         elif kind == "skipped":
             print(f"{when(e, args.utc)} S  {e['reason']}")
+        elif kind == "fallback":
+            print(f"{when(e, args.utc)} F  {e['reason']}")
         else:
             r = e["reason"]
             print(f"{when(e, args.utc)} X  reason={r} ({REASONS.get(r, '?')}) chat {chat_id(e)}")
@@ -99,8 +101,12 @@ def cmd_stats(events, args):
     han_any = {id(e) for e in han_text} | {id(e) for e in han_title}
     updated = [e for e in rows if e["event"] == "updated"]
     skipped = [e for e in rows if e["event"] == "skipped"]
+    fell_back = [e for e in rows if e["event"] == "fallback"]
     print(f"relayed {len(relayed)}  updated {len(updated)}  skipped {len(skipped)}  removed {len(removed)}")
     print(f"fallback (~) {sum(map(is_fallback, relayed))}")
+    if fell_back:  # Layer 6: why the Translator gave up — an outage, or an input Lark will not translate
+        why = Counter(e["reason"].split(":")[0] for e in fell_back)
+        print("fallback reasons:", ", ".join(f"{r} ×{n}" for r, n in why.most_common()))
     if updated or skipped:
         types = Counter(e["msgType"] for e in updated)
         reasons = Counter(e["reason"].split(":")[0] if e["reason"].startswith("error") else e["reason"] for e in skipped)

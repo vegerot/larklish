@@ -28,8 +28,8 @@ private const val MAX_TRANSLATE_CHARS = 1000 // the translation API's limit
  */
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val translator = defaultTranslator()
     private val recorder by lazy { Recorder(File(filesDir, "events.jsonl")) }
+    private val translator by lazy { defaultTranslator(recorder::fallback) }
     private val fetcher by lazy { defaultMessageFetcher(this) }
     private val updates = HashMap<String, Job>() // in-flight Update per Original key
     private lateinit var manager: NotificationManager

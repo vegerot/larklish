@@ -5,9 +5,12 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
 
+/** Lark ran its own detection and decided there was nothing to translate. A retry cannot change that. */
+class NotTranslated : IOException("Lark returned the input unchanged")
+
 /**
  * Lark's own translation engine (Experiment 05). Throws on any failure;
- * [FallbackTranslator] turns that into an ML Kit result.
+ * [FallbackTranslator] retries once, then turns that into an ML Kit result.
  */
 class LarkApiTranslator(private val appId: String, private val appSecret: String) : Translator {
     private var token = ""
@@ -26,7 +29,7 @@ class LarkApiTranslator(private val appId: String, private val appSecret: String
         }
         // Lark runs its own language detection and returns Latin-heavy text untouched
         // (Experiment 05). The caller only sends Han text, so "unchanged" means "not translated".
-        if (out == text) throw IOException("Lark returned the input unchanged")
+        if (out == text) throw NotTranslated()
         out
     }
 
