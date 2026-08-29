@@ -56,14 +56,14 @@ def adb(*args, allow_fail=False):
 def require_device():
     """`adb logcat` waits forever when no phone is attached, so check before anything blocks."""
     out = subprocess.run(["adb", "devices"], capture_output=True, text=True)
-    if not [l for l in out.stdout.splitlines()[1:] if l.strip().endswith("\tdevice")]:
+    if not [ln for ln in out.stdout.splitlines()[1:] if ln.strip().endswith("\tdevice")]:
         sys.exit("no phone on adb — check the cable, then `adb devices`")
 
 
 # ── events: the Relay record (`filesDir/events.jsonl`, written by Recorder.kt) ─
 def read_events(path):
     if path:
-        text = open(path, encoding="utf-8").read()
+        text = pathlib.Path(path).read_text(encoding="utf-8")
     else:
         require_device()
         text = adb("exec-out", "run-as", PACKAGE, "cat", "files/events.jsonl").stdout
@@ -152,8 +152,12 @@ def events_stats(events, args):
         print(f"span {when(relayed[0], args.utc)} → {when(relayed[-1], args.utc)}")
 
 
+def md_cell(s):
+    return s.replace("|", "\\|")
+
+
 def events_table(events, args):
-    cell = lambda s: s.replace("|", "\\|")
+    cell = md_cell
     print("| Original | Relay | Grade |")
     print("| --- | --- | --- |")
     for e in select(events, args):
@@ -313,6 +317,11 @@ def lark_api(method, path, payload):
     return d["data"] if d.get("ok") else None
 
 
+def names_chat(name, title, stem):
+    """Lark truncates a long title with `...`; then any chat whose name starts with the stem."""
+    return name.startswith(stem) if title.endswith("...") else name == title
+
+
 def preview_sender(text):
     if text.endswith(":...") and ": " not in text:
         text = text[:-3] + " ..."
@@ -373,7 +382,7 @@ def cmd_replay(args):
         "".join(f"{at_ms(e)}\t{esc(e['title'])}\t{esc(e['text'])}\n" for e in relayed), encoding="utf-8")
 
     # the phone's own DM cache: `messages/search` is not replayable offline
-    raw = (open(args.chats, encoding="utf-8").read() if args.chats
+    raw = (pathlib.Path(args.chats).read_text(encoding="utf-8") if args.chats
            else adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json", allow_fail=True).stdout).strip()
     cached = json.loads(raw) if raw.startswith("{") else {}
     dms = {k[3:]: v for k, v in cached.items() if k.startswith("dm:")}
@@ -386,8 +395,7 @@ def cmd_replay(args):
             continue
         stem = title[:-3] if title.endswith("...") else title
         data = lark_api("GET", "/open-apis/im/v1/chats/search", {"query": stem, "page_size": 20}) or {}
-        hit = (lambda n: n.startswith(stem)) if title.endswith("...") else (lambda n: n == title)
-        ids = [h["chat_id"] for h in data.get("items", []) if hit(h["name"])][:5]
+        ids = [h["chat_id"] for h in data.get("items", []) if names_chat(h["name"], title, stem)][:5]
         titles[title] = ids
         chats.update(ids)
         print(f"  {len(ids)} chat(s) for [{title}]")
