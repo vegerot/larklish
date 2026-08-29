@@ -988,3 +988,62 @@ Next:
 Next:
 
 - Soak continues; icon polish per the todo when the artist delivers a vector.
+
+### 2026-08-28 — Soak 2: Layer 5 for a day (Experiment 09)
+
+- 📊 91 real Relays, **34 Updated (37 %)**, median 2.3 s. `post` is 2 of 3 Updated
+  messages. No crashes. Full write-up: `docs/experiments/09-soak.md`.
+- 🔍 The chat resolver is the bottleneck; only 2 chats ever succeed. Five root causes,
+  each reproduced against the live Open API today:
+  1. **Threads**: a topic chat puts the thread's root text in the title, so
+     `chats/search` finds nothing. The replies *are* in the chat's own message list.
+  2. **Ambiguous prefix**: `【bytedcli MR 处理】...` matches 6 chats; we cache the first
+     one forever → every later MR is `no-message`.
+  3. **No retry** on the message list (we give up 1.8 s after the Original).
+  4. **Strict match**: `emotion` tags become `[emotion]` not `[Delighted]`, and Lark's
+     Preview drops a trailing bold run, so `startsWith(stem)` fails.
+  5. **Fallback on transport errors**: all 11 `~` rows are one 2.5 h block; Lark
+     translates the same strings well today, ML Kit mangles them.
+- 🆕 Person DMs also carry the title `Lark`; `title == Sender` never happened.
+
+Next:
+
+- Layer 6 "make the Update land" — the five fixes above, ~34/91 → ~63/91.
+
+### 2026-08-28 — Which thread resolver? (Experiment 10)
+
+- 🧪 Replayed all 210 Relays (08-26 → 28) offline against the live API through the three
+  candidate resolvers. Scripts in `tools/replay/`; write-up in
+  `docs/experiments/10-thread-resolver.md`.
+- 📉 The ceiling is **3 messages in 3 days**. Twelve Relays have a title `chats/search`
+  cannot resolve, but 9 are reactions, recalls or calendar reminders with nothing to fetch.
+- 🥇 **LRU 2 wins**: +3 for +71 GETs. Scanning every cached chat finds the same 3 for
+  +278 GETs. A thread-root cache alone finds **0** — it can never earn the first hit.
+- 🛡️ 0 of 105 stems match in more than one of 35 chats, so the LRU fallback cannot pick
+  the wrong chat.
+- 🚫 Running the fallback after `no-message`/`no-match` too: **+0** found, +134…+415 GETs.
+- ⚖️ Re-ranked Layer 6: the loose match is worth **+7**, the thread resolver **+3**, prefix
+  disambiguation **+1** (most `【bytedcli MR 处理】` messages are `interactive` cards).
+
+### 2026-08-28 — All five Layer 6 fixes measured (Experiment 11)
+
+- 🧪 Ran every proposed fix through the Experiment 10 harness (210 Relays). Four of my
+  five guesses were wrong. Write-up: `docs/experiments/11-layer6-fixes.md`.
+- ❌ **Fix 1 (retry the message list) is worth 0.** The forward edge is already generous —
+  no message ever arrives after its Original. The **backward** edge is the bug: the
+  message-to-Original delay runs p50 5.1 s, p95 24.3 s, **max 43.9 s**, so
+  `BEFORE_MS = 15_000` throws away the top 7 %. `60_000` recovers **+6** for zero extra
+  API calls and zero ambiguity. One constant, not a retry loop.
+- ✅ Fix 2 **+7** (the prefix match carries it; `emotion` alone is +2 and subsumed, but keep
+  it — the Relay should show `[Delighted]`, not `[emotion]`).
+- ✅ Fix 3 **+1**, fix 4 **+3**, fix 5 **10 of 11 Relays** (16 of 18 Han fragments translate
+  fine through Lark today; 1 is genuinely `unchanged`; 1 transport failure reproduced live,
+  and 0 of 60 sequential calls failed — failures cluster).
+- 📈 Stacked: **101 → 119 of 210 Relays (48 % → 56 %)**, GETs 170 → 367.
+- 🆕 Messages get **edited** after posting and the API returns the edited text, so a stem
+  match can never succeed on those. `text` bodies can contain HTML (`<p>…`): 11 of 198.
+
+Next:
+
+- Layer 6 in the measured order: window 60 s → prefix match → emotion → translate retry →
+  LRU 2 → (optional) disambiguate. Drop the message-list retry.
