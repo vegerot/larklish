@@ -279,13 +279,12 @@ lark-cli auth login                                       #   …then log lark-c
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
-adb shell am start -n com.vegerot.larklish/.MainActivity -f 0x10008000 \
-  --es debug refresh                                      # Layer 5: force a user-token refresh, log the user
-adb shell run-as com.vegerot.larklish rm files/chats.json \
-  && adb shell am force-stop com.vegerot.larklish         # Layer 5: reset the chat-id cache (the service keeps it in memory)
+tools/probe "中文消息"                                  # post to the test group, then show the Relay
+tools/probe --install --thread "中文消息"               #   …after installDebug; --thread adds a reply in a thread
+tools/probe --debug refresh                            #   MainActivity hooks: user, refresh, fetch, thread
+tools/chats                                            # what the chat-id cache holds
+tools/chats --clear                                    #   reset it (deletes the file *and* force-stops)
 tools/events stats                                     # the Relay record (see tools/events --help)
 tools/events --since 2026-08-26T17:29 --han list       #   views: list, stats, table, pull
 tools/phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # fire a deep link; also top, shade, shot, home
-lark-cli im +messages-send --as bot \
-  --user-id ou_4d4c9ea3307c313a134ac3ea0821935e --text "中文"   # trigger an Original
 ```

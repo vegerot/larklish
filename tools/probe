@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Send one message to the test group and show what Larklish did with it.
+
+    tools/probe "这是一条测试消息"      # send, wait, print the Relay and the Update
+    tools/probe --install "…"          # ./gradlew installDebug first
+    tools/probe --thread "…"           # a root message, then a reply inside its thread
+    tools/probe --debug thread         # run a MainActivity debug hook instead of sending
+
+The phone must be on `adb`, and `lark-cli auth status` must show the bot as ready.
+Read the Relay record afterwards with `tools/events list`.
+"""
+
+import argparse
+import json
+import shlex
+import subprocess
+import sys
+import time
+
+PACKAGE = "com.vegerot.larklish"
+TEST_CHAT = "oc_e2feee77ba20b6c5285d22fb8aa90eb4"  # Larklish 测试群
+TEST_TITLE = "Larklish 测试群"
+TAGS = ["LarkListener:I", "MessageFetcher:I", "Translator:I", "FallbackTranslator:W", "*:S"]
+
+
+def run(args, **kw):
+    out = subprocess.run(args, capture_output=True, text=True, **kw)
+    if out.returncode != 0:
+        sys.exit(f"{args[0]}: {(out.stderr or out.stdout).strip()}")
+    return out.stdout
+
+
+def require_device():
+    """`adb logcat` waits forever when no phone is attached, so check before anything blocks."""
+    out = subprocess.run(["adb", "devices"], capture_output=True, text=True)
+    if not [l for l in out.stdout.splitlines()[1:] if l.strip().endswith("\tdevice")]:
+        sys.exit("no phone on adb — check the cable, then `adb devices`")
+
+
+def send(text, reply_to=None):
+    """Post as the bot. Returns the new message id."""
+    args = ["lark-cli", "im", "+messages-reply", "--message-id", reply_to, "--reply-in-thread"] if reply_to \
+        else ["lark-cli", "im", "+messages-send", "--chat-id", TEST_CHAT]
+    out = run(args + ["--as", "bot", "--text", text])
+    return json.loads(out)["data"]["message_id"]
+
+
+def debug_hook(what, title, text):
+    # `adb shell` hands one string to the phone's shell, which splits it again: a title with a
+    # space silently truncates unless every value is quoted for *that* shell.
+    command = " ".join([
+        "am", "start", "-n", f"{PACKAGE}/.MainActivity",
+        "--es", "debug", shlex.quote(what),
+        "--es", "title", shlex.quote(title),
+        "--es", "text", shlex.quote(text),
+    ])
+    run(["adb", "shell", command])
+
+
+def log():
+    out = run(["adb", "logcat", "-d", "-s"] + TAGS)
+    for line in out.splitlines():
+        parts = line.split(None, 5)  # date time pid tid level tag: message
+        print(" ".join(parts[1:2] + parts[4:]) if len(parts) > 5 else line)
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("text", nargs="?", help="the message to post (Chinese exercises the Translator)")
+    p.add_argument("--install", action="store_true", help="./gradlew installDebug first")
+    p.add_argument("--thread", action="store_true", help="post a root message, then reply inside its thread")
+    p.add_argument("--debug", metavar="HOOK", help="run a MainActivity debug hook: user, refresh, fetch or thread")
+    p.add_argument("--title", default=TEST_TITLE, help="title for --debug fetch/thread")
+    p.add_argument("--wait", type=int, default=12, help="seconds to wait for the Update (default 12)")
+    args = p.parse_args()
+    if not args.text and not args.debug:
+        p.error("give a message to send, or --debug HOOK")
+
+    require_device()
+    if args.install:
+        print("installing…")
+        run(["./gradlew", "--quiet", "installDebug"])
+    run(["adb", "logcat", "-c"])
+
+    if args.debug:
+        debug_hook(args.debug, args.title, args.text or "")
+    else:
+        root = send(args.text)
+        print(f"sent {root}")
+        if args.thread:
+            time.sleep(min(args.wait, 8))
+            print(f"replied {send('回复：' + args.text, reply_to=root)}")
+
+    time.sleep(args.wait)
+    log()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
