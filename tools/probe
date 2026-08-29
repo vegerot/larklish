@@ -49,7 +49,9 @@ def debug_hook(what, title, text):
     # `adb shell` hands one string to the phone's shell, which splits it again: a title with a
     # space silently truncates unless every value is quoted for *that* shell.
     command = " ".join([
-        "am", "start", "-n", f"{PACKAGE}/.MainActivity",
+        # CLEAR_TOP|NEW_TASK: MainActivity reads the hook in onCreate, so a running instance
+        # must be recreated — otherwise `am start` delivers onNewIntent and nothing happens.
+        "am", "start", "-f", "0x10008000", "-n", f"{PACKAGE}/.MainActivity",
         "--es", "debug", shlex.quote(what),
         "--es", "title", shlex.quote(title),
         "--es", "text", shlex.quote(text),

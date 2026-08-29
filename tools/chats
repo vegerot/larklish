@@ -44,11 +44,12 @@ def main():
         print("cache deleted and app force-stopped; it rebuilds on the next Original")
         return 0
 
-    out = adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json")
-    if not out.stdout.strip():
+    # `adb exec-out` folds the device's stderr into stdout, so a missing file arrives as text.
+    raw = adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json").stdout.strip()
+    if not raw.startswith("{"):
         print("no cache yet — nothing has been resolved")
         return 0
-    chats = json.loads(out.stdout)
+    chats = json.loads(raw)
     groups = {k: v for k, v in chats.items() if not k.startswith("dm:")}
     dms = {k[3:]: v for k, v in chats.items() if k.startswith("dm:")}
     for label, rows in (("groups", groups), ("DMs", dms)):
