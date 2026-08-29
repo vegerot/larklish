@@ -19,6 +19,9 @@ private const val BEFORE_MS = 60_000L
 /** clock slack between the phone and Lark. No message ever arrives after its Original (Experiment 11). */
 private const val AFTER_MS = 5_000L
 
+/** enough characters to name one message inside the window; 0 false positives in 35 chats (Experiment 11) */
+private const val MATCH_CHARS = 12
+
 /** a bot DM's Original has this title; the Sender is the bot*/
 private const val BOT_DM_TITLE = "Lark"
 
@@ -43,20 +46,22 @@ sealed interface Pick {
 }
 
 /**
- * The newest message with text inside `[when − 60 s, when + 5 s]` whose text starts with
- * the Preview stem, whitespace ignored (Lark's Preview drops the newlines of a `post` and
- * keeps those of a `text`, Experiment 08). A textless message there is reported by type
- * (`image`, `sticker`, `interactive`, …).
+ * The newest message with text inside `[when − 60 s, when + 5 s]` whose text opens with the
+ * Preview stem. Only the first [MATCH_CHARS] folded characters must agree: the Preview is
+ * not a faithful prefix of the Full text — it writes `[Delighted]` for an emoji, lower-cases
+ * `@All`, and can drop a trailing bold run (Experiment 11). A textless message in the window
+ * is reported by type (`image`, `sticker`, `interactive`, …).
  */
 fun pickMessage(items: List<Candidate>, stem: String, whenMs: Long): Pick {
     val window = items.filter { !it.deleted && it.createTime in (whenMs - BEFORE_MS)..(whenMs + AFTER_MS) }
-    val squashedStem = stem.squash()
-    window.firstOrNull { it.text.isNotEmpty() && it.text.squash().startsWith(squashedStem) }?.let { return Pick.Found(it) }
+    val needle = stem.fold().take(MATCH_CHARS)
+    window.firstOrNull { it.text.isNotEmpty() && it.text.fold().startsWith(needle) }?.let { return Pick.Found(it) }
     val newest = window.firstOrNull() ?: return Pick.Skipped("no-message")
     return Pick.Skipped(if (newest.text.isNotEmpty()) "no-match" else "type:${newest.msgType}")
 }
 
-private fun String.squash() = filterNot { it.isWhitespace() }
+/** How a stem and a message text are compared: no whitespace, no case (Lark's Preview keeps neither). */
+private fun String.fold() = filterNot { it.isWhitespace() }.lowercase()
 
 /** `@_user_1` placeholders → `@Name`, from the message's `mentions` (key → name). */
 fun resolveMentions(text: String, mentions: Map<String, String>): String =

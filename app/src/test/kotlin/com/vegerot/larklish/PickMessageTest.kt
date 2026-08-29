@@ -38,6 +38,26 @@ class PickMessageTest {
     }
 
     @Test
+    fun theStemMatchesWithoutItsCase() {
+        // Lark's Preview lower-cases the `@All` mention of a `post` (Experiment 11).
+        val post = Candidate("p", "post", at - 1_000, deleted = false, text = "Hi @All Happy Friday!")
+        assertEquals(Pick.Found(post), pickMessage(listOf(post), stem = "Hi @all Happy Friday!", whenMs = at))
+    }
+
+    @Test
+    fun onlyTheOpeningOfTheStemHasToAgree() {
+        // Lark's Preview dropped the trailing bold run `FOR SAN JOSE OFFICE ONLY` (Experiment 11).
+        val post = Candidate("p", "post", at - 1_000, deleted = false, text = "Hi @All Happy Friday! FOR SAN JOSE OFFICE ONLY\nHope everyone has started packing")
+        assertEquals(Pick.Found(post), pickMessage(listOf(post), stem = "Hi @all Happy Friday!Hope everyone has started packing", whenMs = at))
+    }
+
+    @Test
+    fun aShortStemStillHasToAgreeInFull() {
+        val items = listOf(text("other", at - 1_000, "好的"))
+        assertEquals(Pick.Skipped("no-match"), pickMessage(items, stem = "不好", whenMs = at))
+    }
+
+    @Test
     fun recalledMessagesAreSkipped() {
         val items = listOf(Candidate("r", "text", at - 1_000, deleted = true, text = ""), text("ok", at - 2_000, "还在"))
         assertEquals(Pick.Found(items[1]), pickMessage(items, stem = "", whenMs = at))
