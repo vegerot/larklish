@@ -1093,3 +1093,15 @@ Next:
   measured max 43.9 s on a normal day and no gain past 60 s, so **do not widen the window
   for this**: it only appears when push is delayed, and a wider window costs a worse pick on
   every ordinary Original. Let the next soak say how often it really happens.
+
+### 2026-08-28 — one tool: `tools/larklish`
+
+- 🧰 `tools/events`, `tools/probe`, `tools/chats` and `tools/phone` are now groups of one
+  entry point. Each keeps the shape it had, and the views it had become sub-subcommands:
+  `tools/larklish events --since … list`, `… phone shade shot.png`, `… chats --clear`.
+- 🔐 `tools/lark-token` stays its own file — it is the only piece with dependencies of its
+  own (a `uv` script needing `cryptography`). `tools/larklish token` execs it and passes
+  arguments through, so there is still one entry point to remember.
+- ✅ Equivalence checked, not assumed: `events` `pull`, `stats`, `list`, `table` and the
+  filter flags all diff clean against the old tool, as do `chats` and `phone top`. `probe`,
+  `probe --debug thread` and `token` were re-run against the phone.

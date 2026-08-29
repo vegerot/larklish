@@ -181,7 +181,7 @@ push the message off the page, and `unwrapHtml` strips the markup Lark adds to a
 message. The chat cache now holds only what a message confirmed, so the one poisoned entry
 was cleared once (`rm files/chats.json`, force-stop) and cannot come back.
 
-Then soak again and re-grade with `tools/events stats` — now including `fallback` rows,
+Then soak again and re-grade with `tools/larklish events stats` — now including `fallback` rows,
 which say whether the Translator hit an outage or an input Lark will not translate.
 
 ### Later (not experiments)
@@ -269,7 +269,7 @@ Dev machines (Max moves between them; `local.properties` is per machine):
 cp debug.keystore ~/.android/debug.keystore              # once per machine: same debug signer everywhere,
                                                           #   so installDebug upgrades in place (keeps data + grants)
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
-tools/lark-token --write                                  # Layers 4–5: lark.appId, lark.appSecret,
+tools/larklish token --write                              # Layers 4–5: lark.appId, lark.appSecret,
                                                           #   lark.userRefreshToken from lark-cli's store
                                                           #   (needs uv; Debian: curl -LsSf https://astral.sh/uv/install.sh | sh)
 lark-cli auth login                                       #   …then log lark-cli in again: the phone consumes
@@ -279,12 +279,12 @@ lark-cli auth login                                       #   …then log lark-c
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
-tools/probe "中文消息"                                  # post to the test group, then show the Relay
-tools/probe --install --thread "中文消息"               #   …after installDebug; --thread adds a reply in a thread
-tools/probe --debug refresh                            #   MainActivity hooks: user, refresh, fetch, thread
-tools/chats                                            # what the chat-id cache holds
-tools/chats --clear                                    #   reset it (deletes the file *and* force-stops)
-tools/events stats                                     # the Relay record (see tools/events --help)
-tools/events --since 2026-08-26T17:29 --han list       #   views: list, stats, table, pull
-tools/phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # fire a deep link; also top, shade, shot, home
+tools/larklish probe "中文消息"                          # post to the test group, then show the Relay
+tools/larklish probe --install --thread "中文消息"       #   …after installDebug; --thread adds a reply in a thread
+tools/larklish probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch, thread
+tools/larklish chats                                   # what the chat-id cache holds
+tools/larklish chats --clear                           #   reset it (deletes the file *and* force-stops)
+tools/larklish events stats                            # the Relay record; views: list, stats, table, pull
+tools/larklish events --since 2026-08-29T00:30 --han list
+tools/larklish phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # also top, shade, shot, home
 ```
