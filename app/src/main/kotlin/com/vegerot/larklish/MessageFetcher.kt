@@ -13,10 +13,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "MessageFetcher"
 
-/** the message is posted before its Original (E2: ~3 s)*/
-private const val BEFORE_MS = 15_000L
+/** the message is posted before its Original: p50 5 s, p95 24 s, max 44 s (Experiment 11) */
+private const val BEFORE_MS = 60_000L
 
-/** clock slack between the phone and Lark*/
+/** clock slack between the phone and Lark. No message ever arrives after its Original (Experiment 11). */
 private const val AFTER_MS = 5_000L
 
 /** a bot DM's Original has this title; the Sender is the bot*/
@@ -43,7 +43,7 @@ sealed interface Pick {
 }
 
 /**
- * The newest message with text inside `[when − 15 s, when + 5 s]` whose text starts with
+ * The newest message with text inside `[when − 60 s, when + 5 s]` whose text starts with
  * the Preview stem, whitespace ignored (Lark's Preview drops the newlines of a `post` and
  * keeps those of a `text`, Experiment 08). A textless message there is reported by type
  * (`image`, `sticker`, `interactive`, …).
@@ -77,9 +77,13 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
         val chatId = chatId(title, preview, whenMs) ?: return@withContext Pick.Skipped("no-chat")
         val items = LarkHttp.getJson(
             "/open-apis/im/v1/messages",
+            // Bound the request by the same window [pickMessage] uses, so a burst in a busy
+            // chat cannot push the message off the page.
             mapOf(
                 "container_id_type" to "chat", "container_id" to chatId,
-                "sort_type" to "ByCreateTimeDesc", "page_size" to "5",
+                "sort_type" to "ByCreateTimeDesc", "page_size" to "20",
+                "start_time" to ((whenMs - BEFORE_MS) / 1000).toString(),
+                "end_time" to ((whenMs + AFTER_MS) / 1000).toString(),
             ),
             token.bearer(),
         ).getJSONObject("data").getJSONArray("items").objects().map(::candidateOf)

@@ -26,8 +26,15 @@ class PickMessageTest {
 
     @Test
     fun messagesOutsideTheWindowNeverMatch() {
-        val items = listOf(text("future", at + 6_000, "x"), text("past", at - 16_000, "x"))
+        val items = listOf(text("future", at + 6_000, "x"), text("past", at - 61_000, "x"))
         assertEquals(Pick.Skipped("no-message"), pickMessage(items, stem = "", whenMs = at))
+    }
+
+    @Test
+    fun theWindowReachesBackTheFullMinute() {
+        // The message-to-Original delay runs to 43.9 s on real traffic (Experiment 11).
+        val late = text("late", at - 44_000, "还在窗口里")
+        assertEquals(Pick.Found(late), pickMessage(listOf(late), stem = "还在窗口里", whenMs = at))
     }
 
     @Test
