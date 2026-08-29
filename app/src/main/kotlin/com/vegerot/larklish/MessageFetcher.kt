@@ -212,26 +212,39 @@ fun unwrapHtml(text: String): String {
         .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&") // `&amp;` last, or `&amp;lt;` decodes twice
 }
 
+/** One tagged piece of a `post` paragraph, with only the fields [postText] reads. */
+data class PostElement(val tag: String, val text: String = "", val userName: String = "", val emojiType: String = "")
+
 /**
  * A `post` is `title` + paragraphs of tagged elements (Experiment 08):
  * `{"title": "", "content": [[{"tag": "text", "text": "…"}], [{"tag": "img", "image_key": "…"}]]}`.
  * One line per paragraph; images become `[image]` and emoji `[Delighted]`, like Lark's own Preview.
+ * Pure, so the replay harness scores the shipped rules instead of a copy of them.
  */
-fun postText(post: JSONObject): String {
-    val paragraphs = post.getJSONArray("content").let { ps -> (0 until ps.length()).map { ps.getJSONArray(it) } }
+fun postText(title: String, paragraphs: List<List<PostElement>>): String {
     val lines = paragraphs.map { p ->
-        p.objects().joinToString("") { e ->
-            when (val tag = e.getString("tag")) {
-                "text", "a" -> e.getString("text")
-                "at" -> "@" + e.optString("user_name")
+        p.joinToString("") { e ->
+            when (e.tag) {
+                "text", "a" -> e.text
+                "at" -> "@" + e.userName
                 "img" -> "[image]"
-                "emotion" -> "[" + e.optString("emoji_type", tag) + "]"
-                else -> "[$tag]"
+                "emotion" -> "[" + e.emojiType.ifEmpty { e.tag } + "]"
+                else -> "[${e.tag}]"
             }
         }
     }
-    return (listOf(post.optString("title")) + lines).filter { it.isNotEmpty() }.joinToString("\n")
+    return (listOf(title) + lines).filter { it.isNotEmpty() }.joinToString("\n")
 }
+
+/** Lark's JSON shape of a `post`, mapped onto [postText]'s pure input. */
+private fun postText(post: JSONObject): String = postText(
+    post.optString("title"),
+    post.getJSONArray("content").let { ps -> (0 until ps.length()).map { ps.getJSONArray(it) } }.map { p ->
+        p.objects().map {
+            PostElement(it.getString("tag"), it.optString("text"), it.optString("user_name"), it.optString("emoji_type"))
+        }
+    },
+)
 
 fun defaultMessageFetcher(context: Context) =
     MessageFetcher(defaultUserToken(context), File(context.filesDir, "chats.json"))

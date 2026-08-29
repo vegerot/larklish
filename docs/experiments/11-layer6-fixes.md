@@ -2,6 +2,9 @@
 
 Experiment 09 proposed five fixes and guessed what each was worth. This experiment
 measures all five on the replay harness of Experiment 10 (`tools/replay/`), over the same
+<!-- Superseded 2026-08-28: the Python harness became `ReplayTest.kt` plus
+     `tools/larklish replay fetch`, so it now scores the shipped rules instead of a copy.
+     The numbers below were produced by the Python originals. -->
 **210 Relays** (2026-08-26 → 28). Four of the five guesses were wrong.
 
 ## Guess vs. measurement

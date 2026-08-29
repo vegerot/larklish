@@ -287,4 +287,6 @@ tools/larklish chats --clear                           #   reset it (deletes the
 tools/larklish events stats                            # the Relay record; views: list, stats, table, pull
 tools/larklish events --since 2026-08-29T00:30 --han list
 tools/larklish phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # also top, shade, shot, home
+tools/larklish replay fetch                            # pull replay-corpus/ (gitignored: real messages)
+./gradlew testDebugUnitTest --tests '*ReplayTest*' -i  #   …score the shipped rules over it
 ```

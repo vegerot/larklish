@@ -1105,3 +1105,25 @@ Next:
 - ✅ Equivalence checked, not assumed: `events` `pull`, `stats`, `list`, `table` and the
   filter flags all diff clean against the old tool, as do `chats` and `phone top`. `probe`,
   `probe --debug thread` and `token` were re-run against the phone.
+
+### 2026-08-28 — the replay harness became Kotlin, and now measures the real rules
+
+- 🎯 `tools/replay/*.py` re-implemented `pickMessage`, `postText`, `resolveMentions`,
+  `unwrapHtml` and `Preview.parse` in Python — **34 lines of duplicated semantics**. Every
+  Layer 6 number came out of that copy. Hand-porting `unwrapHtml` had already produced one
+  wrong expectation, so the risk was real, not theoretical.
+- 🧪 `ReplayTest.kt` replays a day of real Originals through the functions the app ships.
+  `tools/larklish replay fetch` pulls the corpus (Originals, `chats/search` hits, DM cache,
+  messages) into gitignored `replay-corpus/` as TSV — real colleagues' messages, never
+  committed, so the test skips without it.
+- 🔧 One refactor made it possible: `postText` now has a pure core
+  (`postText(title, paragraphs: List<List<PostElement>>)`) plus a thin JSON adapter. It was
+  the only rule bound to `org.json`, which is a stub in JVM tests and cannot be replaced —
+  Gradle cannot reach Maven Central here (`PKIX path building failed`, the corporate TLS
+  interception that also broke `uv` and needed `--native-tls`).
+- 📊 **122 of 210** with the shipped rules, against the Python harness's 119. The gap sits
+  inside the harness's modelling slack (it approximated `sbn.postTime` and used a 4 s forward
+  edge against the shipped 5 s) and a slightly different corpus span. The direction is what
+  matters: the real rules do at least as well as the estimate, so Layer 6's numbers hold.
+- 🐍 `tools/lark-token` stays Python by decision: it runs rarely, and moving it would buy
+  only the loss of the `uv` + `cryptography` dependency.

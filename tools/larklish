@@ -7,6 +7,7 @@
     tools/larklish probe --debug thread          #   …or run a MainActivity debug hook
     tools/larklish chats                         # the chat-id cache; --clear resets it
     tools/larklish phone shade shot.png          # adb helpers (top, open, shade, shot, home)
+    tools/larklish replay fetch                  # pull the corpus ReplayTest scores against
     tools/larklish token --write                 # credentials from lark-cli's store
 
 `--help` works at every level: `tools/larklish events --help`, `… events list --help`.
@@ -280,6 +281,130 @@ def cmd_phone(args):
             shot(args.file)
 
 
+# ── replay: pull the corpus that ReplayTest scores the shipped rules against ───
+#
+# Four tab-separated files, so the Kotlin side needs no JSON library and the rules it
+# measures are the app's own. Leaf strings escape \\, newline and tab; sub-lists use the
+# control separators \x01 (items), \x02 (paragraphs) and \x03 (fields of one element).
+#
+#   originals.tsv  atMs, title, text
+#   titles.tsv     title, chatIds…                 (every chat chats/search names)
+#   dms.tsv        sender, chatId                  (from the phone's chat cache)
+#   messages.tsv   chatId, msgType, createTime, deleted, mentions, payload
+CORPUS_FILES = ("originals.tsv", "titles.tsv", "dms.tsv", "messages.tsv")
+SEP_ITEM, SEP_PARA, SEP_FIELD = "\x01", "\x02", "\x03"
+
+
+def esc(s):
+    s = (s or "").replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
+    assert not any(c in s for c in (SEP_ITEM, SEP_PARA, SEP_FIELD)), "text contains a separator"
+    return s
+
+
+def lark_api(method, path, payload):
+    """None when Lark refuses — e.g. 230002, a chat Max is not a member of. Those are expected."""
+    flag = "--params" if method == "GET" else "--data"
+    out = subprocess.run(["lark-cli", "api", method, path, flag, json.dumps(payload), "--as", "user"],
+                         capture_output=True, text=True)
+    try:
+        d = json.loads(out.stdout)
+    except ValueError:
+        return None
+    return d["data"] if d.get("ok") else None
+
+
+def preview_sender(text):
+    if text.endswith(":...") and ": " not in text:
+        text = text[:-3] + " ..."
+    i = text.find(": ")
+    if i < 0:
+        return ""
+    head = text[:i]
+    return head[:-4] if head.endswith(("@you", "@all")) else head
+
+
+def messages_of(chat, start, end):
+    items, token, pages = [], None, 0
+    while True:
+        params = {"container_id_type": "chat", "container_id": chat, "sort_type": "ByCreateTimeDesc",
+                  "page_size": "50", "start_time": str(start), "end_time": str(end)}
+        if token:
+            params["page_token"] = token
+        data = lark_api("GET", "/open-apis/im/v1/messages", params)
+        if data is None:  # not a member of that chat, or the call failed
+            return items
+        items += data.get("items", [])
+        pages += 1
+        token = data.get("page_token")
+        if not data.get("has_more") or not token or pages > 12:
+            return items
+
+
+def message_row(chat, m):
+    kind, body = m["msg_type"], m["body"]["content"]
+    mentions = SEP_ITEM.join(f"{esc(x['key'])}{SEP_FIELD}{esc(x['name'])}" for x in (m.get("mentions") or []))
+    if m.get("deleted"):
+        payload = ""
+    elif kind == "text":
+        payload = esc(json.loads(body)["text"])
+    elif kind == "post":
+        post = json.loads(body)
+        paras = [SEP_ITEM.join(
+            SEP_FIELD.join(esc(e.get(k, "")) for k in ("tag", "text", "user_name", "emoji_type"))
+            for e in para) for para in post["content"]]
+        payload = SEP_PARA.join([esc(post.get("title") or "")] + paras)
+    else:
+        payload = ""
+    return "\t".join([chat, kind, m["create_time"], "1" if m.get("deleted") else "0", mentions, payload])
+
+
+def cmd_replay(args):
+    out = pathlib.Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    events = read_events(args.file)
+    relayed = [e for e in events if e["event"] == "relayed"]
+    if not relayed:
+        sys.exit("no Relays in the record — nothing to replay")
+
+    def at_ms(e):
+        return int(datetime.fromisoformat(e["at"].replace("Z", "+00:00")).timestamp() * 1000)
+
+    (out / "originals.tsv").write_text(
+        "".join(f"{at_ms(e)}\t{esc(e['title'])}\t{esc(e['text'])}\n" for e in relayed), encoding="utf-8")
+
+    # the phone's own DM cache: `messages/search` is not replayable offline
+    raw = (open(args.chats, encoding="utf-8").read() if args.chats
+           else adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json", allow_fail=True).stdout).strip()
+    cached = json.loads(raw) if raw.startswith("{") else {}
+    dms = {k[3:]: v for k, v in cached.items() if k.startswith("dm:")}
+    (out / "dms.tsv").write_text("".join(f"{esc(k)}\t{v}\n" for k, v in dms.items()), encoding="utf-8")
+
+    titles, chats = {}, set(dms.values())
+    for e in relayed:
+        title = e["title"]
+        if title == "Lark" or title == preview_sender(e["text"]) or title in titles:
+            continue
+        stem = title[:-3] if title.endswith("...") else title
+        data = lark_api("GET", "/open-apis/im/v1/chats/search", {"query": stem, "page_size": 20}) or {}
+        hit = (lambda n: n.startswith(stem)) if title.endswith("...") else (lambda n: n == title)
+        ids = [h["chat_id"] for h in data.get("items", []) if hit(h["name"])][:5]
+        titles[title] = ids
+        chats.update(ids)
+        print(f"  {len(ids)} chat(s) for [{title}]")
+    (out / "titles.tsv").write_text(
+        "".join(f"{esc(t)}\t{SEP_ITEM.join(ids)}\n" for t, ids in titles.items()), encoding="utf-8")
+
+    start, end = min(map(at_ms, relayed)) // 1000 - 120, max(map(at_ms, relayed)) // 1000 + 120
+    rows = []
+    for i, chat in enumerate(sorted(chats), 1):
+        got = messages_of(chat, start, end)
+        print(f"  [{i}/{len(chats)}] {chat} {len(got)} messages")
+        rows += [message_row(chat, m) for m in got]
+    (out / "messages.tsv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    print(f"\ncorpus → {out}/  ({len(relayed)} Originals, {len(chats)} chats, {len(rows)} messages)")
+    print("score it with: ./gradlew testDebugUnitTest --tests '*ReplayTest*'")
+
+
 # ── token: lark-cli's encrypted store (its own file; needs uv + cryptography) ──
 def cmd_token(args):
     script = pathlib.Path(__file__).resolve().with_name("lark-token")
@@ -328,6 +453,14 @@ def main():
     o.add_argument("url")
     o.add_argument("file", nargs="?")
     f.set_defaults(fn=cmd_phone)
+
+    r = group.add_parser("replay", help="the corpus ReplayTest scores the shipped rules against")
+    rsub = r.add_subparsers(dest="act", required=True)
+    fetch = rsub.add_parser("fetch", help="pull Originals, chats and messages into a corpus directory")
+    fetch.add_argument("--out", default="replay-corpus", help="corpus directory (default replay-corpus/)")
+    fetch.add_argument("--file", help="read this saved events.jsonl instead of the phone")
+    fetch.add_argument("--chats", help="read this saved chats.json instead of the phone (DM senders)")
+    r.set_defaults(fn=cmd_replay)
 
     t = group.add_parser("token", help="credentials from lark-cli's store (runs tools/lark-token)")
     t.add_argument("rest", nargs=argparse.REMAINDER, help="passed through, e.g. --write")
