@@ -79,6 +79,36 @@ class PickMessageTest {
     }
 
     @Test
+    fun aMentionLarkLocalizesStillMatchesOnItsClose() {
+        // The phone writes `@Oncall Assistant`, the API `@Oncall 助手` (Experiment 12).
+        val post = Candidate("p", "post", at - 1_000, deleted = false, text = "@Oncall 助手 MPA流水线发布卡住，重试之后失败")
+        assertEquals(Pick.Found(post), pickMessage(listOf(post), stem = "@Oncall Assistant MPA流水线发布卡住，重试之后失败", whenMs = at))
+    }
+
+    @Test
+    fun theAllMentionIsLocalizedTheSameWay() {
+        // `@all` on the phone, `@所有人` from the API — no `mentions` entry names it (Experiment 12).
+        val post = Candidate("p", "post", at - 1_000, deleted = false, text = "@所有人 正在直播中~\n会议链接：https://www.us.larkoffice.com/calendar/share?token=e975")
+        assertEquals(Pick.Found(post), pickMessage(listOf(post), stem = "@all 正在直播中~会议链接：https://www.us.larkoffice.com", whenMs = at))
+    }
+
+    @Test
+    fun theCloseOnlyDecidesWhenBothSidesOpenWithAMention() {
+        // Without that guard a shared tail — a link, a sign-off — could name the wrong message.
+        val other = text("other", at - 1_000, "刚才 MPA流水线发布卡住，重试之后失败")
+        assertEquals(Pick.Skipped("no-match"), pickMessage(listOf(other), stem = "@Oncall Assistant MPA流水线发布卡住，重试之后失败", whenMs = at))
+    }
+
+    @Test
+    fun theOpeningStillDecidesWhenItCan() {
+        val items = listOf(
+            text("newer", at - 1_000, "@Someone 完全不同的开头 MPA流水线发布卡住，重试之后失败"),
+            text("mine", at - 2_000, "@Oncall Assistant MPA流水线发布卡住，重试之后失败"),
+        )
+        assertEquals(Pick.Found(items[1]), pickMessage(items, stem = "@Oncall Assistant MPA流水线发布卡住，重试之后失败", whenMs = at))
+    }
+
+    @Test
     fun recalledMessagesAreSkipped() {
         val items = listOf(Candidate("r", "text", at - 1_000, deleted = true, text = ""), text("ok", at - 2_000, "还在"))
         assertEquals(Pick.Found(items[1]), pickMessage(items, stem = "", whenMs = at))

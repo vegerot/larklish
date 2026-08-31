@@ -62,8 +62,9 @@ sealed interface Pick {
  * The newest message with text just before the Original whose text opens with the Preview
  * stem. Only the first [MATCH_CHARS] folded characters must agree: the Preview is not a
  * faithful prefix of the Full text — it writes `[Delighted]` for an emoji, lower-cases
- * `@All`, and can drop a trailing bold run (Experiment 11). A textless message in the window
- * is reported by type (`image`, `sticker`, `interactive`, …).
+ * `@All`, and can drop a trailing bold run (Experiment 11). A message that opens with a
+ * mention is matched on the close of the stem instead, because Lark localizes the name.
+ * A textless message in the window is reported by type (`image`, `sticker`, `interactive`, …).
  *
  * How far back the window reaches depends on how much needle there is. A full-length one
  * identifies the message by itself, so it may look past a delayed push; a short or empty stem
@@ -71,10 +72,20 @@ sealed interface Pick {
  * apart, so it stays close to the Original.
  */
 fun pickMessage(items: List<Candidate>, stem: String, whenMs: Long): Pick {
-    val needle = stem.fold().take(MATCH_CHARS)
+    val folded = stem.fold()
+    val needle = folded.take(MATCH_CHARS)
     val before = if (needle.length == MATCH_CHARS) BEFORE_DELAYED_MS else BEFORE_MS
     val window = items.filter { !it.deleted && it.createTime in (whenMs - before)..(whenMs + AFTER_MS) }
     window.firstOrNull { it.text.isNotEmpty() && it.text.fold().startsWith(needle) }?.let { return Pick.Found(it) }
+    // A mention shows whichever of an account's names the reader prefers, so the two sides
+    // disagree on the opening and on nothing else: the phone writes `@Oncall Assistant`,
+    // `@all` and `@Yan Fan`, the API `@Oncall 助手`, `@所有人` and `@樊艳` (Experiment 12).
+    // Both sides must open with a mention, or a shared close — a link, a sign-off — could
+    // name the wrong message.
+    if (folded.startsWith("@") && folded.length >= MATCH_CHARS) {
+        val close = folded.takeLast(MATCH_CHARS)
+        window.firstOrNull { it.text.startsWith("@") && it.text.fold().contains(close) }?.let { return Pick.Found(it) }
+    }
     val newest = window.firstOrNull() ?: return Pick.Skipped("no-message")
     return Pick.Skipped(if (newest.text.isNotEmpty()) "no-match" else "type:${newest.msgType}")
 }

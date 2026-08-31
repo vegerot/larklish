@@ -1196,3 +1196,57 @@ So the reach follows the needle: **`BEFORE_DELAYED_MS = 300_000` when the folded
 12 characters, `BEFORE_MS = 60_000` otherwise.** The request carries the wider bound; the
 narrowing happens in `pickMessage`. Replay is unchanged at 122 of 210, as monotonicity predicts,
 with `no-message` 19 → 16 and `no-match` 11 → 14 — the same outcomes, reported more truthfully.
+
+## 2026-08-31 — Layer 6 soaked; Lark localizes mentions
+
+`tools/larklish events --since 2026-08-29T04:30 stats` over 2.6 days (a weekend, so 27
+Relays against Experiment 09's 92 in a day). Full grade in
+`docs/experiments/12-soak-and-mentions.md`.
+
+| | Layer 5 (Exp 09) | Layer 6 |
+| --- | --- | --- |
+| Truncated Previews Updated | 16 of 39 (41 %) | **11 of 13 (85 %)** |
+| `no-message` | 17 | **0** |
+| `no-match` | 10 | 2 |
+| `no-chat` | 21 | 10 |
+
+**Truncated Previews are the denominator that matters.** A Relay whose Preview already holds
+the whole message loses nothing when the Update is skipped, and 14 of the 15 skips are that
+case. `no-message` — the bucket the needle-dependent window was built for — is gone.
+
+Two root causes reproduced against the live API, both the same fact: **Lark localizes names.**
+
+- The 10 `no-chat` rows are all bot DMs. `messages/search` finds their chats (15 p2p hits
+  each); `dmChatId` rejects them because the API's peer name is `字节餐厅` where the phone says
+  `ByteCanteen`. And every one is a `CARD`, so fixing the name recovers **nothing**. 🚫 The
+  bucket is closed — do not build a bot-DM resolver.
+- The 2 `no-match` rows open with `@Oncall Assistant`; the API returns `@Oncall 助手`. Same for
+  `@all` / `@所有人` and for colleagues with two names (`@Yan Fan` / `@樊艳`). The two sides
+  disagree on the opening and on nothing else.
+
+Three matchers scored over a refreshed 257-Original corpus, only the matcher swapped:
+
+```
+head (shipped)                            137        no-match 16
+head + body after the leading mentions    146  +9     no-match  7
+head + close of the stem                  148 +11     no-match  5
+head + close, both sides opening with @   148 +11     no-match  5   ← shipped
+```
+
+The `body` rule needs the `mentions` array and still loses `@所有人`, which no entry names.
+The `close` rule needs no structure at all. The `@` guard costs nothing and shuts the rule
+off everywhere else, so a shared close — a link, a sign-off — can never name the wrong
+message. All 11 recovered picks were checked by hand: every one is the right message.
+
+`ReplayTest` scores the same 148 of 257 the scorer predicts — no drift this time. On the
+phone the ordinary path is unchanged: Relay → `Found` → Update in 3.1 s. The localized-mention
+path is *not* verified on the phone; it cannot be synthesized (it needs a real account with two
+names) and the next Oncall message in the soak will show it.
+
+Not changed, recorded: both ML Kit fallbacks are `99991400 request trigger frequency limit`,
+six hours apart. That quota belongs to the shared fat CLI app, not to us — and
+`FallbackTranslator` retries with no pause, which cannot help a frequency limit. 2 events in
+2.6 days and readable English both times, so it waits. If it grows, pause before the retry.
+
+Next: a **weekday** soak on the new rule — this one had no weekday traffic to speak of.
+`tools/larklish events --since 2026-08-31T20:40 stats`.
