@@ -1305,3 +1305,57 @@ English; a short one relayed and logged no `MessageFetcher` line at all, recordi
 
 Next: the two findings this session's probes turned up — a per-chat 400 aborts the whole
 lookup, and the translate rate limit is now constant.
+
+### 2026-08-31 — two findings from the shade: a 400 aborts the lookup, and the quota is gone
+
+Max sent a screenshot of the shade. Two things in it, both reproduced.
+
+#### A chat Max cannot read kills the whole lookup
+
+```
+Larklish Update failed
+java.io.IOException: Lark /open-apis/im/v1/messages: http 400 code 230002
+Bot/User can NOT be out of the chat.
+```
+
+The Original's title was `ByteDance Research...`, so `groupChatIds` prefix-matches. Repeated
+live today:
+
+| chat | `im/v1/messages` |
+| --- | --- |
+| `ByteDance Research 技术交流群4` | OK |
+| `ByteDance Research 技术交流群` | **400 `230002`** — Max is not a member |
+
+`chats/search` returns chats Max can **find** but not **read**. `LarkHttp` throws on any
+non-200, and `pickIn` does not catch, so one such chat aborts `fullTextOf` entirely — the
+remaining prefix candidates never run, and neither does the LRU fallback that fix 5 added for
+exactly this kind of miss. The Relay is left with its Preview and the debug build posts an
+error notification.
+
+`tools/larklish`'s own `lark_api` already treats 230002 as expected ("a chat Max is not a
+member of"). The app should too: a per-chat failure means *this chat has nothing*, not *give
+up*. Not fixed — outside the two changes Max asked for. ~3 lines in `pickIn`.
+
+#### The translate quota is exhausted
+
+| day (UTC) | Relays | fallback events |
+| --- | --- | --- |
+| 08-26 → 08-30 | 237 | **0** |
+| 08-31 | 44 | 4 |
+| 09-01 | 29 | **11** |
+
+13 of the 15 are `99991400 request trigger frequency limit`; the first was 2026-08-30 19:51
+PDT. Roughly **one Relay in three** is now ML Kit output, and the probes above show it hitting
+the title, the message *and* the Full text of a single Relay.
+
+Two candidates, neither confirmed: the shared fat CLI app's quota (this session made hundreds
+of `lark-cli` calls pulling the replay corpus — a Shortcut consequence, `plan.md`), or a
+tightened tenant limit. Experiment 12 said to revisit if the count grew. It grew.
+
+The fetch guard shipped today halves the app's own translate calls. Beyond that,
+`FallbackTranslator` retries **with no pause**, which cannot help a frequency limit — the
+probes show the retry failing 0.8 s after the first call, every time. A pause before the
+retry is the next thing to try.
+
+Next: Max's call — fix the 230002 abort, pause the retry, or soak first and re-grade with
+`tools/larklish events --since 2026-09-01T03:50 stats`.
