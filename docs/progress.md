@@ -1197,7 +1197,7 @@ So the reach follows the needle: **`BEFORE_DELAYED_MS = 300_000` when the folded
 narrowing happens in `pickMessage`. Replay is unchanged at 122 of 210, as monotonicity predicts,
 with `no-message` 19 → 16 and `no-match` 11 → 14 — the same outcomes, reported more truthfully.
 
-## 2026-08-31 — Layer 6 soaked; Lark localizes mentions
+### 2026-08-31 — Layer 6 soaked; Lark localizes mentions
 
 `tools/larklish events --since 2026-08-29T04:30 stats` over 2.6 days (a weekend, so 27
 Relays against Experiment 09's 92 in a day). Full grade in
