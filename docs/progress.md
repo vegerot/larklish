@@ -1359,3 +1359,43 @@ retry is the next thing to try.
 
 Next: Max's call — fix the 230002 abort, pause the retry, or soak first and re-grade with
 `tools/larklish events --since 2026-09-01T03:50 stats`.
+
+### 2026-08-31 — one unreadable chat no longer ends the lookup
+
+The `230002` from the shade, fixed. `chats/search` returns chats Max can **find** but not
+**read**; `LarkHttp` throws on any non-200 and `pickIn` did not catch, so one such chat
+aborted `fullTextOf` outright — the remaining prefix candidates never ran, and neither did
+the LRU fallback added for exactly this kind of miss.
+
+`pickIn` now catches `IOException` and answers `Skipped("error: …")` for **that chat**. The
+reason still reaches `events.jsonl`, so the record loses nothing; what it loses is the power
+of one chat to speak for the others.
+
+Second defect, same cause: `if (candidates.size == 1) remember(key, candidates[0])` cached a
+chat that had just answered 400. Every later Original under that title would have hit the
+same 400 forever — the poisoned-cache disease fix 6 cured for ambiguous titles. Now it caches
+only a chat that answered.
+
+Two things learned while reproducing it:
+
+- **Time bounds mask the error.** The same chat answers `400 230002` bare and
+  `ok, items: []` with `start_time`/`end_time` — which `pickIn` always sends. That is why the
+  error is rare, and why it could not be reproduced by replaying the failing title.
+- **`chats/search` is nondeterministic here too.** Four searches for `ByteDance Research`
+  returned two distinct chats in varying order; the failing one is
+  `oc_e4bc5f9d…` (`ByteDance Research 技术交流群`), and Max is in `…群4`, not `…群`.
+
+Verified on the phone by seeding `files/chats.json` with a well-formed but invalid chat id
+(`oc_0000…000f`, which answers `230001` even *with* time bounds) and running the fetch hook:
+
+```
+W MessageFetcher: [TEST-BAD-CHAT] oc_0000…000f unreadable: java.io.IOException: … code 230001 …
+I Translator: debug fetch [TEST-BAD-CHAT]: Skipped(reason=error: java.io.IOException: …)
+```
+
+Before, that line was `debug fetch failed: …` and the lookup was over. The cache was backed up
+and restored (22 entries, unchanged). 22 JVM tests green.
+
+Next: soak and re-grade — `tools/larklish events --since 2026-09-01T03:50 stats`. Watch the
+`not-truncated` bucket (by design), whether the localized-mention rule fires on a real Oncall
+message, and whether the `99991400` fallbacks keep climbing.

@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "MessageFetcher"
@@ -51,12 +52,21 @@ data class Candidate(
     val text: String, // `text` and flattened `post` messages; "" for every other type
 )
 
+/** A [Pick.Skipped] reason that means the call failed, not that nothing matched. */
+private const val ERROR = "error: "
+
 sealed interface Pick {
     data class Found(val candidate: Candidate) : Pick
 
-    /** `no-chat`, `no-message` (nothing in the window), `no-match`, or `type:<msg_type>` — recorded so the soak shows why. */
+    /**
+     * `no-chat`, `no-message` (nothing in the window), `no-match`, `type:<msg_type>`, or
+     * `error: …` when the chat could not be read — recorded so the soak shows why.
+     */
     data class Skipped(val reason: String) : Pick
 }
+
+/** The call failed. Such a chat answers for itself only: never cache it, never trust its silence. */
+private fun Pick.failed() = this is Pick.Skipped && reason.startsWith(ERROR)
 
 /**
  * The newest message with text just before the Original whose text opens with the Preview
@@ -101,7 +111,9 @@ fun resolveMentions(text: String, mentions: Map<String, String>): String =
  * Finds the Full text behind an Original (Layer 5): chat id → newest messages of the chat
  * → [pickMessage]. Groups: title → `chats/search`. DMs: `messages/search` around the
  * Original's time, the p2p hit whose peer name is the Sender. Chat ids are cached in
- * [cacheFile] (`title` for groups, `dm:<Sender>` for DMs). Throws on HTTP failure.
+ * [cacheFile] (`title` for groups, `dm:<Sender>` for DMs). A chat that cannot be read is
+ * just one chat's miss ([pickIn]); a failed *search* still throws, having no candidates to
+ * fall back on.
  */
 class MessageFetcher(private val token: UserToken, private val cacheFile: File) {
     private val chats: MutableMap<String, String> = HashMap<String, String>().apply {
@@ -125,7 +137,9 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
                 return@withContext pick
             }
         }
-        if (candidates.size == 1) remember(key, candidates[0]) // unambiguous: keep it even on a miss
+        // Unambiguous and readable: keep it even on a miss. A chat that answered 400 is never
+        // cached — every later Original under this title would hit the same 400 forever.
+        if (candidates.size == 1 && !outcome.failed()) remember(key, candidates[0])
         // A reply inside a topic chat carries the *thread's* root text as its title, so no chat
         // search can ever find it (Experiment 09). Such a reply follows other traffic in the same
         // chat, so the chat is almost always one Larklish just used (Experiment 10).
@@ -136,7 +150,14 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
         outcome
     }
 
-    private fun pickIn(chatId: String, title: String, preview: Preview, whenMs: Long): Pick {
+    /**
+     * One chat's answer. A failure here is **this chat's** answer, not the lookup's:
+     * `chats/search` returns chats Max can find but not read (`230002 Bot/User can NOT be out
+     * of the chat`), and one of those used to abort `fullTextOf` outright — skipping the other
+     * candidates and the LRU fallback added for exactly this kind of miss (progress.md
+     * 2026-08-31). The reason still reaches the record through [Pick.Skipped].
+     */
+    private fun pickIn(chatId: String, title: String, preview: Preview, whenMs: Long): Pick = try {
         val items = LarkHttp.getJson(
             "/open-apis/im/v1/messages",
             // Bound the request by the same window [pickMessage] uses, so a burst in a busy
@@ -150,13 +171,16 @@ class MessageFetcher(private val token: UserToken, private val cacheFile: File) 
             token.bearer(),
         ).getJSONObject("data").getJSONArray("items").objects().map(::candidateOf)
         Log.i(TAG, "[$title] $chatId candidates: " + items.joinToString { "${it.msgType} ${(whenMs - it.createTime) / 1000}s ago" })
-        return pickMessage(items, preview.stem, whenMs).also {
+        pickMessage(items, preview.stem, whenMs).also {
             Log.i(TAG, "[$title] $chatId → $it")
             if (it is Pick.Found) {
                 recent.remove(chatId)
                 recent.addFirst(chatId)
             }
         }
+    } catch (e: IOException) {
+        Log.w(TAG, "[$title] $chatId unreadable: $e")
+        Pick.Skipped(ERROR + e)
     }
 
     /**
