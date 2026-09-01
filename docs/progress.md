@@ -1278,3 +1278,30 @@ next `Triton数据安全` Original in the soak will show it. `RomanizeTest` stil
 romanizer itself, on the phone, where the ICU data lives.
 
 Next: the fetch guard (`Fetch only when the Preview ends in ...`).
+
+### 2026-08-31 — the Update runs only when Lark cut the Preview
+
+An optimization `plan.md` has carried since 2026-08-27, now measured before it shipped
+(`docs/experiments/13-fetch-guard.md`): **54 % of the record's 257 Relays fetch a message
+they already have.**
+
+Checked rather than assumed: of the 34 Updates whose Preview did *not* end in `...`, **33
+returned a Full text identical to it.** The one exception is a `post` with a **title** —
+Lark previews only the title and does not mark the cut, so nothing on the notification
+distinguishes it from a short message. That shape is lost. Accepted: 1 of 34, and the saving
+is half of all API traffic, including half the translate calls behind the `99991400` rate
+limit.
+
+`Preview.truncated` holds the rule, next to `stem`, so the `...` has one name and one meaning
+in the code. A skipped Relay records `skipped not-truncated`, so the bucket stays visible and
+a later soak can price the exception.
+
+⚠️ Reading the next soak: `not-truncated` is **by design**, not a failure. The grade to read
+is Updates against Relays whose Preview *was* cut — the denominator Experiment 12 argued for.
+
+Verified on the phone, both paths: a long message relayed `...` then Updated with the full
+English; a short one relayed and logged no `MessageFetcher` line at all, recording
+`S not-truncated`. 22 JVM tests green.
+
+Next: the two findings this session's probes turned up — a per-chat 400 aborts the whole
+lookup, and the translate rate limit is now constant.

@@ -59,4 +59,12 @@ class PreviewTest {
             Preview.parse("Bits@you: 😀"),
         )
     }
+
+    @Test
+    fun larksEllipsisIsWhatMarksAPreviewTruncated() {
+        assertEquals(true, Preview.parse("Bits: 这是一条很长的消息，...").truncated)
+        assertEquals(true, Preview.parse("Bits:...").truncated) // the empty Preview is a cut too
+        assertEquals(false, Preview.parse("Bits: Sync Task Conflicted").truncated)
+        assertEquals(false, Preview.parse("You have received a message.").truncated)
+    }
 }

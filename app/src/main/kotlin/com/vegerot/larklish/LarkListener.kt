@@ -81,7 +81,15 @@ class LarkListener : NotificationListenerService() {
             // develop. Release builds cancel it (Max, 2026-08-25).
             if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
             Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[$relayText]")
-            update(sbn, title, relayTitle, relaySender, preview)
+            // An uncut Preview already holds the whole message, so there is nothing to fetch:
+            // 33 of 34 such Relays had a Full text identical to their Preview (Experiment 13).
+            // Skipping them halves the API load, and with it the translate rate limit that
+            // drives the ML Kit fallback. Recorded, so a soak can still price the exception.
+            if (preview.truncated) {
+                update(sbn, title, relayTitle, relaySender, preview)
+            } else {
+                recorder.skipped(sbn.key, "not-truncated")
+            }
         }
     }
 

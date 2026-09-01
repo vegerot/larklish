@@ -228,8 +228,12 @@ which say whether the Translator hit an outage or an input Lark will not transla
   English (`customFetch` → `CustomEtch`). Instead of the whole sentence, send each Han run
   (`权限申请`) to the Translator and splice the results back. Evidence:
   `docs/experiments/08-soak.md`.
-- [ ] **Fetch only when the Preview ends in `...`.** A performance optimization for
-  Layer 5: a Preview without `...` already holds the Full text.
+- [x] **Fetch only when the Preview ends in `...`.** ✅ Done 2026-08-31: `Preview.truncated`
+  gates the Update, and a Relay that skips it records `skipped not-truncated` so a soak can
+  still price the exception. 54 % of Relays never needed the fetch, and 33 of the 34 Updates
+  measured from an uncut Preview returned a Full text **identical** to it. The exception is
+  a `post` with a title: Lark previews only the title, with no `...`, so those are lost
+  (1 of 34, a probe). Evidence: `docs/experiments/13-fetch-guard.md`.
 - [ ] **Image in the Relay (far future, Max).** Lark's Original for an image says only
   `[image]`. Android can show the picture (`Notification.BigPictureStyle().bigPicture(bitmap)`).
   The Layer 5 fetch already sees these messages (`msg_type` `image`, today a
