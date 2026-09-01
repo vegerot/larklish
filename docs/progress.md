@@ -1250,3 +1250,31 @@ six hours apart. That quota belongs to the shared fat CLI app, not to us — and
 
 Next: a **weekday** soak on the new rule — this one had no weekday traffic to speak of.
 `tools/larklish events --since 2026-08-31T20:40 stats`.
+
+### 2026-08-31 — the Sender goes to the engine unless it is a person's name
+
+`romanize()` was applied to every Han Sender. That is right for a person — 陈昱萌 → "Chen
+Yumeng" — and useless for anything else, because pinyin carries no meaning:
+
+| Sender | Was | Now |
+| --- | --- | --- |
+| `国际电商风险运营平台` | Guo Ji Dian Shang Feng Xian Yun Ying Ping Tai | through Lark's engine |
+| `Triton数据安全` | Triton Shu Ju An Quan | through Lark's engine |
+
+**10 of 257 Relays** in the record carry such a Sender (12 have Han in the Sender at all; the
+other 2 are people). Proposed on 2026-08-26 from the Layer 4 soak; the record now prices it.
+
+`String.isHanName()` — bare Han, 2–4 characters — lives in `Han.kt`, which is ICU-free on
+purpose, so the rule is unit-testable on the JVM. `Translator.senderOf` picks the path, next
+to `englishOf`. `buildRelay` now takes the Sender **already in English**, like the title and
+the message it already took that way; it no longer reaches for the `Preview` itself.
+
+Cost: one extra translate call for the ~4 % of Relays with a mixed Sender. A Latin Sender
+still never reaches the engine — `englishOf` gates it.
+
+Verified: 21 JVM tests green, and a probe on the phone relays and Updates as before. The
+Han-Sender branch is not exercised on the phone yet — the test bot's name is Latin, and the
+next `Triton数据安全` Original in the soak will show it. `RomanizeTest` still covers the
+romanizer itself, on the phone, where the ICU data lives.
+
+Next: the fetch guard (`Fetch only when the Preview ends in ...`).

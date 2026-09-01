@@ -69,7 +69,11 @@ class LarkListener : NotificationListenerService() {
         updates.remove(sbn.key)?.cancel()
         updates[sbn.key] = scope.launch {
             val relayTitle = translator.englishOf(title)
-            val relay = buildRelay(this@LarkListener, sbn, relayTitle, preview, translator.englishOf(preview.message))
+            val relaySender = translator.senderOf(preview.sender)
+            val relay = buildRelay(
+                this@LarkListener, sbn, relayTitle, relaySender, preview.mention,
+                translator.englishOf(preview.message),
+            )
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
             recorder.relayed(sbn.key, title, text, relayTitle, relayText)
@@ -77,18 +81,27 @@ class LarkListener : NotificationListenerService() {
             // develop. Release builds cancel it (Max, 2026-08-25).
             if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
             Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[$relayText]")
-            update(sbn, title, relayTitle, preview)
+            update(sbn, title, relayTitle, relaySender, preview)
         }
     }
 
     /** Layer 5: fetch the Full text, translate it, and Update the Relay in place. */
-    private suspend fun update(sbn: StatusBarNotification, title: String, relayTitle: String, preview: Preview) {
+    private suspend fun update(
+        sbn: StatusBarNotification,
+        title: String,
+        relayTitle: String,
+        relaySender: String,
+        preview: Preview,
+    ) {
         try {
             when (val pick = fetcher.fullTextOf(title, preview, sbn.postTime)) {
                 is Pick.Skipped -> recorder.skipped(sbn.key, pick.reason)
                 is Pick.Found -> {
                     val fullText = pick.candidate.text
-                    val relay = buildRelay(this, sbn, relayTitle, preview, translator.englishOf(fullText.take(MAX_TRANSLATE_CHARS)))
+                    val relay = buildRelay(
+                        this, sbn, relayTitle, relaySender, preview.mention,
+                        translator.englishOf(fullText.take(MAX_TRANSLATE_CHARS)),
+                    )
                     manager.notify(sbn.key, RELAY_ID, relay)
                     val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
                     recorder.updated(sbn.key, pick.candidate.msgType, fullText, relayText)

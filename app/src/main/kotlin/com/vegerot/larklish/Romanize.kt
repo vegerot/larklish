@@ -15,8 +15,7 @@ fun romanize(sender: String): String {
     val capitalized = syllables.map { it.replaceFirstChar(Char::uppercase) }
     // A bare Chinese name: one-character surname + given name. Two-character surnames
     // (欧阳, 司马) are rare among Max's contacts; they come out as "Ou Yangxx". Accepted.
-    val isName = sender.length in 2..4 && sender.all { it.isHan() }
-    if (isName) {
+    if (sender.isHanName()) {
         val given = syllables.drop(1).joinToString("").replaceFirstChar(Char::uppercase)
         return "${capitalized.first()} $given"
     }

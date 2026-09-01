@@ -8,22 +8,24 @@ const val RELAY_CHANNEL = "relay"
 
 /**
  * The English notification Larklish posts in place of an Original.
- * Keeps the Original's tap intent, avatar and time. The Sender is romanized, never translated.
+ * Keeps the Original's tap intent, avatar and time. [title], [sender] and [message] arrive
+ * in English already — the caller decides how each one gets there ([Translator.senderOf]).
  */
 fun buildRelay(
     context: Context,
     original: StatusBarNotification,
     title: String,
-    preview: Preview,
+    sender: String,
+    mention: Mention?,
     message: String,
 ): Notification {
     val originalNotification = original.notification
-    val sender = romanize(preview.sender) + when (preview.mention) {
+    val who = sender + when (mention) {
         Mention.YOU -> "@you"
         Mention.ALL -> "@all"
         null -> ""
     }
-    val text = if (sender.isEmpty()) message else "$sender: $message"
+    val text = if (who.isEmpty()) message else "$who: $message"
     return Notification.Builder(context, RELAY_CHANNEL)
         .setSmallIcon(R.drawable.ic_notification) // 译鸟 silhouette; see plan.md "App icon"
         .setLargeIcon(originalNotification.getLargeIcon())

@@ -201,13 +201,13 @@ which say whether the Translator hit an outage or an input Lark will not transla
   (2026-08-25) kept ML Kit for faster iteration; Experiments 04–05 showed Lark's engine
   fixes every ML Kit failure seen in the soak, so Layer 4 makes Lark primary with ML Kit
   as fallback. The fat CLI app's secret in the APK is a Shortcut (see below).
-- [ ] **Romanize only person names.** `romanize()` is right for bare 2–4-character Han
-  names (陈昱萌 → Chen Yumeng) and wrong for bot or group Senders that mix Latin and Han
-  (`Triton数据安全` → "Triton Shu Ju An Quan", `Argos平台报警` → "Argos Ping Tai Bao
-  Jing"), where pinyin carries no meaning. Lark's engine translates those well ("Triton
-  Data Security"). Change: in `Relay.kt`, romanize a Sender only when it is a bare Han
-  name; send every other Han-containing Sender through `englishOf`. Add a `RomanizeTest`
-  case. Evidence: `docs/experiments/05-lark-api.md` "Soak".
+- [x] **Romanize only person names.** ✅ Done 2026-08-31: `Translator.senderOf` romanizes a
+  Sender only when `isHanName()` — bare Han, 2–4 characters — and sends every other
+  Han-containing Sender to the engine. Before, a bot or group Sender became meaningless
+  pinyin (`国际电商风险运营平台` → "Guo Ji Dian Shang Feng Xian Yun Ying Ping Tai",
+  `Triton数据安全` → "Triton Shu Ju An Quan"); 10 of 257 Relays carried one. `buildRelay`
+  now takes the Sender already in English, like the title and the message.
+  Evidence: `docs/experiments/05-lark-api.md` "Soak".
 - [ ] **App icon: finish the 译鸟 mark.** 2026-08-27: an AI-generated flat bird (navy
   body, orange belly, two chirp arcs, teal disc; `docs/logo/larklish-v1.png`) is in use as
   the adaptive launcher icon and, as an alpha silhouette, the notification small icon.
