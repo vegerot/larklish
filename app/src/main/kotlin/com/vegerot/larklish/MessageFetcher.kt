@@ -103,9 +103,14 @@ fun pickMessage(items: List<Candidate>, stem: String, whenMs: Long): Pick {
 /** How a stem and a message text are compared: no whitespace, no case (Lark's Preview keeps neither). */
 private fun String.fold() = filterNot { it.isWhitespace() }.lowercase()
 
-/** `@_user_1` placeholders → `@Name`, from the message's `mentions` (key → name). */
+/**
+ * `@_user_1` placeholders → `@Name`, from the message's `mentions` (key → name). `@_all` has
+ * no entry there and reads `@all` in the Preview, so it is spelled that way here too.
+ */
 fun resolveMentions(text: String, mentions: Map<String, String>): String =
-    Regex("@_user_\\d+").replace(text) { m -> mentions[m.value]?.let { "@$it" } ?: m.value }
+    Regex("@_(user_\\d+|all)").replace(text) { m ->
+        if (m.value == "@_all") "@all" else mentions[m.value]?.let { "@$it" } ?: m.value
+    }
 
 /**
  * Finds the Full text behind an Original (Layer 5): chat id → newest messages of the chat

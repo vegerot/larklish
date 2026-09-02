@@ -21,4 +21,10 @@ class MentionsTest {
     fun unknownPlaceholdersStay() {
         assertEquals("@_user_3 hi", resolveMentions("@_user_3 hi", emptyMap()))
     }
+
+    @Test
+    fun theAllMentionHasNoEntryAndReadsLikeThePreview() {
+        // A `text` body spells @all as `@_all`, and the `mentions` array never names it (soak 2026-09-02).
+        assertEquals("Hi @all Labor Day event setup is ready!", resolveMentions("Hi @_all Labor Day event setup is ready!", emptyMap()))
+    }
 }

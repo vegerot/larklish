@@ -1399,3 +1399,40 @@ and restored (22 entries, unchanged). 22 JVM tests green.
 Next: soak and re-grade — `tools/larklish events --since 2026-09-01T03:50 stats`. Watch the
 `not-truncated` bucket (by design), whether the localized-mention rule fires on a real Oncall
 message, and whether the `99991400` fallbacks keep climbing.
+
+### 2026-09-02 — weekday soak graded: 31 of 34, the mention rule carries a third of it
+
+`tools/larklish events --since 2026-09-01T03:50 stats` over 1.7 weekdays, 111 Relays. Full
+grade in `docs/experiments/14-weekday-soak.md`.
+
+| | Layer 6, weekend (Exp 12) | Layer 6 + guard, weekdays |
+| --- | --- | --- |
+| Cut Previews Updated | 11 of 13 | **31 of 34 (91 %)** |
+| `no-chat` | 10, all bot DMs | 17, all bot DMs |
+| `no-match` | 2 | 3 (2 cards, 1 bug) |
+| `not-truncated` (by design) | — | 56 of 111 |
+
+The three things the last entry said to watch:
+
+- 🎯 **The localized-mention rule fires on real traffic**: 11 of the 31 Updates came through
+  the close rule (`@Oncall 助手` ×7, three colleagues with two names, `@_all：`), every one the
+  right message.
+- 🛁 **`not-truncated` cost nothing measurable.** The four uncut Previews that looked like more
+  were three `interactive` cards (the Preview is the card's title) and one recalled `post`.
+- 📈 **`99991400` is not ours to fix.** 14 of 81 Han texts gave up on it — all inside Beijing
+  10h–17h, none overnight. The doc says the 20 QPS limit is **per tenant, shared by every app
+  in the tenant**, so a dedicated app would not help. Not changed; two levers recorded.
+
+One bug, fixed: a `text` body spells @all as the literal `@_all` with no `mentions` entry, so
+Rachel Lam's `Hi @all Labor Day…` missed the head match and two Updated Relays read `@_all`.
+`resolveMentions` now writes `@all`, the Preview's spelling. `MentionsTest` covers it; a probe
+with `<at user_id="all"></at>` Updates to `@all` on the phone; 48 JVM tests green; `ReplayTest`
+unchanged at 148 of 257.
+
+Also priced, not changed: 6 `NotTranslated` Relays (Latin-heavy, ML Kit made each worse — the
+"Han runs" Later item); an unreadable chat cached from a clean miss (`ByteDance Research
+技术交流群`, harm 0 so far); cards that carry real `text`/`at` content.
+
+Next: Max's call among (1) translate only the Han runs on `NotTranslated` (6 of 111),
+(2) a slower Lark retry after ML Kit posts, with a second Update (14 of 111),
+(3) cache a chat only on `Found`, (4) flatten `interactive` cards. Or soak on.
