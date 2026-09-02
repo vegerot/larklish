@@ -3,6 +3,10 @@
 
     tools/larklish-helper events stats                  # the Relay record (list, stats, table, pull)
     tools/larklish-helper events --since 2026-08-29T00:30 --han list
+    tools/larklish-helper events --since 2026-09-01T03:50 grade   # the soak grade: each Relay and its outcome
+    tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then
+    tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits
+    tools/larklish-helper translate '先别发布' --repeat 30                          # one Lark translate call
     tools/larklish-helper probe "中文消息"               # post to the test group, show the Relay
     tools/larklish-helper probe --debug thread          #   …or run a MainActivity debug hook
     tools/larklish-helper chats                         # the chat-id cache; --clear resets it
@@ -168,6 +172,53 @@ def events_table(events, args):
         print(f"| {original} | {relay} |  |")
 
 
+def one_line(s):
+    return s.replace("\n", " ⏎ ")
+
+
+def preview_message(text):
+    """The message part of an Original's text, as `Preview.parse` sees it (after the first `: `)."""
+    sender, sep, message = text.partition(": ")
+    return message if sep else text
+
+
+def relays_with_outcomes(events):
+    """Each Relay with what the Update did to it: `updated`, `skipped <reason>`, or `canceled`
+    (a newer Original took the key before the fetch returned). Outcomes are keyed by the Original,
+    so they pair by key, in order."""
+    relays, open_by_key = [], {}
+    for e in events:
+        kind = e["event"]
+        if kind == "relayed":
+            r = dict(e, outcome="canceled", cut=preview_message(e["text"]).endswith("..."))
+            relays.append(r)
+            open_by_key[e["key"]] = r
+        elif kind == "updated" and e["key"] in open_by_key:
+            open_by_key[e["key"]]["outcome"] = f"updated ({e['msgType']})"
+        elif kind == "skipped" and e["key"] in open_by_key:
+            reason = e["reason"]
+            open_by_key[e["key"]]["outcome"] = "skipped " + (reason.split(":")[0] if reason.startswith("error") else reason)
+    return relays
+
+
+def events_grade(events, args):
+    """The soak grade (Experiments 12–14): `not-truncated` is by design, so the denominator is the
+    Relays whose Preview Lark cut — and the list of those that did not Update is the work list."""
+    relays = relays_with_outcomes(select(events, args))
+    cut = [r for r in relays if r["cut"]]
+    updated = [r for r in cut if r["outcome"].startswith("updated")]
+    print(f"Relays {len(relays)}   Preview cut {len(cut)}   complete {len(relays) - len(cut)} (skipped by design)")
+    print(f"\ncut Previews → Updated {len(updated)} of {len(cut)}")
+    for outcome, n in Counter(r["outcome"] for r in cut).most_common():
+        print(f"  {n:4}  {outcome}")
+    misses = [r for r in cut if not r["outcome"].startswith("updated")]
+    if misses:
+        print("\ncut, not Updated:")
+        for r in misses:
+            outcome = r["outcome"].removeprefix("skipped ")
+            print(f"  {when(r, args.utc)} {outcome:18} [{r['title'][:30]}] {one_line(r['text'])[:80]}")
+
+
 def events_pull(events, args):
     with open(args.out, "w", encoding="utf-8") as f:
         for e in events:
@@ -177,7 +228,8 @@ def events_pull(events, args):
 
 def cmd_events(args):
     events = read_events(args.file)
-    {"list": events_list, "stats": events_stats, "table": events_table, "pull": events_pull}[args.view](events, args)
+    {"list": events_list, "stats": events_stats, "table": events_table, "grade": events_grade,
+     "pull": events_pull}[args.view](events, args)
 
 
 # ── probe: post one message and show what Larklish did with it ────────────────
@@ -249,6 +301,114 @@ def cmd_chats(args):
             print(f"  {chat}  {name}")
 
 
+def chats_search(query, page_size=20):
+    data = lark_api("GET", "/open-apis/im/v1/chats/search", {"query": query, "page_size": page_size}) or {}
+    return data.get("items", [])
+
+
+def cmd_chats_search(args):
+    """`chats/search` is not deterministic (progress.md 2026-08-28): --repeat shows which hits come and go."""
+    seen, names = Counter(), {}
+    for _ in range(args.repeat):
+        for h in chats_search(args.query):
+            seen[h["chat_id"]] += 1
+            names[h["chat_id"]] = h
+    if not seen:
+        print("no hits")
+    for chat, n in sorted(seen.items(), key=lambda kv: -kv[1]):
+        h = names[chat]
+        runs = f"{n}/{args.repeat}  " if args.repeat > 1 else ""
+        print(f"{runs}{chat}  {h['name']}")
+
+
+# ── msgs: what a chat said around a time (the start of every `no-match` investigation) ─
+def parse_when(s):
+    """ISO time → epoch seconds. A naive time is local, like `events` prints it."""
+    t = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return t.timestamp() if t.tzinfo else t.astimezone().timestamp()
+
+
+def parse_span(s):
+    """`90s`, `5m`, `2h` → seconds."""
+    return int(s[:-1]) * {"s": 1, "m": 60, "h": 3600}[s[-1]]
+
+
+def resolve_chat(name):
+    """`oc_…` as is; else the phone's cache (exact, or the truncated-title stem), else `chats/search`."""
+    if name.startswith("oc_"):
+        return name
+    raw = adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json", allow_fail=True).stdout.strip()
+    cached = json.loads(raw) if raw.startswith("{") else {}
+    stem = name[:-3] if name.endswith("...") else name
+    for title, chat in cached.items():
+        if title == name or title.startswith(stem):
+            print(f"# {chat}  {title}  (cache)")
+            return chat
+    hits = [h for h in chats_search(stem) if names_chat(h["name"], name, stem)] or chats_search(stem)
+    if not hits:
+        sys.exit(f"no chat named {name!r} in the cache or in chats/search")
+    print(f"# {hits[0]['chat_id']}  {hits[0]['name']}  (chats/search, {len(hits)} hit(s))")
+    return hits[0]["chat_id"]
+
+
+def flat_text(m):
+    """One line per message, the way the app would read it: `text` and `post` flattened, the rest named."""
+    kind, body = m["msg_type"], m["body"]["content"]
+    if m.get("deleted"):
+        return "(recalled)"
+    if kind == "text":
+        return json.loads(body)["text"]
+    if kind == "post":
+        post = json.loads(body)
+        paras = [" ".join(e.get("text") or e.get("user_name") or e.get("emoji_type") or f"[{e['tag']}]" for e in para)
+                 for para in post["content"]]
+        return " ⏎ ".join(([post["title"]] if post.get("title") else []) + paras)
+    if kind == "interactive":
+        try:
+            title = json.loads(body).get("title") or json.loads(body).get("header", {}).get("title", {}).get("content")
+        except (ValueError, AttributeError):
+            title = None
+        return f"[card] {title}" if title else f"[card] {body[:80]}"
+    return f"[{kind}] {body[:80]}"
+
+
+def cmd_msgs(args):
+    chat = resolve_chat(args.chat)
+    around = parse_when(args.around) if args.around else time.time()
+    start, end = int(around - parse_span(args.before)), int(around + parse_span(args.after))
+    items = messages_of(chat, start, end)
+    if not items:
+        print("no messages in the window (or a chat Max cannot read)")
+    for m in sorted(items, key=lambda m: int(m["create_time"])):
+        t = datetime.fromtimestamp(int(m["create_time"]) / 1000)
+        if not args.utc:
+            t = t.astimezone()
+        mentions = " ".join(f"{x['key']}={x['name']}" for x in (m.get("mentions") or []))
+        line = m["body"]["content"] if args.raw else one_line(flat_text(m))
+        print(f"{t.strftime('%m-%d %H:%M:%S')}  {m['msg_type']:12} {line}" + (f"   {{{mentions}}}" if mentions else ""))
+
+
+# ── translate: one call to the engine the app uses, to answer rate-limit and pass-through questions ─
+def cmd_translate(args):
+    """--as bot is the tenant token the app uses; the rate limit (99991400) is per tenant either way."""
+    codes = Counter()
+    for i in range(args.repeat):
+        if i and args.pause:
+            time.sleep(args.pause)
+        d = lark_call("POST", "/open-apis/translation/v1/text/translate",
+                      {"source_language": "zh", "target_language": "en", "text": args.text}, identity=args.identity)
+        if d.get("ok"):
+            out = d["data"]["text"]
+            code = "ok" if out != args.text else "unchanged"
+            codes[code] += 1
+            print(f"{time.strftime('%H:%M:%S')}  {code:9} {out}")
+        else:
+            codes[str(d.get('code'))] += 1
+            print(f"{time.strftime('%H:%M:%S')}  {d.get('code')}  {d.get('msg')}")
+    if args.repeat > 1:
+        print("\n" + "  ".join(f"{c} ×{n}" for c, n in codes.most_common()))
+
+
 # ── phone: small adb helpers (Experiment 07 probed Lark's AppLinks with these) ─
 def top():
     dump = adb("shell", "dumpsys", "activity", "activities").stdout
@@ -305,15 +465,20 @@ def esc(s):
     return s
 
 
-def lark_api(method, path, payload):
-    """None when Lark refuses — e.g. 230002, a chat Max is not a member of. Those are expected."""
+def lark_call(method, path, payload, identity="user"):
+    """The whole lark-cli response: `ok`, and `data` or `code` + `msg`."""
     flag = "--params" if method == "GET" else "--data"
-    out = subprocess.run(["lark-cli", "api", method, path, flag, json.dumps(payload), "--as", "user"],
+    out = subprocess.run(["lark-cli", "api", method, path, flag, json.dumps(payload), "--as", identity],
                          capture_output=True, text=True)
     try:
-        d = json.loads(out.stdout)
+        return json.loads(out.stdout)
     except ValueError:
-        return None
+        return {"ok": False, "code": -1, "msg": (out.stderr or out.stdout).strip()}
+
+
+def lark_api(method, path, payload):
+    """None when Lark refuses — e.g. 230002, a chat Max is not a member of. Those are expected."""
+    d = lark_call(method, path, payload)
     return d["data"] if d.get("ok") else None
 
 
@@ -435,6 +600,7 @@ def main():
     view.add_parser("list", help="every event, oldest first")
     view.add_parser("stats", help="counts")
     view.add_parser("table", help="Markdown table of Relays for the experiment docs")
+    view.add_parser("grade", help="the soak grade: every Relay paired with its Update outcome, cut Previews first")
     view.add_parser("pull", help="save the raw JSONL").add_argument("out")
     e.set_defaults(fn=cmd_events)
 
@@ -447,9 +613,30 @@ def main():
     b.add_argument("--wait", type=int, default=12, help="seconds to wait for the Update (default 12)")
     b.set_defaults(fn=cmd_probe)
 
-    c = group.add_parser("chats", help="the chat-id cache")
+    c = group.add_parser("chats", help="the chat-id cache; `chats search` asks the API")
     c.add_argument("--clear", action="store_true", help="delete the cache and force-stop the app")
     c.set_defaults(fn=cmd_chats)
+    csub = c.add_subparsers(dest="act")
+    cs = csub.add_parser("search", help="chats/search hits for a query (chat_id, name)")
+    cs.add_argument("query")
+    cs.add_argument("--repeat", type=int, default=1, help="ask N times; shows in how many runs each hit appeared")
+    cs.set_defaults(fn=cmd_chats_search)
+
+    m = group.add_parser("msgs", help="what a chat said around a time (im/v1/messages, flattened)")
+    m.add_argument("chat", help="oc_… id, or a title — resolved through the phone's cache, then chats/search")
+    m.add_argument("--around", help="ISO time, local unless it ends in Z (default: now)")
+    m.add_argument("--before", default="10m", help="reach back this far: 90s, 5m, 2h (default 10m)")
+    m.add_argument("--after", default="1m", help="and forward this far (default 1m)")
+    m.add_argument("--raw", action="store_true", help="print body.content as the API returns it")
+    m.add_argument("--utc", action="store_true", help="print UTC instead of local time")
+    m.set_defaults(fn=cmd_msgs)
+
+    x = group.add_parser("translate", help="one call to Lark's translate API, with its code")
+    x.add_argument("text")
+    x.add_argument("--repeat", type=int, default=1, help="call N times and tally the codes (the rate-limit probe)")
+    x.add_argument("--pause", type=float, default=0, help="seconds between calls (default 0)")
+    x.add_argument("--as", dest="identity", default="bot", choices=["bot", "user"], help="identity (default bot, as the app)")
+    x.set_defaults(fn=cmd_translate)
 
     f = group.add_parser("phone", help="adb helpers")
     act = f.add_subparsers(dest="act", required=True)

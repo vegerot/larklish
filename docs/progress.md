@@ -1436,3 +1436,32 @@ Also priced, not changed: 6 `NotTranslated` Relays (Latin-heavy, ML Kit made eac
 Next: Max's call among (1) translate only the Han runs on `NotTranslated` (6 of 111),
 (2) a slower Lark retry after ML Kit posts, with a second Update (14 of 111),
 (3) cache a chat only on `Found`, (4) flatten `interactive` cards. Or soak on.
+
+### 2026-09-02 — `tools/larklish-helper`: the four rituals of a soak review, as subcommands
+
+Max asked what this session repeated. Of 642 Bash calls, four shapes came back every soak:
+
+| ritual | times | now |
+| --- | --- | --- |
+| Python over `events.jsonl` to pair each Relay with its outcome, split by cut Preview | ~40 | `events grade` |
+| `im/v1/messages` on a chat around a time, then Python to flatten the bodies | ~30 | `msgs CHAT --around ISO` |
+| `chats/search` + parse `name`/`chat_id`, repeated for the nondeterminism | ~12 | `chats search QUERY --repeat N` |
+| a bare translate call, once or in a 30-call loop, to read the code | ~6 | `translate TEXT --repeat N` |
+
+`grade` is the one that mattered: Experiments 08, 09, 12 and 14 each rewrote it, and each
+rewrite drew the lines a little differently (what "canceled" is, which denominator). One view,
+one definition: `not-truncated` is by design, so the grade is Updates against cut Previews,
+and the cut-but-not-Updated rows are printed as the work list.
+
+`msgs` takes an `oc_…` id or a title, resolved through the phone's cache and then
+`chats/search`; `--raw` prints `body.content` as the API returns it. `chats search --repeat 3`
+prints `3/3` or `1/3` per hit. `translate` uses `--as bot`, the tenant token the app uses, and
+tallies `ok` / `unchanged` / `99991400`. The tool itself was renamed `larklish-helper` first,
+in its own commit.
+
+Verified against the phone and the live API: `grade` reproduces Experiment 14's numbers plus
+the two probes since; `msgs` on Rachel Lam's Original shows the `@_all` body; `chats search
+'ByteDance Research' --repeat 3` shows both `技术交流群` chats 3/3; `translate` gives `ok` ×3
+on Han and `unchanged` on the Latin-heavy MR reminder.
+
+Next: unchanged — Max's call among the four proposals of the entry above, or soak on.
