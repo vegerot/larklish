@@ -15,101 +15,37 @@
     tools/larklish-helper token --write                 # credentials from lark-cli's store
 
 `--help` works at every level: `tools/larklish-helper events --help`, `… events list --help`.
-`token` runs `tools/lark-token`, which stays its own file: it is the only piece that needs
-uv and cryptography.
+The pieces live in `tools/larklishlib.py`, importable for the one-off scripts this does not
+cover. `token` runs `tools/lark-token`, which stays its own file: it is the only piece that
+needs uv and cryptography.
 """
 
 import argparse
 import json
 import os
 import pathlib
-import re
-import shlex
-import subprocess
 import sys
 import time
 from collections import Counter
 from datetime import datetime
 
-PACKAGE = "com.vegerot.larklish"
-TEST_CHAT = "oc_e2feee77ba20b6c5285d22fb8aa90eb4"  # Larklish 测试群
-TEST_TITLE = "Larklish 测试群"
-LOG_TAGS = ["LarkListener:I", "MessageFetcher:I", "Translator:I", "FallbackTranslator:W", "*:S"]
-REASONS = {  # NotificationListenerService.REASON_*
-    1: "click", 2: "cancel", 3: "cancel_all", 8: "app_cancel", 9: "app_cancel_all",
-    10: "listener_cancel", 12: "group_summary_canceled", 18: "snoozed", 19: "timeout",
-}
-
-
-# ── shared ────────────────────────────────────────────────────────────────────
-def run(args, **kw):
-    """Run a command and fail loudly with whatever it said."""
-    out = subprocess.run(args, capture_output=True, text=True, **kw)
-    if out.returncode != 0:
-        sys.exit(f"{args[0]}: {(out.stderr or out.stdout).strip()}")
-    return out.stdout
-
-
-def adb(*args, allow_fail=False):
-    out = subprocess.run(["adb", *args], capture_output=True, text=True)
-    if out.returncode != 0 and not allow_fail:
-        sys.exit(f"adb {' '.join(args)}: {(out.stderr or out.stdout).strip()}")
-    return out
-
-
-def require_device():
-    """`adb logcat` waits forever when no phone is attached, so check before anything blocks."""
-    out = subprocess.run(["adb", "devices"], capture_output=True, text=True)
-    if not [ln for ln in out.stdout.splitlines()[1:] if ln.strip().endswith("\tdevice")]:
-        sys.exit("no phone on adb — check the cable, then `adb devices`")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from larklishlib import (  # noqa: E402
+    PACKAGE, REASONS, SEP_ITEM, TEST_TITLE,
+    adb, chats_search, debug_hook, esc, event_chat, event_ms, flat_text, has_han, is_fallback, lark_call,
+    message_row, messages_of, names_chat, one_line, parse_span, parse_when, preview_sender, print_log,
+    read_chat_cache, read_events, relays_with_outcomes, require_device, resolve_chat, run, select, send,
+    shot, top, when,
+)
 
 
 # ── events: the Relay record (`filesDir/events.jsonl`, written by Recorder.kt) ─
-def read_events(path):
-    if path:
-        text = pathlib.Path(path).read_text(encoding="utf-8")
-    else:
-        require_device()
-        text = adb("exec-out", "run-as", PACKAGE, "cat", "files/events.jsonl").stdout
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
-
-
-def has_han(s):
-    return any("一" <= c <= "鿿" or "㐀" <= c <= "䶿" for c in s)
-
-
-def is_fallback(e):
-    # The `~` marks the translated part: the title, or the message after `Sender: `.
-    return e["relayTitle"].startswith("~") or e["relayText"].split(": ", 1)[-1].startswith("~")
-
-
-def when(e, utc):
-    t = datetime.fromisoformat(e["at"].replace("Z", "+00:00"))
-    if not utc:
-        t = t.astimezone()
-    return t.strftime("%m-%d %H:%M")
-
-
-def event_chat(e):
-    return e["key"].split("|")[2]
-
-
-def select(events, args):
-    out = []
-    for e in events:
-        if args.since and e["at"] < args.since:
-            continue
-        relayed = e["event"] == "relayed"
-        if e["event"] == "removed" and args.no_removed:
-            continue
-        if args.han and not (relayed and (has_han(e["text"]) or has_han(e["title"]))):
-            continue
-        out.append(e)
-    return out
+def selected(events, args):
+    return select(events, since=args.since, han=args.han, no_removed=args.no_removed)
 
 
 def events_list(events, args):
-    for e in select(events, args):
+    for e in selected(events, args):
         kind = e["event"]
         if kind == "relayed":
             mark = "~" if is_fallback(e) else " "
@@ -129,7 +65,7 @@ def events_list(events, args):
 
 
 def events_stats(events, args):
-    rows = select(events, args)
+    rows = selected(events, args)
     relayed = [e for e in rows if e["event"] == "relayed"]
     removed = [e for e in rows if e["event"] == "removed"]
     han_text = [e for e in relayed if has_han(e["text"])]
@@ -154,39 +90,10 @@ def events_stats(events, args):
         print(f"span {when(relayed[0], args.utc)} → {when(relayed[-1], args.utc)}")
 
 
-def one_line(s):
-    return s.replace("\n", " ⏎ ")
-
-
-def preview_message(text):
-    """The message part of an Original's text, as `Preview.parse` sees it (after the first `: `)."""
-    sender, sep, message = text.partition(": ")
-    return message if sep else text
-
-
-def relays_with_outcomes(events):
-    """Each Relay with what the Update did to it: `updated`, `skipped <reason>`, or `canceled`
-    (a newer Original took the key before the fetch returned). Outcomes are keyed by the Original,
-    so they pair by key, in order."""
-    relays, open_by_key = [], {}
-    for e in events:
-        kind = e["event"]
-        if kind == "relayed":
-            r = dict(e, outcome="canceled", cut=preview_message(e["text"]).endswith("..."))
-            relays.append(r)
-            open_by_key[e["key"]] = r
-        elif kind == "updated" and e["key"] in open_by_key:
-            open_by_key[e["key"]]["outcome"] = f"updated ({e['msgType']})"
-        elif kind == "skipped" and e["key"] in open_by_key:
-            reason = e["reason"]
-            open_by_key[e["key"]]["outcome"] = "skipped " + (reason.split(":")[0] if reason.startswith("error") else reason)
-    return relays
-
-
 def events_grade(events, args):
     """The soak grade (Experiments 12–14): `not-truncated` is by design, so the denominator is the
     Relays whose Preview Lark cut — and the list of those that did not Update is the work list."""
-    relays = relays_with_outcomes(select(events, args))
+    relays = relays_with_outcomes(selected(events, args))
     cut = [r for r in relays if r["cut"]]
     updated = [r for r in cut if r["outcome"].startswith("updated")]
     print(f"Relays {len(relays)}   Preview cut {len(cut)}   complete {len(relays) - len(cut)} (skipped by design)")
@@ -214,31 +121,6 @@ def cmd_events(args):
 
 
 # ── probe: post one message and show what Larklish did with it ────────────────
-def send(text, reply_to=None):
-    """Post as the bot. Returns the new message id."""
-    args = ["lark-cli", "im", "+messages-reply", "--message-id", reply_to, "--reply-in-thread"] if reply_to \
-        else ["lark-cli", "im", "+messages-send", "--chat-id", TEST_CHAT]
-    return json.loads(run(args + ["--as", "bot", "--text", text]))["data"]["message_id"]
-
-
-def debug_hook(what, title, text):
-    # `adb shell` hands one string to the phone's shell, which splits it again: a title with a
-    # space silently truncates unless every value is quoted for *that* shell. CLEAR_TOP|NEW_TASK
-    # because MainActivity reads the hook in onCreate — a running instance must be recreated.
-    adb("shell", " ".join([
-        "am", "start", "-f", "0x10008000", "-n", f"{PACKAGE}/.MainActivity",
-        "--es", "debug", shlex.quote(what),
-        "--es", "title", shlex.quote(title),
-        "--es", "text", shlex.quote(text),
-    ]))
-
-
-def print_log():
-    for line in adb("logcat", "-d", "-s", *LOG_TAGS).stdout.splitlines():
-        parts = line.split(None, 5)  # date time pid tid level tag: message
-        print(" ".join(parts[1:2] + parts[4:]) if len(parts) > 5 else line)
-
-
 def cmd_probe(args):
     if not args.text and not args.debug:
         sys.exit("give a message to send, or --debug HOOK")
@@ -268,23 +150,16 @@ def cmd_chats(args):
         adb("shell", "am", "force-stop", PACKAGE)
         print("cache deleted and app force-stopped; it rebuilds on the next Original")
         return
-    # `adb exec-out` folds the device's stderr into stdout, so a missing file arrives as text.
-    raw = adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json", allow_fail=True).stdout.strip()
-    if not raw.startswith("{"):
+    chats = read_chat_cache()
+    if not chats:
         print("no cache yet — nothing has been resolved")
         return
-    chats = json.loads(raw)
     groups = {k: v for k, v in chats.items() if not k.startswith("dm:")}
     dms = {k[3:]: v for k, v in chats.items() if k.startswith("dm:")}
     for label, rows in (("groups", groups), ("DMs", dms)):
         print(f"\n{label} ({len(rows)})")
         for name, chat in sorted(rows.items()):
             print(f"  {chat}  {name}")
-
-
-def chats_search(query, page_size=20):
-    data = lark_api("GET", "/open-apis/im/v1/chats/search", {"query": query, "page_size": page_size}) or {}
-    return data.get("items", [])
 
 
 def cmd_chats_search(args):
@@ -303,58 +178,10 @@ def cmd_chats_search(args):
 
 
 # ── msgs: what a chat said around a time (the start of every `no-match` investigation) ─
-def parse_when(s):
-    """ISO time → epoch seconds. A naive time is local, like `events` prints it."""
-    t = datetime.fromisoformat(s.replace("Z", "+00:00"))
-    return t.timestamp() if t.tzinfo else t.astimezone().timestamp()
-
-
-def parse_span(s):
-    """`90s`, `5m`, `2h` → seconds."""
-    return int(s[:-1]) * {"s": 1, "m": 60, "h": 3600}[s[-1]]
-
-
-def resolve_chat(name):
-    """`oc_…` as is; else the phone's cache (exact, or the truncated-title stem), else `chats/search`."""
-    if name.startswith("oc_"):
-        return name
-    raw = adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json", allow_fail=True).stdout.strip()
-    cached = json.loads(raw) if raw.startswith("{") else {}
-    stem = name[:-3] if name.endswith("...") else name
-    for title, chat in cached.items():
-        if title == name or title.startswith(stem):
-            print(f"# {chat}  {title}  (cache)")
-            return chat
-    hits = [h for h in chats_search(stem) if names_chat(h["name"], name, stem)] or chats_search(stem)
-    if not hits:
-        sys.exit(f"no chat named {name!r} in the cache or in chats/search")
-    print(f"# {hits[0]['chat_id']}  {hits[0]['name']}  (chats/search, {len(hits)} hit(s))")
-    return hits[0]["chat_id"]
-
-
-def flat_text(m):
-    """One line per message, the way the app would read it: `text` and `post` flattened, the rest named."""
-    kind, body = m["msg_type"], m["body"]["content"]
-    if m.get("deleted"):
-        return "(recalled)"
-    if kind == "text":
-        return json.loads(body)["text"]
-    if kind == "post":
-        post = json.loads(body)
-        paras = [" ".join(e.get("text") or e.get("user_name") or e.get("emoji_type") or f"[{e['tag']}]" for e in para)
-                 for para in post["content"]]
-        return " ⏎ ".join(([post["title"]] if post.get("title") else []) + paras)
-    if kind == "interactive":
-        try:
-            title = json.loads(body).get("title") or json.loads(body).get("header", {}).get("title", {}).get("content")
-        except (ValueError, AttributeError):
-            title = None
-        return f"[card] {title}" if title else f"[card] {body[:80]}"
-    return f"[{kind}] {body[:80]}"
-
-
 def cmd_msgs(args):
-    chat = resolve_chat(args.chat)
+    chat, how = resolve_chat(args.chat)
+    if how:
+        print(f"# {chat}  {how}")
     around = parse_when(args.around) if args.around else time.time()
     start, end = int(around - parse_span(args.before)), int(around + parse_span(args.after))
     items = messages_of(chat, start, end)
@@ -390,19 +217,7 @@ def cmd_translate(args):
         print("\n" + "  ".join(f"{c} ×{n}" for c, n in codes.most_common()))
 
 
-# ── phone: small adb helpers (Experiment 07 probed Lark's AppLinks with these) ─
-def top():
-    dump = adb("shell", "dumpsys", "activity", "activities").stdout
-    m = re.search(r"topResumedActivity=ActivityRecord\{\S+ u0 (\S+)", dump)
-    return m.group(1) if m else "?"
-
-
-def shot(path):
-    with open(path, "wb") as f:
-        subprocess.run(["adb", "exec-out", "screencap", "-p"], check=True, stdout=f)
-    print(f"screenshot: {path}")
-
-
+# ── phone: small adb helpers ──────────────────────────────────────────────────
 def cmd_phone(args):
     require_device()
     if args.act == "top":
@@ -411,100 +226,16 @@ def cmd_phone(args):
         adb("shell", "input", "keyevent", "KEYCODE_HOME")
     elif args.act == "shot":
         shot(args.file)
+        print(f"screenshot: {args.file}")
     elif args.act == "shade":
         adb("shell", "cmd", "statusbar", "expand-notifications")
         time.sleep(2)
         if args.file:
             shot(args.file)
+            print(f"screenshot: {args.file}")
 
 
 # ── replay: pull the corpus that ReplayTest scores the shipped rules against ───
-#
-# Four tab-separated files, so the Kotlin side needs no JSON library and the rules it
-# measures are the app's own. Leaf strings escape \\, newline and tab; sub-lists use the
-# control separators \x01 (items), \x02 (paragraphs) and \x03 (fields of one element).
-#
-#   originals.tsv  atMs, title, text
-#   titles.tsv     title, chatIds…                 (every chat chats/search names)
-#   dms.tsv        sender, chatId                  (from the phone's chat cache)
-#   messages.tsv   chatId, msgType, createTime, deleted, mentions, payload
-CORPUS_FILES = ("originals.tsv", "titles.tsv", "dms.tsv", "messages.tsv")
-SEP_ITEM, SEP_PARA, SEP_FIELD = "\x01", "\x02", "\x03"
-
-
-def esc(s):
-    s = (s or "").replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
-    assert not any(c in s for c in (SEP_ITEM, SEP_PARA, SEP_FIELD)), "text contains a separator"
-    return s
-
-
-def lark_call(method, path, payload, identity="user"):
-    """The whole lark-cli response: `ok`, and `data` or `code` + `msg`."""
-    flag = "--params" if method == "GET" else "--data"
-    out = subprocess.run(["lark-cli", "api", method, path, flag, json.dumps(payload), "--as", identity],
-                         capture_output=True, text=True)
-    try:
-        return json.loads(out.stdout)
-    except ValueError:
-        return {"ok": False, "code": -1, "msg": (out.stderr or out.stdout).strip()}
-
-
-def lark_api(method, path, payload):
-    """None when Lark refuses — e.g. 230002, a chat Max is not a member of. Those are expected."""
-    d = lark_call(method, path, payload)
-    return d["data"] if d.get("ok") else None
-
-
-def names_chat(name, title, stem):
-    """Lark truncates a long title with `...`; then any chat whose name starts with the stem."""
-    return name.startswith(stem) if title.endswith("...") else name == title
-
-
-def preview_sender(text):
-    if text.endswith(":...") and ": " not in text:
-        text = text[:-3] + " ..."
-    i = text.find(": ")
-    if i < 0:
-        return ""
-    head = text[:i]
-    return head[:-4] if head.endswith(("@you", "@all")) else head
-
-
-def messages_of(chat, start, end):
-    items, token, pages = [], None, 0
-    while True:
-        params = {"container_id_type": "chat", "container_id": chat, "sort_type": "ByCreateTimeDesc",
-                  "page_size": "50", "start_time": str(start), "end_time": str(end)}
-        if token:
-            params["page_token"] = token
-        data = lark_api("GET", "/open-apis/im/v1/messages", params)
-        if data is None:  # not a member of that chat, or the call failed
-            return items
-        items += data.get("items", [])
-        pages += 1
-        token = data.get("page_token")
-        if not data.get("has_more") or not token or pages > 12:
-            return items
-
-
-def message_row(chat, m):
-    kind, body = m["msg_type"], m["body"]["content"]
-    mentions = SEP_ITEM.join(f"{esc(x['key'])}{SEP_FIELD}{esc(x['name'])}" for x in (m.get("mentions") or []))
-    if m.get("deleted"):
-        payload = ""
-    elif kind == "text":
-        payload = esc(json.loads(body)["text"])
-    elif kind == "post":
-        post = json.loads(body)
-        paras = [SEP_ITEM.join(
-            SEP_FIELD.join(esc(e.get(k, "")) for k in ("tag", "text", "user_name", "emoji_type"))
-            for e in para) for para in post["content"]]
-        payload = SEP_PARA.join([esc(post.get("title") or "")] + paras)
-    else:
-        payload = ""
-    return "\t".join([chat, kind, m["create_time"], "1" if m.get("deleted") else "0", mentions, payload])
-
-
 def cmd_replay(args):
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -513,16 +244,11 @@ def cmd_replay(args):
     if not relayed:
         sys.exit("no Relays in the record — nothing to replay")
 
-    def at_ms(e):
-        return int(datetime.fromisoformat(e["at"].replace("Z", "+00:00")).timestamp() * 1000)
-
     (out / "originals.tsv").write_text(
-        "".join(f"{at_ms(e)}\t{esc(e['title'])}\t{esc(e['text'])}\n" for e in relayed), encoding="utf-8")
+        "".join(f"{event_ms(e)}\t{esc(e['title'])}\t{esc(e['text'])}\n" for e in relayed), encoding="utf-8")
 
     # the phone's own DM cache: `messages/search` is not replayable offline
-    raw = (pathlib.Path(args.chats).read_text(encoding="utf-8") if args.chats
-           else adb("exec-out", "run-as", PACKAGE, "cat", "files/chats.json", allow_fail=True).stdout).strip()
-    cached = json.loads(raw) if raw.startswith("{") else {}
+    cached = read_chat_cache(args.chats)
     dms = {k[3:]: v for k, v in cached.items() if k.startswith("dm:")}
     (out / "dms.tsv").write_text("".join(f"{esc(k)}\t{v}\n" for k, v in dms.items()), encoding="utf-8")
 
@@ -532,15 +258,14 @@ def cmd_replay(args):
         if title == "Lark" or title == preview_sender(e["text"]) or title in titles:
             continue
         stem = title[:-3] if title.endswith("...") else title
-        data = lark_api("GET", "/open-apis/im/v1/chats/search", {"query": stem, "page_size": 20}) or {}
-        ids = [h["chat_id"] for h in data.get("items", []) if names_chat(h["name"], title, stem)][:5]
+        ids = [h["chat_id"] for h in chats_search(stem) if names_chat(h["name"], title, stem)][:5]
         titles[title] = ids
         chats.update(ids)
         print(f"  {len(ids)} chat(s) for [{title}]")
     (out / "titles.tsv").write_text(
         "".join(f"{esc(t)}\t{SEP_ITEM.join(ids)}\n" for t, ids in titles.items()), encoding="utf-8")
 
-    start, end = min(map(at_ms, relayed)) // 1000 - 120, max(map(at_ms, relayed)) // 1000 + 120
+    start, end = min(map(event_ms, relayed)) // 1000 - 120, max(map(event_ms, relayed)) // 1000 + 120
     rows = []
     for i, chat in enumerate(sorted(chats), 1):
         got = messages_of(chat, start, end)

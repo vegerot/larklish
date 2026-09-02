@@ -1513,3 +1513,25 @@ Next:
   `events.jsonl` and the grants; its refresh token would end the dev box's
   lark-cli chain).
 - Soak continues; grade the 431-row record when Max asks.
+
+### 2026-09-02 — `tools/larklishlib.py`: the helper's pieces, importable
+
+Max asked whether the one-off scripts a soak review still needs would be easier if the helper
+were importable. They would: the session's ad-hoc scripts re-typed `lark-cli api` + `json.loads`
+48 times, `body.content` flattening 38 times, epoch ↔ ISO 32 times and the events pairing 40
+times — all of which the helper had, behind a hyphenated filename `import` cannot reach.
+
+Split by kind, not by feature: `tools/larklishlib.py` holds the phone (`adb`, `read_events`,
+`read_chat_cache`, `send`, `debug_hook`), the record (`select`, `relays_with_outcomes`, `when`,
+`event_ms`) and the Open API (`lark_call`, `chats_search`, `messages_of`, `flat_text`,
+`resolve_chat`, `parse_when`); `tools/larklish-helper` keeps the `cmd_*` and `argparse` and
+imports the rest. Two small refactors on the way: `select` takes keywords instead of the
+`argparse` namespace, and the three inline `adb exec-out … chats.json` reads became one
+`read_chat_cache()`.
+
+Equivalence checked, not assumed: every subcommand diffed clean against its pre-refactor
+output (`list`, `stats`, `grade`, `chats`, `msgs`, `top`; `search` and `translate` modulo
+order and clock); `replay fetch` ran over a 40-event file. The proof of the point: Experiment
+14's Beijing-hour table of `99991400` give-ups is now 8 lines on the lib, and matches.
+
+Next: unchanged — Max's call among the Later items from the soak, or soak on.
