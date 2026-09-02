@@ -1537,4 +1537,10 @@ order and clock); `replay fetch` ran over a 40-event file. The proof of the poin
 Typed afterwards (Max's ask): `Event`, `Relay`, `Message`, `ChatCache` aliases over the JSON dicts,
 every signature annotated; `ruff` and `ty` clean.
 
+Then grouped (Max's ask): the one file became the package `tools/larklishlib/` with a module per
+group — `phone` (adb), `record` (events.jsonl), `lark` (the Open API; `lark_call` → `lark.cli`,
+`lark_api` → `lark.api`, `send` moved here) and `corpus` (the replay TSV format). The helper calls
+`phone.adb`, `record.when`, `lark.chats_search`; every subcommand still diffs clean, `replay fetch`
+byte-identical over the 40-event file.
+
 Next: unchanged — Max's call among the Later items from the soak, or soak on.
