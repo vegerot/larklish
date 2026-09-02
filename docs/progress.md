@@ -1476,3 +1476,40 @@ is settled). Removed. Kept, though idle: `probe --thread` (the only real thread 
 `probe --debug user|refresh` (for the day the seed token dies), `replay fetch --file/--chats`.
 
 Next: unchanged — Max's call among the four proposals of the soak entry, or soak on.
+
+### 2026-09-02 — The dev box builds Larklish, and reaches the phone
+
+- 🔀 The bridge worktree was 12 commits behind; rebased onto `origin/main`
+  (`e69a06d` → `f7cec9c`), and again onto `f35b1cb` after Experiment 09, so
+  Layer 5, the icon and the soak-2 fixes are in the tree here.
+- 🧰 The dev box had no toolchain: JDK 11 only (Gradle 9.7.1 needs 17+), no SDK,
+  no Gradle cache. Installed Temurin JDK 21 (`~/.jdks/jdk-21.0.12.1+1`) and the
+  SDK (`~/Android/Sdk`: `cmdline-tools`, `platform-tools` 37.0.1,
+  `platforms;android-37.0`, `build-tools;36.0.0`). Gotcha: the platform package
+  is **`android-37.0`**; `sdkmanager` answers `Failed to find package` for
+  `platforms;android-37`.
+- 🔑 `tools/lark-token --write` read this box's own lark-cli store
+  (`~/.local/share/lark-cli`, user token valid to 2026-09-03) into
+  `local.properties`, so all three `BuildConfig` fields are real here. The
+  single-use rule still holds: whatever refreshes first kills this box's chain.
+- ✅ `./gradlew --no-daemon assembleDebug testDebugUnitTest`: BUILD SUCCESSFUL,
+  5 m 56 s cold (Gradle distribution + every dependency), 21/21 JVM tests green
+  (`Preview` 6, `PickMessage` 7, `Mentions` 3, `EnglishOf` 3, `Fallback` 2).
+  APK 91 MB, debug signer from the repo keystore. Not installed on the phone yet.
+- 🔌 `adb` from the dev box: the phone hangs on the Mac's USB, so the Mac forwards
+  its adb server (`ssh -N -R 5037:localhost:5037`), and the dev box's client uses
+  `ADB_SERVER_SOCKET=tcp:localhost:5037`. Client and server must be the same
+  version (both `37.0.1-15733141`). Two traps: the DNS name `devbox` is a load
+  balancer (`10.8.7.247`), not this machine (`10.251.236.182`); and
+  `ExitOnForwardFailure` belongs on the dedicated tunnel only, or a second
+  `ssh devbox` is refused.
+- 📱 Verified over the tunnel: Pixel 4a, SDK 36, Larklish 0.1 running (pid 7010),
+  the listener grant in place, `files/events.jsonl` at 431 rows.
+- 📄 `plan.md` Commands: dev-box bullet rewritten, `sdkmanager` line, tunnel lines.
+
+Next:
+
+- Max decides whether to install this dev-box APK (it upgrades in place, keeps
+  `events.jsonl` and the grants; its refresh token would end the dev box's
+  lark-cli chain).
+- Soak continues; grade the 431-row record when Max asks.

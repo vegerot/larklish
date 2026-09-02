@@ -275,11 +275,22 @@ Dev machines (Max moves between them; `local.properties` is per machine):
   `platform-tools`, `cmdline-tools`). Build through the Studio MCP (`build_project`) or
   `./gradlew`; both work.  Prefer using Android Studio MCP over `./gradlew` generally,
     but often the CLI will be more convenient than Studio MCP.
-- GNU+Linux (Debian). SDK at `~/Android/Sdk` (has `platforms/android-36`,
+- GNU+Linux (Debian), the desktop. SDK at `~/Android/Sdk` (has `platforms/android-36`,
   `build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
   `uv` in `~/.local/bin` (installed 2026-08-27 for `tools/lark-token`).
+- GNU+Linux, the ByteDance dev box (`devbox`, home `/data00/home/max.coplan`, address
+  `10.251.236.182`). A different machine from the desktop. Toolchain installed
+  2026-08-28: Temurin JDK 21 in `~/.jdks/jdk-21.0.12.1+1` (the system JDK 11 cannot run
+  Gradle 9.7.1) and the SDK at `~/Android/Sdk` (`cmdline-tools`, `platform-tools` 37.0.1,
+  `platforms;android-37.0`, `build-tools;36.0.0`). The platform package is
+  `android-37.0`, not `android-37`. `uv` and `lark-cli` in `~/.local/bin`. No phone on
+  USB: `adb` reaches the Pixel 4a through a reverse tunnel from the Mac (below).
 
 ```sh
+export JAVA_HOME=~/.jdks/jdk-21.0.12.1+1                   # dev box only: the system JDK 11 is too old
+export ANDROID_HOME=~/Android/Sdk                         # devbox only: for Gradle 9.7.1
+"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+  platform-tools "platforms;android-37.0" "build-tools;36.0.0"   # devbox only: once per machine
 cp debug.keystore ~/.android/debug.keystore              # once per machine: same debug signer everywhere,
                                                           #   so installDebug upgrades in place (keeps data + grants)
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
@@ -290,6 +301,12 @@ lark-cli auth login                                       #   …then log lark-c
                                                           #   that refresh token (single-use, Experiment 08)
 ./gradlew installDebug
 ./gradlew testDebugUnitTest                                # JVM tests
+ssh -N -o ExitOnForwardFailure=yes devbox                 # when working remotely on devbox: on the Mac: carry its adb server to the dev box
+                                                          #   (~/.ssh/config: Host devbox, HostName 10.251.236.182,
+                                                          #   RemoteForward 5037 localhost:5037; the DNS name
+                                                          #   `devbox` is a load balancer, not the machine)
+export ADB_SERVER_SOCKET=tcp:localhost:5037                # on the dev box: adb talks to the Mac's server
+export PATH="$HOME/Android/Sdk/platform-tools:$PATH"       # devbox: client and server versions must match
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
