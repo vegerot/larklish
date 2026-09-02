@@ -1480,8 +1480,8 @@ Next: unchanged — Max's call among the four proposals of the soak entry, or so
 ### 2026-09-02 — The dev box builds Larklish, and reaches the phone
 
 - 🔀 The bridge worktree was 12 commits behind; rebased onto `origin/main`
-  (`e69a06d` → `f7cec9c`), and again onto `f35b1cb` after Experiment 09, so
-  Layer 5, the icon and the soak-2 fixes are in the tree here.
+  (`e69a06d` → `f7cec9c`), so Layer 5 and the icon are in the tree here.
+  (Rebased again onto `f35b1cb` on 2026-09-02, before the entry below.)
 - 🧰 The dev box had no toolchain: JDK 11 only (Gradle 9.7.1 needs 17+), no SDK,
   no Gradle cache. Installed Temurin JDK 21 (`~/.jdks/jdk-21.0.12.1+1`) and the
   SDK (`~/Android/Sdk`: `cmdline-tools`, `platform-tools` 37.0.1,
@@ -1567,3 +1567,38 @@ against the pre-refactor snapshot; the import works. Not re-run: `chats`, `phone
 — unchanged except `probe` printing `log_lines()`.
 
 Next: unchanged — Max's call among the Later items from the soak, or soak on.
+
+### 2026-09-02 — Dev-box build installed in place: two traps, no data lost
+
+Same soak as "weekday soak graded" above, read from the dev box two Relays later (113):
+the numbers agree, and the `Hi @all` miss is the `@_all` bug fixed there. What is new here:
+
+- 🔏 Trap 1: the dev box's first build had signed with a fresh AGP keystore (`9A:75:41…`),
+  so its APK could never upgrade the phone's install (`CD:5B:25:F8…`).
+  `cp debug.keystore ~/.android/debug.keystore` (plan.md Commands) before the build.
+  Built `ef413a8`: 46 JVM tests green, 1 skipped (`ReplayTest` needs the corpus).
+- 📲 `adb install -r` through the Mac tunnel (91 MB, ~2 min) upgraded in place: `events.jsonl`
+  1046 → 1050 rows (traffic during the install), `chats.json`, `user-token.json`, both
+  grants and the ML Kit model all kept; the listener rebound at once. No data lost.
+- 🔑 Trap 2: the seed copied on 08-28 was **revoked** (`authen/v2/oauth/token` 400
+  `20064 … can only be used once`). This box's lark-cli had rotated its chain on 09-01 23:29,
+  so the copied refresh token was already spent. The app ignores `user-token.json` when the
+  seed changes, so the first real Relay after the install skipped `error: … 20064`. A copied
+  seed is only good until *that* machine's lark-cli refreshes — days, not weeks.
+- 💡 Fix without spending anyone's chain: seed the build with the **phone's own live refresh
+  token** (`files/user-token.json` → `local.properties`). Rebuilt (19 s), reinstalled
+  (1052 rows, caches and grants kept); the fetch hook then reached the API
+  (`candidates: text 289s ago` → `no-message`, the probe being 5 min old) and the token file
+  rotated. No `lark-cli auth login` anywhere. `plan.md` Commands carry the alternative.
+- 🤷 Two bot probes into the test group: `sent`, but Lark posted **no Original** (no
+  `LarkListener` line, no active Lark notification) while real traffic relayed fine. Not
+  chased; likely the test group was open on the Mac and read at once.
+- 📉 One datum for lever (2) above: the `99991400` events sit minutes to hours apart, and the
+  no-pause retry (the 2–5 s pairs in the record) **failed every time** — a pause of seconds
+  will not beat this limit; a second Update later might.
+
+Next:
+
+- Soak on the new build; `tools/larklish-helper events --since 2026-09-02T22:02 stats`.
+  An `error: … 20064` row means the seed trap again.
+- Levers (1)–(4) from the entry above: Max's call.

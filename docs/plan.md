@@ -57,6 +57,7 @@ the table below; `CONTEXT.md` holds the words.
 | `post` messages | Everyday type (4 of 12 newest in the busiest group; a plain sentence from the mobile editor is a `post`). `body.content` = `{title, content: [[{tag, text|image_key|user_name…}]]}` | same |
 | Fallback on Latin-heavy text | Both real ML Kit fallback rows made the English worse (`customFetch` → `CustomEtch`, shouting). `tools/events` had hidden them (`~` after `Sender: `) | same |
 | User refresh tokens | Single-use: the phone's first refresh killed the Mac's lark-cli chain 35 min later (`token_missing`). A separate `auth login` (Debian) is a separate chain and survives | same, "Layer 5's first hours" |
+| A copied seed expires early | The refresh token `tools/lark-token` copies is spent as soon as *that* machine's lark-cli refreshes (days): the phone then gets `authen/v2/oauth/token` 400 `20064 … can only be used once` and, because the seed changed, ignores its own `user-token.json` | `docs/progress.md` 2026-09-02 |
 | Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
 | Message → Original delay | p50 5.1 s, p90 10.2 s, p95 24.3 s, **max 43.9 s** over 116 matched Relays. No message ever arrives *after* its Original, so only the backward edge matters | `docs/experiments/11-layer6-fixes.md` |
 | Topic chats | `San Jose 1199…`, `Seller Center - FE Oncall` are `chat_mode: topic`. A reply in a thread puts the **thread's root text** in the Original's title, so `chats/search` finds nothing — but `im/v1/messages` on the chat returns the thread replies | `docs/experiments/09-soak.md` |
@@ -320,6 +321,9 @@ tools/larklish-helper token --write                              # Layers 4–5:
                                                           #   (needs uv; Debian: curl -LsSf https://astral.sh/uv/install.sh | sh)
 lark-cli auth login                                       #   …then log lark-cli in again: the phone consumes
                                                           #   that refresh token (single-use, Experiment 08)
+adb exec-out run-as com.vegerot.larklish cat files/user-token.json   # …or seed from the phone's own live
+                                                          #   refreshToken → lark.userRefreshToken: no chain is spent
+                                                          #   (a copied seed dies when that machine's lark-cli refreshes)
 ./gradlew installDebug
 ./gradlew testDebugUnitTest                                # JVM tests
 ssh -N -o ExitOnForwardFailure=yes devbox                 # when working remotely on devbox: on the Mac: carry its adb server to the dev box
