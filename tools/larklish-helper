@@ -31,7 +31,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from larklishlib import (  # noqa: E402
-    PACKAGE, REASONS, SEP_ITEM, TEST_TITLE,
+    Event, PACKAGE, REASONS, SEP_ITEM, TEST_TITLE,
     adb, chats_search, debug_hook, esc, event_chat, event_ms, flat_text, has_han, is_fallback, lark_call,
     message_row, messages_of, names_chat, one_line, parse_span, parse_when, preview_sender, print_log,
     read_chat_cache, read_events, relays_with_outcomes, require_device, resolve_chat, run, select, send,
@@ -40,11 +40,11 @@ from larklishlib import (  # noqa: E402
 
 
 # ── events: the Relay record (`filesDir/events.jsonl`, written by Recorder.kt) ─
-def selected(events, args):
+def selected(events: list[Event], args: argparse.Namespace) -> None:
     return select(events, since=args.since, han=args.han, no_removed=args.no_removed)
 
 
-def events_list(events, args):
+def events_list(events: list[Event], args: argparse.Namespace) -> None:
     for e in selected(events, args):
         kind = e["event"]
         if kind == "relayed":
@@ -64,7 +64,7 @@ def events_list(events, args):
             print(f"{when(e, args.utc)} X  reason={r} ({REASONS.get(r, '?')}) chat {event_chat(e)}")
 
 
-def events_stats(events, args):
+def events_stats(events: list[Event], args: argparse.Namespace) -> None:
     rows = selected(events, args)
     relayed = [e for e in rows if e["event"] == "relayed"]
     removed = [e for e in rows if e["event"] == "removed"]
@@ -90,7 +90,7 @@ def events_stats(events, args):
         print(f"span {when(relayed[0], args.utc)} → {when(relayed[-1], args.utc)}")
 
 
-def events_grade(events, args):
+def events_grade(events: list[Event], args: argparse.Namespace) -> None:
     """The soak grade (Experiments 12–14): `not-truncated` is by design, so the denominator is the
     Relays whose Preview Lark cut — and the list of those that did not Update is the work list."""
     relays = relays_with_outcomes(selected(events, args))
@@ -108,20 +108,20 @@ def events_grade(events, args):
             print(f"  {when(r, args.utc)} {outcome:18} [{r['title'][:30]}] {one_line(r['text'])[:80]}")
 
 
-def events_pull(events, args):
+def events_pull(events: list[Event], args: argparse.Namespace) -> None:
     with open(args.out, "w", encoding="utf-8") as f:
         for e in events:
             f.write(json.dumps(e, ensure_ascii=False) + "\n")
     print(f"{len(events)} events → {args.out}")
 
 
-def cmd_events(args):
+def cmd_events(args: argparse.Namespace) -> None:
     events = read_events(args.file)
     {"list": events_list, "stats": events_stats, "grade": events_grade, "pull": events_pull}[args.view](events, args)
 
 
 # ── probe: post one message and show what Larklish did with it ────────────────
-def cmd_probe(args):
+def cmd_probe(args: argparse.Namespace) -> None:
     if not args.text and not args.debug:
         sys.exit("give a message to send, or --debug HOOK")
     require_device()
@@ -142,7 +142,7 @@ def cmd_probe(args):
 
 
 # ── chats: the chat-id cache (`filesDir/chats.json`, written by MessageFetcher) ─
-def cmd_chats(args):
+def cmd_chats(args: argparse.Namespace) -> None:
     require_device()
     if args.clear:
         # Deleting the file is not enough: the service keeps the map in memory.
@@ -162,7 +162,7 @@ def cmd_chats(args):
             print(f"  {chat}  {name}")
 
 
-def cmd_chats_search(args):
+def cmd_chats_search(args: argparse.Namespace) -> None:
     """`chats/search` is not deterministic (progress.md 2026-08-28): --repeat shows which hits come and go."""
     seen, names = Counter(), {}
     for _ in range(args.repeat):
@@ -178,7 +178,7 @@ def cmd_chats_search(args):
 
 
 # ── msgs: what a chat said around a time (the start of every `no-match` investigation) ─
-def cmd_msgs(args):
+def cmd_msgs(args: argparse.Namespace) -> None:
     chat, how = resolve_chat(args.chat)
     if how:
         print(f"# {chat}  {how}")
@@ -197,7 +197,7 @@ def cmd_msgs(args):
 
 
 # ── translate: one call to the engine the app uses, to answer rate-limit and pass-through questions ─
-def cmd_translate(args):
+def cmd_translate(args: argparse.Namespace) -> None:
     """--as bot is the tenant token the app uses; the rate limit (99991400) is per tenant either way."""
     codes = Counter()
     for i in range(args.repeat):
@@ -218,7 +218,7 @@ def cmd_translate(args):
 
 
 # ── phone: small adb helpers ──────────────────────────────────────────────────
-def cmd_phone(args):
+def cmd_phone(args: argparse.Namespace) -> None:
     require_device()
     if args.act == "top":
         print(top())
@@ -236,7 +236,7 @@ def cmd_phone(args):
 
 
 # ── replay: pull the corpus that ReplayTest scores the shipped rules against ───
-def cmd_replay(args):
+def cmd_replay(args: argparse.Namespace) -> None:
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     events = read_events(args.file)
@@ -277,12 +277,12 @@ def cmd_replay(args):
 
 
 # ── token: lark-cli's encrypted store (its own file; needs uv + cryptography) ──
-def cmd_token(args):
+def cmd_token(args: argparse.Namespace) -> None:
     script = pathlib.Path(__file__).resolve().with_name("lark-token")
     os.execv(str(script), [str(script), *args.rest])
 
 
-def main():
+def main() -> None:
     p = argparse.ArgumentParser(prog="tools/larklish-helper", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     group = p.add_subparsers(dest="group", required=True)

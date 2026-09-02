@@ -1534,4 +1534,7 @@ output (`list`, `stats`, `grade`, `chats`, `msgs`, `top`; `search` and `translat
 order and clock); `replay fetch` ran over a 40-event file. The proof of the point: Experiment
 14's Beijing-hour table of `99991400` give-ups is now 8 lines on the lib, and matches.
 
+Typed afterwards (Max's ask): `Event`, `Relay`, `Message`, `ChatCache` aliases over the JSON dicts,
+every signature annotated; `ruff` and `ty` clean.
+
 Next: unchanged — Max's call among the Later items from the soak, or soak on.

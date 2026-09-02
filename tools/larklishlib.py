@@ -23,6 +23,12 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime
+from typing import Any
+
+Event = dict[str, Any]      # one line of events.jsonl (Recorder.kt): `event`, `at`, `key`, …
+Relay = dict[str, Any]      # an Event of kind `relayed`, plus `outcome` and `cut` (relays_with_outcomes)
+Message = dict[str, Any]    # one item of im/v1/messages: `msg_type`, `create_time`, `body.content`, …
+ChatCache = dict[str, str]  # chats.json: title or `dm:<Sender>` → chat id
 
 PACKAGE = "com.vegerot.larklish"
 TEST_CHAT = "oc_e2feee77ba20b6c5285d22fb8aa90eb4"  # Larklish 测试群
@@ -35,7 +41,7 @@ REASONS = {  # NotificationListenerService.REASON_*
 
 
 # ── the phone ─────────────────────────────────────────────────────────────────
-def run(args, **kw):
+def run(args: list[str], **kw: Any) -> str:
     """Run a command and fail loudly with whatever it said."""
     out = subprocess.run(args, capture_output=True, text=True, **kw)
     if out.returncode != 0:
@@ -43,21 +49,21 @@ def run(args, **kw):
     return out.stdout
 
 
-def adb(*args, allow_fail=False):
+def adb(*args: str, allow_fail: bool = False) -> subprocess.CompletedProcess[str]:
     out = subprocess.run(["adb", *args], capture_output=True, text=True)
     if out.returncode != 0 and not allow_fail:
         sys.exit(f"adb {' '.join(args)}: {(out.stderr or out.stdout).strip()}")
     return out
 
 
-def require_device():
+def require_device() -> None:
     """`adb logcat` waits forever when no phone is attached, so check before anything blocks."""
     out = subprocess.run(["adb", "devices"], capture_output=True, text=True)
     if not [ln for ln in out.stdout.splitlines()[1:] if ln.strip().endswith("\tdevice")]:
         sys.exit("no phone on adb — check the cable, then `adb devices`")
 
 
-def read_events(path=None):
+def read_events(path: str | None = None) -> list[Event]:
     """`filesDir/events.jsonl` (written by Recorder.kt) from the phone, or a saved copy."""
     if path:
         text = pathlib.Path(path).read_text(encoding="utf-8")
@@ -67,7 +73,7 @@ def read_events(path=None):
     return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
-def read_chat_cache(path=None):
+def read_chat_cache(path: str | None = None) -> ChatCache:
     """`filesDir/chats.json` (written by MessageFetcher): title → chat id, `dm:<Sender>` → chat id.
     Empty when nothing has been resolved yet."""
     if path:
@@ -79,14 +85,14 @@ def read_chat_cache(path=None):
     return json.loads(raw) if raw.startswith("{") else {}
 
 
-def send(text, reply_to=None):
+def send(text: str, reply_to: str | None = None) -> str:
     """Post to the test group as the bot. Returns the new message id."""
     args = ["lark-cli", "im", "+messages-reply", "--message-id", reply_to, "--reply-in-thread"] if reply_to \
         else ["lark-cli", "im", "+messages-send", "--chat-id", TEST_CHAT]
     return json.loads(run(args + ["--as", "bot", "--text", text]))["data"]["message_id"]
 
 
-def debug_hook(what, title, text):
+def debug_hook(what: str, title: str, text: str) -> None:
     """A MainActivity debug hook: user, refresh, fetch or thread."""
     # `adb shell` hands one string to the phone's shell, which splits it again: a title with a
     # space silently truncates unless every value is quoted for *that* shell. CLEAR_TOP|NEW_TASK
@@ -99,36 +105,36 @@ def debug_hook(what, title, text):
     ]))
 
 
-def print_log():
+def print_log() -> None:
     """The app's logcat so far, time + level + tag + message."""
     for line in adb("logcat", "-d", "-s", *LOG_TAGS).stdout.splitlines():
         parts = line.split(None, 5)  # date time pid tid level tag: message
         print(" ".join(parts[1:2] + parts[4:]) if len(parts) > 5 else line)
 
 
-def top():
+def top() -> str:
     """The foreground activity."""
     dump = adb("shell", "dumpsys", "activity", "activities").stdout
     m = re.search(r"topResumedActivity=ActivityRecord\{\S+ u0 (\S+)", dump)
     return m.group(1) if m else "?"
 
 
-def shot(path):
+def shot(path: str) -> None:
     with open(path, "wb") as f:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], check=True, stdout=f)
 
 
 # ── the record ────────────────────────────────────────────────────────────────
-def has_han(s):
+def has_han(s: str) -> bool:
     return any("一" <= c <= "鿿" or "㐀" <= c <= "䶿" for c in s)
 
 
-def is_fallback(e):
+def is_fallback(e: Event) -> bool:
     # The `~` marks the translated part: the title, or the message after `Sender: `.
     return e["relayTitle"].startswith("~") or e["relayText"].split(": ", 1)[-1].startswith("~")
 
 
-def when(e, utc=False):
+def when(e: Event, utc: bool = False) -> str:
     """An event's time as `MM-DD HH:MM`, local unless `utc`."""
     t = datetime.fromisoformat(e["at"].replace("Z", "+00:00"))
     if not utc:
@@ -136,25 +142,25 @@ def when(e, utc=False):
     return t.strftime("%m-%d %H:%M")
 
 
-def event_ms(e):
+def event_ms(e: Event) -> int:
     return int(datetime.fromisoformat(e["at"].replace("Z", "+00:00")).timestamp() * 1000)
 
 
-def event_chat(e):
+def event_chat(e: Event) -> str:
     return e["key"].split("|")[2]
 
 
-def one_line(s):
+def one_line(s: str) -> str:
     return s.replace("\n", " ⏎ ")
 
 
-def preview_message(text):
+def preview_message(text: str) -> str:
     """The message part of an Original's text, as `Preview.parse` sees it (after the first `: `)."""
     sender, sep, message = text.partition(": ")
     return message if sep else text
 
 
-def preview_sender(text):
+def preview_sender(text: str) -> str:
     if text.endswith(":...") and ": " not in text:
         text = text[:-3] + " ..."
     i = text.find(": ")
@@ -164,7 +170,7 @@ def preview_sender(text):
     return head[:-4] if head.endswith(("@you", "@all")) else head
 
 
-def select(events, since=None, han=False, no_removed=False):
+def select(events: list[Event], since: str | None = None, han: bool = False, no_removed: bool = False) -> list[Event]:
     """`since` is an ISO UTC prefix; `han` keeps only Relays with Han in the Original."""
     out = []
     for e in events:
@@ -179,15 +185,16 @@ def select(events, since=None, han=False, no_removed=False):
     return out
 
 
-def relays_with_outcomes(events):
+def relays_with_outcomes(events: list[Event]) -> list[Relay]:
     """Each Relay with what the Update did to it: `updated (<msgType>)`, `skipped <reason>`, or
     `canceled` (a newer Original took the key before the fetch returned), and `cut` — whether Lark
     cut the Preview. Outcomes are keyed by the Original, so they pair by key, in order."""
-    relays, open_by_key = [], {}
+    relays: list[Relay] = []
+    open_by_key: dict[str, Relay] = {}
     for e in events:
         kind = e["event"]
         if kind == "relayed":
-            r = dict(e, outcome="canceled", cut=preview_message(e["text"]).endswith("..."))
+            r: Relay = dict(e, outcome="canceled", cut=preview_message(e["text"]).endswith("..."))
             relays.append(r)
             open_by_key[e["key"]] = r
         elif kind == "updated" and e["key"] in open_by_key:
@@ -199,7 +206,7 @@ def relays_with_outcomes(events):
 
 
 # ── the Open API, through lark-cli ────────────────────────────────────────────
-def lark_call(method, path, payload, identity="user"):
+def lark_call(method: str, path: str, payload: dict[str, Any], identity: str = "user") -> dict[str, Any]:
     """The whole lark-cli response: `ok`, and `data` or `code` + `msg`."""
     flag = "--params" if method == "GET" else "--data"
     out = subprocess.run(["lark-cli", "api", method, path, flag, json.dumps(payload), "--as", identity],
@@ -210,35 +217,35 @@ def lark_call(method, path, payload, identity="user"):
         return {"ok": False, "code": -1, "msg": (out.stderr or out.stdout).strip()}
 
 
-def lark_api(method, path, payload):
+def lark_api(method: str, path: str, payload: dict[str, Any]) -> dict[str, Any] | None:
     """None when Lark refuses — e.g. 230002, a chat Max is not a member of. Those are expected."""
     d = lark_call(method, path, payload)
     return d["data"] if d.get("ok") else None
 
 
-def parse_when(s):
+def parse_when(s: str) -> float:
     """ISO time → epoch seconds. A naive time is local, like `events` prints it."""
     t = datetime.fromisoformat(s.replace("Z", "+00:00"))
     return t.timestamp() if t.tzinfo else t.astimezone().timestamp()
 
 
-def parse_span(s):
+def parse_span(s: str) -> int:
     """`90s`, `5m`, `2h` → seconds."""
     return int(s[:-1]) * {"s": 1, "m": 60, "h": 3600}[s[-1]]
 
 
-def names_chat(name, title, stem):
+def names_chat(name: str, title: str, stem: str) -> bool:
     """Lark truncates a long title with `...`; then any chat whose name starts with the stem."""
     return name.startswith(stem) if title.endswith("...") else name == title
 
 
-def chats_search(query, page_size=20):
+def chats_search(query: str, page_size: int = 20) -> list[dict[str, Any]]:
     """`chats/search` hits (`chat_id`, `name`, …). Not deterministic — progress.md 2026-08-28."""
     data = lark_api("GET", "/open-apis/im/v1/chats/search", {"query": query, "page_size": page_size}) or {}
     return data.get("items", [])
 
 
-def resolve_chat(name):
+def resolve_chat(name: str) -> tuple[str, str]:
     """`oc_…` as is; else the phone's cache (exact, or the truncated-title stem), else `chats/search`.
     Returns `(chat_id, how)`; exits when nothing names the chat."""
     if name.startswith("oc_"):
@@ -253,9 +260,10 @@ def resolve_chat(name):
     return hits[0]["chat_id"], f"{hits[0]['name']}  (chats/search, {len(hits)} hit(s))"
 
 
-def messages_of(chat, start, end):
+def messages_of(chat: str, start: int, end: int) -> list[Message]:
     """`im/v1/messages` of a chat between two epoch seconds, every page. Empty for a chat Max cannot read."""
-    items, token, pages = [], None, 0
+    items: list[Message] = []
+    token, pages = None, 0
     while True:
         params = {"container_id_type": "chat", "container_id": chat, "sort_type": "ByCreateTimeDesc",
                   "page_size": "50", "start_time": str(start), "end_time": str(end)}
@@ -271,7 +279,7 @@ def messages_of(chat, start, end):
             return items
 
 
-def flat_text(m):
+def flat_text(m: Message) -> str:
     """One line per message, the way the app would read it: `text` and `post` flattened, the rest named."""
     kind, body = m["msg_type"], m["body"]["content"]
     if m.get("deleted"):
@@ -306,13 +314,13 @@ CORPUS_FILES = ("originals.tsv", "titles.tsv", "dms.tsv", "messages.tsv")
 SEP_ITEM, SEP_PARA, SEP_FIELD = "\x01", "\x02", "\x03"
 
 
-def esc(s):
+def esc(s: str | None) -> str:
     s = (s or "").replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
     assert not any(c in s for c in (SEP_ITEM, SEP_PARA, SEP_FIELD)), "text contains a separator"
     return s
 
 
-def message_row(chat, m):
+def message_row(chat: str, m: Message) -> str:
     kind, body = m["msg_type"], m["body"]["content"]
     mentions = SEP_ITEM.join(f"{esc(x['key'])}{SEP_FIELD}{esc(x['name'])}" for x in (m.get("mentions") or []))
     if m.get("deleted"):
