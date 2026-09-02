@@ -1465,3 +1465,14 @@ the two probes since; `msgs` on Rachel Lam's Original shows the `@_all` body; `c
 on Han and `unchanged` on the Latin-heavy MR reminder.
 
 Next: unchanged — Max's call among the four proposals of the entry above, or soak on.
+
+### 2026-09-02 — `tools/larklish-helper`: three dead paths removed
+
+Max asked what the tool no longer needs. Counted over the session's 642 Bash calls:
+`events table` (1 use; the Layer 4 hand-grading table, last needed in Experiment 08),
+`events --fallback` (1 use; `list` already marks `R~`/`U~` rows and `stats` tallies the
+reasons), and `phone open URL` (9 uses, all inside Experiments 06–07 — the deep-link question
+is settled). Removed. Kept, though idle: `probe --thread` (the only real thread Original),
+`probe --debug user|refresh` (for the day the seed token dies), `replay fetch --file/--chats`.
+
+Next: unchanged — Max's call among the four proposals of the soak entry, or soak on.

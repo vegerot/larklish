@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Larklish's tools, in one place. Every group keeps the shape of the tool it replaces.
 
-    tools/larklish-helper events stats                  # the Relay record (list, stats, table, pull)
+    tools/larklish-helper events stats                  # the Relay record (list, stats, grade, pull)
     tools/larklish-helper events --since 2026-08-29T00:30 --han list
     tools/larklish-helper events --since 2026-09-01T03:50 grade   # the soak grade: each Relay and its outcome
     tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then
@@ -10,7 +10,7 @@
     tools/larklish-helper probe "中文消息"               # post to the test group, show the Relay
     tools/larklish-helper probe --debug thread          #   …or run a MainActivity debug hook
     tools/larklish-helper chats                         # the chat-id cache; --clear resets it
-    tools/larklish-helper phone shade shot.png          # adb helpers (top, open, shade, shot, home)
+    tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
     tools/larklish-helper replay fetch                  # pull the corpus ReplayTest scores against
     tools/larklish-helper token --write                 # credentials from lark-cli's store
 
@@ -104,8 +104,6 @@ def select(events, args):
             continue
         if args.han and not (relayed and (has_han(e["text"]) or has_han(e["title"]))):
             continue
-        if args.fallback and not (relayed and is_fallback(e)):
-            continue
         out.append(e)
     return out
 
@@ -154,22 +152,6 @@ def events_stats(events, args):
     print("removal reasons:", ", ".join(f"{r} ({REASONS.get(r, '?')}) ×{n}" for r, n in sorted(Counter(e['reason'] for e in removed).items())))
     if relayed:
         print(f"span {when(relayed[0], args.utc)} → {when(relayed[-1], args.utc)}")
-
-
-def md_cell(s):
-    return s.replace("|", "\\|")
-
-
-def events_table(events, args):
-    cell = md_cell
-    print("| Original | Relay | Grade |")
-    print("| --- | --- | --- |")
-    for e in select(events, args):
-        if e["event"] != "relayed":
-            continue
-        original = f"{cell(e['text'])}" if not has_han(e["title"]) else f"title {cell(e['title'])} · {cell(e['text'])}"
-        relay = f"{cell(e['relayText'])}" if not has_han(e["title"]) else f"title {cell(e['relayTitle'])} · {cell(e['relayText'])}"
-        print(f"| {original} | {relay} |  |")
 
 
 def one_line(s):
@@ -228,8 +210,7 @@ def events_pull(events, args):
 
 def cmd_events(args):
     events = read_events(args.file)
-    {"list": events_list, "stats": events_stats, "table": events_table, "grade": events_grade,
-     "pull": events_pull}[args.view](events, args)
+    {"list": events_list, "stats": events_stats, "grade": events_grade, "pull": events_pull}[args.view](events, args)
 
 
 # ── probe: post one message and show what Larklish did with it ────────────────
@@ -435,14 +416,6 @@ def cmd_phone(args):
         time.sleep(2)
         if args.file:
             shot(args.file)
-    elif args.act == "open":
-        adb("shell", "input", "keyevent", "KEYCODE_HOME")
-        time.sleep(1)
-        adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{args.url}'")
-        time.sleep(4)
-        print(f"top: {top()}")
-        if args.file:
-            shot(args.file)
 
 
 # ── replay: pull the corpus that ReplayTest scores the shipped rules against ───
@@ -593,13 +566,11 @@ def main():
     e.add_argument("--file", help="read this saved copy instead of the phone")
     e.add_argument("--since", help="ISO UTC prefix, e.g. 2026-08-29T00:30 (Layer 6 went live)")
     e.add_argument("--han", action="store_true", help="only Relays whose Original has Han text")
-    e.add_argument("--fallback", action="store_true", help="only Relays produced by the ML Kit fallback (~)")
     e.add_argument("--no-removed", action="store_true", help="hide removal events")
     e.add_argument("--utc", action="store_true", help="print UTC instead of local time")
     view = e.add_subparsers(dest="view", required=True)
     view.add_parser("list", help="every event, oldest first")
     view.add_parser("stats", help="counts")
-    view.add_parser("table", help="Markdown table of Relays for the experiment docs")
     view.add_parser("grade", help="the soak grade: every Relay paired with its Update outcome, cut Previews first")
     view.add_parser("pull", help="save the raw JSONL").add_argument("out")
     e.set_defaults(fn=cmd_events)
@@ -644,9 +615,6 @@ def main():
     act.add_parser("home", help="press HOME")
     act.add_parser("shot", help="screenshot to FILE").add_argument("file")
     act.add_parser("shade", help="expand the shade, optional screenshot").add_argument("file", nargs="?")
-    o = act.add_parser("open", help="fire a VIEW intent (deep link), report the foreground activity")
-    o.add_argument("url")
-    o.add_argument("file", nargs="?")
     f.set_defaults(fn=cmd_phone)
 
     r = group.add_parser("replay", help="the corpus ReplayTest scores the shipped rules against")

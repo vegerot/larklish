@@ -298,13 +298,13 @@ tools/larklish-helper probe --install --thread "中文消息"       #   …after
 tools/larklish-helper probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch, thread
 tools/larklish-helper chats                                   # what the chat-id cache holds
 tools/larklish-helper chats --clear                           #   reset it (deletes the file *and* force-stops)
-tools/larklish-helper events stats                            # the Relay record; views: list, stats, table, grade, pull
+tools/larklish-helper events stats                            # the Relay record; views: list, stats, grade, pull
 tools/larklish-helper events --since 2026-08-29T00:30 --han list
 tools/larklish-helper events --since 2026-09-01T03:50 grade   #   the soak grade: cut Previews vs their Update outcome
 tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then (id or title)
 tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits, and how often they appear
 tools/larklish-helper translate '先别发布' --repeat 30          # one Lark translate call, with its code (rate-limit probe)
-tools/larklish-helper phone open 'https://applink.feishu.cn/client/chat/open?openChatId=oc_…'   # also top, shade, shot, home
+tools/larklish-helper phone shade shot.png              # adb helpers: top, home, shot, shade
 tools/larklish-helper replay fetch                            # pull replay-corpus/ (gitignored: real messages)
 ./gradlew testDebugUnitTest --tests '*ReplayTest*' -i  #   …score the shipped rules over it
 ```
