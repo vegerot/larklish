@@ -1094,13 +1094,13 @@ Next:
   for this**: it only appears when push is delayed, and a wider window costs a worse pick on
   every ordinary Original. Let the next soak say how often it really happens.
 
-### 2026-08-28 — one tool: `tools/larklish`
+### 2026-08-28 — one tool: `tools/larklish-helper`
 
 - 🧰 `tools/events`, `tools/probe`, `tools/chats` and `tools/phone` are now groups of one
   entry point. Each keeps the shape it had, and the views it had become sub-subcommands:
-  `tools/larklish events --since … list`, `… phone shade shot.png`, `… chats --clear`.
+  `tools/larklish-helper events --since … list`, `… phone shade shot.png`, `… chats --clear`.
 - 🔐 `tools/lark-token` stays its own file — it is the only piece with dependencies of its
-  own (a `uv` script needing `cryptography`). `tools/larklish token` execs it and passes
+  own (a `uv` script needing `cryptography`). `tools/larklish-helper token` execs it and passes
   arguments through, so there is still one entry point to remember.
 - ✅ Equivalence checked, not assumed: `events` `pull`, `stats`, `list`, `table` and the
   filter flags all diff clean against the old tool, as do `chats` and `phone top`. `probe`,
@@ -1113,7 +1113,7 @@ Next:
   Layer 6 number came out of that copy. Hand-porting `unwrapHtml` had already produced one
   wrong expectation, so the risk was real, not theoretical.
 - 🧪 `ReplayTest.kt` replays a day of real Originals through the functions the app ships.
-  `tools/larklish replay fetch` pulls the corpus (Originals, `chats/search` hits, DM cache,
+  `tools/larklish-helper replay fetch` pulls the corpus (Originals, `chats/search` hits, DM cache,
   messages) into gitignored `replay-corpus/` as TSV — real colleagues' messages, never
   committed, so the test skips without it.
 - 🔧 One refactor made it possible: `postText` now has a pure core
@@ -1199,7 +1199,7 @@ with `no-message` 19 → 16 and `no-match` 11 → 14 — the same outcomes, repo
 
 ### 2026-08-31 — Layer 6 soaked; Lark localizes mentions
 
-`tools/larklish events --since 2026-08-29T04:30 stats` over 2.6 days (a weekend, so 27
+`tools/larklish-helper events --since 2026-08-29T04:30 stats` over 2.6 days (a weekend, so 27
 Relays against Experiment 09's 92 in a day). Full grade in
 `docs/experiments/12-soak-and-mentions.md`.
 
@@ -1249,7 +1249,7 @@ six hours apart. That quota belongs to the shared fat CLI app, not to us — and
 2.6 days and readable English both times, so it waits. If it grows, pause before the retry.
 
 Next: a **weekday** soak on the new rule — this one had no weekday traffic to speak of.
-`tools/larklish events --since 2026-08-31T20:40 stats`.
+`tools/larklish-helper events --since 2026-08-31T20:40 stats`.
 
 ### 2026-08-31 — the Sender goes to the engine unless it is a person's name
 
@@ -1332,7 +1332,7 @@ remaining prefix candidates never run, and neither does the LRU fallback that fi
 exactly this kind of miss. The Relay is left with its Preview and the debug build posts an
 error notification.
 
-`tools/larklish`'s own `lark_api` already treats 230002 as expected ("a chat Max is not a
+`tools/larklish-helper`'s own `lark_api` already treats 230002 as expected ("a chat Max is not a
 member of"). The app should too: a per-chat failure means *this chat has nothing*, not *give
 up*. Not fixed — outside the two changes Max asked for. ~3 lines in `pickIn`.
 
@@ -1358,7 +1358,7 @@ probes show the retry failing 0.8 s after the first call, every time. A pause be
 retry is the next thing to try.
 
 Next: Max's call — fix the 230002 abort, pause the retry, or soak first and re-grade with
-`tools/larklish events --since 2026-09-01T03:50 stats`.
+`tools/larklish-helper events --since 2026-09-01T03:50 stats`.
 
 ### 2026-08-31 — one unreadable chat no longer ends the lookup
 
@@ -1396,13 +1396,13 @@ I Translator: debug fetch [TEST-BAD-CHAT]: Skipped(reason=error: java.io.IOExcep
 Before, that line was `debug fetch failed: …` and the lookup was over. The cache was backed up
 and restored (22 entries, unchanged). 22 JVM tests green.
 
-Next: soak and re-grade — `tools/larklish events --since 2026-09-01T03:50 stats`. Watch the
+Next: soak and re-grade — `tools/larklish-helper events --since 2026-09-01T03:50 stats`. Watch the
 `not-truncated` bucket (by design), whether the localized-mention rule fires on a real Oncall
 message, and whether the `99991400` fallbacks keep climbing.
 
 ### 2026-09-02 — weekday soak graded: 31 of 34, the mention rule carries a third of it
 
-`tools/larklish events --since 2026-09-01T03:50 stats` over 1.7 weekdays, 111 Relays. Full
+`tools/larklish-helper events --since 2026-09-01T03:50 stats` over 1.7 weekdays, 111 Relays. Full
 grade in `docs/experiments/14-weekday-soak.md`.
 
 | | Layer 6, weekend (Exp 12) | Layer 6 + guard, weekdays |

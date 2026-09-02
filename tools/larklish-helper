@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Larklish's tools, in one place. Every group keeps the shape of the tool it replaces.
 
-    tools/larklish events stats                  # the Relay record (list, stats, table, pull)
-    tools/larklish events --since 2026-08-29T00:30 --han list
-    tools/larklish probe "中文消息"               # post to the test group, show the Relay
-    tools/larklish probe --debug thread          #   …or run a MainActivity debug hook
-    tools/larklish chats                         # the chat-id cache; --clear resets it
-    tools/larklish phone shade shot.png          # adb helpers (top, open, shade, shot, home)
-    tools/larklish replay fetch                  # pull the corpus ReplayTest scores against
-    tools/larklish token --write                 # credentials from lark-cli's store
+    tools/larklish-helper events stats                  # the Relay record (list, stats, table, pull)
+    tools/larklish-helper events --since 2026-08-29T00:30 --han list
+    tools/larklish-helper probe "中文消息"               # post to the test group, show the Relay
+    tools/larklish-helper probe --debug thread          #   …or run a MainActivity debug hook
+    tools/larklish-helper chats                         # the chat-id cache; --clear resets it
+    tools/larklish-helper phone shade shot.png          # adb helpers (top, open, shade, shot, home)
+    tools/larklish-helper replay fetch                  # pull the corpus ReplayTest scores against
+    tools/larklish-helper token --write                 # credentials from lark-cli's store
 
-`--help` works at every level: `tools/larklish events --help`, `… events list --help`.
+`--help` works at every level: `tools/larklish-helper events --help`, `… events list --help`.
 `token` runs `tools/lark-token`, which stays its own file: it is the only piece that needs
 uv and cryptography.
 """
@@ -420,7 +420,7 @@ def cmd_token(args):
 
 
 def main():
-    p = argparse.ArgumentParser(prog="tools/larklish", description=__doc__,
+    p = argparse.ArgumentParser(prog="tools/larklish-helper", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     group = p.add_subparsers(dest="group", required=True)
 

@@ -5,7 +5,7 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
 
-// The separators `tools/larklish replay fetch` writes: items, paragraphs, fields of an element.
+// The separators `tools/larklish-helper replay fetch` writes: items, paragraphs, fields of an element.
 private const val SEP_ITEM = '\u0001'
 private const val SEP_PARA = '\u0002'
 private const val SEP_FIELD = '\u0003'
@@ -33,14 +33,14 @@ private data class Original(val whenMs: Long, val title: String, val text: Strin
 
 /**
  * Replays a day of real Originals against the rules the app ships, over a corpus pulled by
- * `tools/larklish replay fetch`. Experiments 10 and 11 scored the same thing in Python, which
+ * `tools/larklish-helper replay fetch`. Experiments 10 and 11 scored the same thing in Python, which
  * measured a *copy* of the rules; this measures `pickMessage`, `postText`, `unwrapHtml`,
  * `resolveMentions` and `Preview.parse` themselves.
  *
  * The corpus is real colleagues' messages, so it is never committed. Without it this test
  * skips. Pull one, then read the breakdown:
  *
- *     tools/larklish replay fetch
+ *     tools/larklish-helper replay fetch
  *     ./gradlew testDebugUnitTest --tests '*ReplayTest*' -i
  */
 class ReplayTest {
@@ -78,7 +78,7 @@ class ReplayTest {
 
     @Test
     fun theShippedRulesFindTheMessageBehindMostOriginals() {
-        assumeTrue("no corpus — run `tools/larklish replay fetch`", corpus != null)
+        assumeTrue("no corpus — run `tools/larklish-helper replay fetch`", corpus != null)
         val messages = candidatesByChat()
         val titles = rows("titles.tsv").associate { it[0].unescaped() to it.getOrElse(1) { "" }.items() }
         val dms = rows("dms.tsv").associate { "dm:" + it[0].unescaped() to it[1] }

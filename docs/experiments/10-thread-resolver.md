@@ -9,7 +9,7 @@ counts what each recovers.
 
 Offline replay, no phone. Scripts in `tools/replay/` (throwaway):
 <!-- Superseded 2026-08-28: the Python harness became `ReplayTest.kt` plus
-     `tools/larklish replay fetch`, so it now scores the shipped rules instead of a copy.
+     `tools/larklish-helper replay fetch`, so it now scores the shipped rules instead of a copy.
      The numbers below were produced by the Python originals. -->
 
 1. `search.py` — every distinct group title (24) through `chats/search`, keeping **all**

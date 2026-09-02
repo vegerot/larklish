@@ -1,7 +1,7 @@
 # 🧪 Experiment 12 — Soak 2026-08-28 → 31: Layer 6 on real traffic
 
 Source: `events.jsonl` (563 events, pulled 2026-08-31 13:26 PDT), read with
-`tools/larklish events --since 2026-08-29T04:30` (the Layer 6 build went live 08-28 21:18).
+`tools/larklish-helper events --since 2026-08-29T04:30` (the Layer 6 build went live 08-28 21:18).
 **27 Relays over 2.6 days** — a weekend, so the volume is a third of Experiment 09's day.
 Every root cause below is reproduced against the live Open API, not read off the record.
 
@@ -71,7 +71,7 @@ The two sides disagree on the opening and on **nothing else**.
 ### Three candidate rules, measured
 
 Scored over the refreshed corpus — **257 Originals**, 2026-08-25 → 31 — with only the
-matcher swapped (`tools/larklish replay fetch`, then the scorer of this experiment):
+matcher swapped (`tools/larklish-helper replay fetch`, then the scorer of this experiment):
 
 ```
 rule                                    found   Δ    no-match

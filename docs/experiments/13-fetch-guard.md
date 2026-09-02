@@ -45,7 +45,7 @@ Accept it. 33 of 34 is the measured rate, the loss is one message shape, and the
 half of all API traffic — including half of the translate calls behind the `99991400` rate
 limit that now drives the ML Kit fallback.
 
-A skipped Relay records `skipped not-truncated`, so `tools/larklish events stats` still shows
+A skipped Relay records `skipped not-truncated`, so `tools/larklish-helper events stats` still shows
 the bucket and a later soak can price the exception instead of guessing at it.
 
 ⚠️ Reading a soak after this change: `not-truncated` is **by design**, not a failure. The

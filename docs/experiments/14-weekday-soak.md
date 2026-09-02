@@ -1,6 +1,6 @@
 # 🧪 Experiment 14 — A weekday soak of Layer 6 + the fetch guard
 
-`tools/larklish events --since 2026-09-01T03:50 stats`, 2026-09-01 03:50 → 09-02 21:06 UTC
+`tools/larklish-helper events --since 2026-09-01T03:50 stats`, 2026-09-01 03:50 → 09-02 21:06 UTC
 (1.7 days, Tuesday and Wednesday in Beijing). **111 Relays.** Experiment 12 asked for a
 weekday soak; this is it. The three things the last progress entry said to watch, in order.
 
