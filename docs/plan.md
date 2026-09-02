@@ -228,11 +228,32 @@ which say whether the Translator hit an outage or an input Lark will not transla
   `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
 - [ ] **Update for the other message types.** After `text` and `post` (Layer 5),
   cards (`interactive`), images, stickers, files. The soak's `msg_type` counts set the order.
+  **Cards first** (2026-09-02): Lark previews a card by its `title` with no `...`, so the
+  guard skips it, and every `type:interactive` and card-shaped `no-match` in Experiment 14 is
+  one. Some carry real `text` and `at` elements a flattener could read (the 风险平台 report);
+  others hold only an image and "请升级至最新版本客户端", worth nothing. Measure the split
+  over the record before building. Evidence: `docs/experiments/14-weekday-soak.md` "Also seen".
 - [ ] **Translate only the Han runs when Lark passes text through.** Both real fallback
   rows of the soak were Latin-heavy sentences with a few Han words; ML Kit damaged the
   English (`customFetch` → `CustomEtch`). Instead of the whole sentence, send each Han run
   (`权限申请`) to the Translator and splice the results back. Evidence:
-  `docs/experiments/08-soak.md`.
+  `docs/experiments/08-soak.md`. Priced 2026-09-02: 6 of 111 Relays were `NotTranslated`,
+  and ML Kit made every one worse (Title-Case, `MR #3245` mangled). Sketch: join the Han runs
+  with `\n`, one Lark call, split on `\n`, splice — one call, not one per run. Evidence:
+  `docs/experiments/14-weekday-soak.md` §3.
+- [ ] **A second Update when Lark's quota frees up.** The `99991400` limit is the tenant's
+  20 QPS, shared by every app, and busy only in Beijing working hours (14 of 81 Han texts
+  gave up on a weekday, 0 overnight). The retry runs 0.8 s after the first call, inside the
+  same busy window, and the windows last minutes. Instead: post the ML Kit text at once, as
+  now, then retry Lark on a slow clock (say 30 s, 60 s, 120 s) and Update the Relay again
+  when it answers — Lark's quality a minute late beats ML Kit's for good. Bound it: the
+  Relay may already be withdrawn (median 11.5 min). Evidence: `docs/experiments/14-weekday-soak.md` §3.
+- [ ] **Cache a chat only on `Found`.** `if (candidates.size == 1 && !outcome.failed())
+  remember(…)` caches a clean miss, and a chat Max cannot read answers a clean miss under
+  time bounds (`ok, items: []` masks `230002`). `ByteDance Research 技术交流群` sits in
+  `chats.json` that way. Harm 0 so far (all three Originals under that title were cards), so
+  it waits — ~1 line when it bites, or `chats --clear` by hand. Evidence:
+  `docs/experiments/14-weekday-soak.md` "Also seen".
 - [x] **Fetch only when the Preview ends in `...`.** ✅ Done 2026-08-31: `Preview.truncated`
   gates the Update, and a Relay that skips it records `skipped not-truncated` so a soak can
   still price the exception. 54 % of Relays never needed the fetch, and 33 of the 34 Updates
