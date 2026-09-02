@@ -35,8 +35,8 @@ unless the situation changes. Read `CONTEXT.md` for the glossary and use its ter
 - Do not search the home directory or `/` broadly.
 - Turn frequently-run one-liners into tools in `./tools`
   + note: don't immediately do it.  Only for common tasks that you have done many times, like `./tools/larklish-helper`, which holds them all as subcommands.
-  + For a one-off script, import `tools/larklishlib/` (the helper's pieces: `phone`, `record`, `lark`,
-    `corpus`) instead of re-typing them: `import sys; sys.path.insert(0, "tools"); from larklishlib import phone, record, lark`.
+  + For a one-off script, import the helper instead of re-typing its pieces — `tools/larklish-helper` is a
+    symlink to `tools/larklish_helper.py`: `import sys; sys.path.insert(0, "tools"); from larklish_helper import read_events, …`.
 
 ## 📖 Output Standard 🏁 Goal: text that is clear, unambiguous, and easy for all readers.
 

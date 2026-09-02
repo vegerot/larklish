@@ -1544,3 +1544,26 @@ group — `phone` (adb), `record` (events.jsonl), `lark` (the Open API; `lark_ca
 byte-identical over the 40-event file.
 
 Next: unchanged — Max's call among the Later items from the soak, or soak on.
+
+### 2026-09-02 — one file again: `tools/larklish_helper.py`, and the command is a symlink to it
+
+Max asked whether the library, the types and the package were an improvement by the
+project's own rules. Honest answer: only partly. The four subcommands were grounded in ~90
+counted repetitions; the library then claimed the same repetitions a second time, the types
+over `dict[str, Any]` check almost nothing, and a five-module package served one consumer
+and zero scripts. The one real gain was the driver/library separation — functions return,
+only `cmd_*` print.
+
+Kept that, in one file. `tools/larklish_helper.py` holds the library (the phone, the record,
+the Open API, the corpus format — types and signatures kept) above the driver, and
+`tools/larklish-helper` is a symlink to it, so the command keeps its name and `from
+larklish_helper import read_events` works. Prefixes only where the bare name said nothing:
+`lark_cli`, `lark_api`, `send_test_message`; everything else flat (`adb`, `when`,
+`chats_search`). `print_log` became `log_lines`, the last library function that printed.
+
+Verified without the phone (it dropped off adb mid-check): `list`, `stats`, `grade` from a saved
+record, `chats search`, `msgs` by id, `translate`, `replay fetch --file --chats` all diff clean
+against the pre-refactor snapshot; the import works. Not re-run: `chats`, `phone top`, `probe`
+— unchanged except `probe` printing `log_lines()`.
+
+Next: unchanged — Max's call among the Later items from the soak, or soak on.

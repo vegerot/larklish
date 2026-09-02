@@ -345,5 +345,5 @@ tools/larklish-helper translate '先别发布' --repeat 30          # one Lark t
 tools/larklish-helper phone shade shot.png              # adb helpers: top, home, shot, shade
 tools/larklish-helper replay fetch                            # pull replay-corpus/ (gitignored: real messages)
 ./gradlew testDebugUnitTest --tests '*ReplayTest*' -i  #   …score the shipped rules over it
-python3 -c 'import sys; sys.path.insert(0, "tools"); from larklishlib import phone, record, lark; …'   # one-off scripts
+python3 -c 'import sys; sys.path.insert(0, "tools"); from larklish_helper import read_events; …'   # one-off scripts: the helper is the library
 ```
