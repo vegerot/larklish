@@ -767,6 +767,22 @@ def rounded(card: Any) -> Any:
     return out
 
 
+FONTS = [  # the first one that exists: macOS system, macOS user-installed, Debian
+    "/System/Library/Fonts/Helvetica.ttc",
+    "/Library/Fonts/Helvetica.ttc",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+]
+
+
+def caption_font(size: int) -> Any:
+    ImageFont = need("PIL.ImageFont")
+    path = next((f for f in FONTS if pathlib.Path(f).exists()), None)
+    assert path, (
+        f"none of {FONTS} exists on this machine"
+    )  # the machines Max uses have one of them
+    return ImageFont.truetype(path, size)
+
+
 def compose(slug: str, caption: str) -> str:
     """<slug>-lark.png and <slug>-larklish.png side by side under a caption → <slug>.png."""
     Image, ImageDraw, ImageFont = (
@@ -778,8 +794,7 @@ def compose(slug: str, caption: str) -> str:
     larklish = rounded(
         Image.open(f"{SHOWCASE_DIR}/{slug}-larklish.png").convert("RGBA")
     )
-    font = ImageFont.truetype("/Library/Fonts/Helvetica.ttc", 44)
-    small = ImageFont.truetype("/Library/Fonts/Helvetica.ttc", 36)
+    font, small = caption_font(44), caption_font(36)
     top = PAD + 70 + 40  # caption line, label line
     page = Image.new(
         "RGB",
