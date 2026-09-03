@@ -1,0 +1,7 @@
+- [Lark references](lark-references.md) — open.larkoffice.com/llms.txt docs index, client docs URL, local lark-cli checkout
+- [Larklish test phone](larklish-test-phone.md) — rooted company Pixel 4a on LineageOS; adb experiments are fine
+- [Lark translation API](lark-translation-api.md) — scope translation:text, tenant token only, 1000 chars, 20 QPS, glossary; no mute API
+- [Computer-use Studio screenshot workaround](computer-use-studio-screenshot-workaround.md) — tool hides Studio window; use raw screencapture + AX geometry, quit Alcove, allowlist Flux Island
+- [Dev box adb tunnel](devbox-adb-tunnel.md) — dev box is 10.251.236.182, not the DNS name "devbox"; port 5037 reverse tunnel
+- [Read docs after compaction](read-docs-after-compaction.md) — Max: fully read CLAUDE.md, plan.md, progress.md after every compaction
+- [ByteDance backend references](bytedance-backend-references.md) — expert answers folder, Tika conversation id, fsopen.bytedance.net Feishu API mirror (verified), lark-cli cannot use it

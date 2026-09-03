@@ -8,6 +8,10 @@ bottom) for the current state. Do not re-propose the rejected alternatives
 (lark-cli polling, bot event subscriptions, third-party cloud translation, Tasker)
 unless the situation changes. Read `CONTEXT.md` for the glossary and use its terms.
 
+Claude's project memory is checked in at `.claude/memory/` (`MEMORY.md` is the index), so it
+follows the repo across machines. Once per machine, point Claude Code's memory path at it:
+`ln -s "$PWD/.claude/memory" ~/.claude/projects/"$(pwd | tr '/.' '--')"/memory`.
+
 ## 📱 Project facts
 
 - Package: `com.vegerot.larklish`

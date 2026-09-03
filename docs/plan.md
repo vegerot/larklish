@@ -315,6 +315,8 @@ export ANDROID_HOME=~/Android/Sdk                         # devbox only: for Gra
   platform-tools "platforms;android-37.0" "build-tools;36.0.0"   # devbox only: once per machine
 cp debug.keystore ~/.android/debug.keystore              # once per machine: same debug signer everywhere,
                                                           #   so installDebug upgrades in place (keeps data + grants)
+ln -s "$PWD/.claude/memory" \
+  ~/.claude/projects/"$(pwd | tr '/.' '--')"/memory  # once per machine: Claude's project memory is in the repo
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
 tools/larklish-helper token --write                              # Layers 4–5: lark.appId, lark.appSecret,
                                                           #   lark.userRefreshToken from lark-cli's store
