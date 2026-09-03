@@ -1672,3 +1672,25 @@ layout); no plan.md Layer until it settles.
 Next:
 
 - Max answers the grill. Then a plan.md Layer for the Backend, and its first commit.
+
+## Layer 7 — Backend v0
+
+### 2026-09-02 — Layer 7 planned: the Backend takes the Update path
+
+Max: Larklish is also an entry in a full-stack hackathon, so it needs a back end. Shortcuts are
+welcome, but the Relay must stay fast and the app must keep solving its two problems. Grilled
+and planned; decisions in `plan.md` Layer 7.
+
+- 📐 The Update path moves — the Lookup and the Full-text translate — as a Go `net/http`
+  server on the official `oapi-sdk-go/v3`. The phone keeps everything on the Relay's critical
+  path and its token chain, and sends the user access token per request; the Backend is
+  stateless but for the chat cache.
+- 📐 Host: this Mac first, ByteFaaS later under `coplan.lark.*`.
+- 📐 Gate: `MessageFetcher.kt` and its tests go only after both replays agree per Original
+  over the 257-Original corpus, or Go is better.
+- 📄 `CONTEXT.md`: **Backend**, **Lookup**. `plan.md`: Layer 7, two settled-facts rows,
+  Shortcuts, Commands.
+
+Next:
+
+- Commit 2: `backend/preview.go`, test-first.

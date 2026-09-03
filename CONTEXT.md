@@ -36,3 +36,11 @@ _Avoid_: body, content, full message
 **Update**:
 A second `notify` on the same Relay key that replaces the Preview with the Full text.
 _Avoid_: refresh, re-post, second post
+
+**Backend**:
+The Go HTTP server that runs the Lookup and translates the Full text for the phone.
+_Avoid_: server, service, proxy, cloud
+
+**Lookup**:
+The path from an Original's title to its Full text: title → chat id → newest messages → pick.
+_Avoid_: fetch, resolve, search

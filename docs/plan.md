@@ -76,6 +76,8 @@ the table below; `CONTEXT.md` holds the words.
 | `@_all` in `text` bodies | A `text` body spells @all as the literal `@_all` and the `mentions` array never names it; the Preview reads `@all`. `resolveMentions` maps it | same §1 |
 | Cards preview their `title` | For an `interactive` message Lark's Preview is the card's `title`, never marked `...`; some cards carry real `text`/`at` elements, others only an image. First target of "Update for the other message types" | same, "Also seen" |
 | Weekday grade | 31 of 34 readable cut Previews Updated (91 %); 11 of the 31 through the localized-mention close rule, all correct | same §1–2 |
+| Feishu API intranet mirror | `open.feishu.cn` → `fsopen.bytedance.net` serves the tenant-token and translate endpoints, from the office network and inside the IDC. `lark-cli` hard-codes the public host by brand, so it cannot use the mirror | `docs/progress.md` 2026-09-02 |
+| The phone reaches the intranet | On the office Wi-Fi `Inspire Creativity` with no VPN, and on cellular through the SealSuite VPN (`fsopen` answers 200 in 1.1 s with Wi-Fi off) | same |
 
 ## Layers
 
@@ -195,6 +197,46 @@ was cleared once (`rm files/chats.json`, force-stop) and cannot come back.
 Then soak again and re-grade with `tools/larklish-helper events stats` — now including `fallback` rows,
 which say whether the Translator hit an outage or an input Lark will not translate.
 
+### Layer 7 — Backend v0 🚧 building
+
+Larklish is also Max's entry in a full-stack hackathon, which needs a front end **and** a
+back end. Max uses it daily, so the Relay stays as fast as it is and the app keeps solving its
+two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are listed below.
+
+- **What moves**: the Update path only — the **Lookup** (title → chat id → newest messages →
+  pick → Full text) and the Full-text translate. The phone keeps the listener, the Relay, the
+  Preview translate, Romanize, the Recorder and the user token chain, and sends its user access
+  token with each request. The Update is off the Relay's critical path, so the extra hop costs
+  nothing Max can feel.
+- **Stateless Backend**, except an in-memory chat cache + LRU, re-learned after a restart (one
+  `chats/search` per chat). Refresh tokens are single-use: a server instance that dies between
+  a rotation and a write loses the chain, so the chain stays on the phone, where it has run for
+  a week.
+- **Go**, `net/http`, and the official SDK `github.com/larksuite/oapi-sdk-go/v3` (chat search,
+  message list, message search, translate; it renews the tenant token itself; the user token
+  goes per request; `WithOpenBaseUrl` for the IDC mirror). No token code in the Backend.
+- **Host**: a Go HTTP server on the Mac first (`go -C backend run .`, port 8787); ByteFaaS
+  later, under the node of the existing function `link-preview` (`n3e8d5na`, PSM
+  `coplan.lark.spooky`, runtime `native/v1`, cluster `faas-cn-north`, request timeout 7 s).
+  Port from `_BYTEFAAS_RUNTIME_PORT` → `PORT` → 8787, `GET /v1/ping`, Lark host from
+  `LARK_HOST` (`https://fsopen.bytedance.net` inside the IDC).
+- **Protocol**: `POST /lookup {title, text, whenMs, userToken}` → `{outcome: "found", msgType,
+  chatId, fullText, english | null}` or `{outcome: "skipped", reason}` with today's reason
+  vocabulary, so the record and `events grade` read the same. A null `english` (Lark failed
+  twice, or returned the input unchanged) sends the phone down its own path: Lark once more,
+  then ML Kit with the `~` mark.
+- **Equivalence before deletion**: both replays write one outcome per Original
+  (`replay-corpus/outcomes-kotlin.tsv`, `outcomes-go.tsv`); `MessageFetcher.kt` and its tests
+  go only when the diff is empty, or Go is better on every differing row. Known edge: 5 of 257
+  stems carry an emoji inside the first 12 characters, where Kotlin counts UTF-16 units and Go
+  counts runes.
+- Files: `backend/` (`preview.go`, `pick.go`, `fetcher.go`, `lark.go`, `live.go`,
+  `translate.go`, `server.go`, `config.go`, `main.go`, and their tests), `app/…/Backend.kt`.
+  Deleted: `MessageFetcher.kt`, `PickMessageTest`, `MentionsTest`, `MessageTextTest`,
+  `ReplayTest`. Commits: docs → `Preview.parse` in Go → the rules in Go → the Kotlin replay
+  writes outcomes → the Lookup policy + the Go replay (the gate) → Lark client + server → the
+  app calls the Backend → soak.
+
 ### Later (not experiments)
 
 - [ ] Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
@@ -285,8 +327,12 @@ gap, not an oversight. The future backend removes most of them.
   ran `tools/lark-token --write` needs `lark-cli auth login` again (Experiment 08).
 - No sign-in screen. A public build needs the device-code flow lark-cli uses. It is also
   the fix the day the seed token dies (7 days without a refresh).
-- Everything runs on-device. The backend takes the secrets, the tokens, and maybe the
-  fetch.
+- The Preview translate and the token chain still run on the phone; only the Update path
+  runs on the Backend (Layer 7).
+- Backend v0: no phone↔Backend auth; cleartext HTTP to the Mac (`usesCleartextTraffic`); the
+  app secret sits in `local.properties` on the phone (Preview translate) and on the Mac
+  (Full-text translate); the chat cache dies with the process. The Mac must be up and on the
+  office Wi-Fi for an Update to land — ByteFaaS removes that.
 
 ## Commands
 
@@ -328,6 +374,11 @@ adb exec-out run-as com.vegerot.larklish cat files/user-token.json   # …or see
                                                           #   (a copied seed dies when that machine's lark-cli refreshes)
 ./gradlew installDebug
 ./gradlew testDebugUnitTest                                # JVM tests
+go -C backend run .                                        # Layer 7: the Backend on this Mac, port 8787
+                                                          #   (local.properties: larklish.backendUrl=http://<mac-ip>:8787)
+go -C backend test ./...                                   #   Go tests; the corpus replay runs when replay-corpus/ exists
+adb reverse tcp:8787 tcp:8787                              #   over USB the phone reaches the Mac as http://127.0.0.1:8787
+curl -s localhost:8787/v1/ping; curl -s localhost:8787/chats   #   liveness; the Backend's chat cache
 ssh -N -o ExitOnForwardFailure=yes devbox                 # when working remotely on devbox: on the Mac: carry its adb server to the dev box
                                                           #   (~/.ssh/config: Host devbox, HostName 10.251.236.182,
                                                           #   RemoteForward 5037 localhost:5037; the DNS name
