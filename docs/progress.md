@@ -1812,3 +1812,15 @@ Next:
 
 - Real traffic with the Backend running is the verification of the Update path:
   `tools/larklish-helper events --since 2026-09-03T06:44 grade`.
+
+### 2026-09-03 — the Wi-Fi fallback works with the cable out
+
+- ✅ Phone unplugged, adb over Wi-Fi only (`adb tcpip 5555`, no reverse mapping): the `fetch`
+  hook reached the Backend at the Mac's LAN address after the refused `127.0.0.1` try, in 2.4 s
+  end to end. With a fresh test-group message: `found`, the Full text, and `english: null` —
+  the Backend's two translate calls hit `99991400` at 00:04 PDT, which is 15:04 in Beijing, the
+  busy window Experiment 14 charted. The phone's own Translator takes over in that case.
+
+Next:
+
+- Real cut traffic with the Backend up is the last unseen hop: `events --since 2026-09-03T06:44 grade`.
