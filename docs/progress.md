@@ -1694,3 +1694,20 @@ and planned; decisions in `plan.md` Layer 7.
 Next:
 
 - Commit 2: `backend/preview.go`, test-first.
+
+### 2026-09-02 — Backend, commits 2–5: the rules and the Lookup in Go, and the gate passed
+
+- 🧪 Test-first, one commit each: `backend/preview.go` (the 7 `PreviewTest` cases),
+  `backend/pick.go` (`pickMessage`, `resolveMentions`, `unwrapHtml`, `postText` — the 18 + 4 + 4
+  Kotlin cases plus two `postText` cases Kotlin never had), `backend/fetcher.go` (the Lookup
+  policy over a `Source` interface: cache, prefix candidates, LRU, per-chat errors — with five
+  tests Kotlin never had, on a fake Lark).
+- 📏 The gate (`docs/experiments/15-backend-replay.md`): `ReplayTest.kt` and
+  `backend/replay_test.go` each write one outcome per Original; **257 of 257 lines identical,
+  148 found on both**. The 5 stems with an emoji inside the first 12 characters, where Kotlin's
+  UTF-16 count and Go's rune count differ, all came out the same.
+- 🧰 `go -C backend vet ./... && go -C backend test ./...` is the Backend's build check.
+
+Next:
+
+- Commit 6: the live `Source` on the official SDK, translate, and the HTTP server.
