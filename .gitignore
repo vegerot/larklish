@@ -11,3 +11,6 @@ __pycache__/
 
 # The helper's venv: `uv venv && uv pip install --system-certs -r tools/requirements.txt`
 .venv/
+
+# SCM build output (build.sh): the tarball ByteFaaS installs
+output/

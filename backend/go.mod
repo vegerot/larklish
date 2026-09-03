@@ -1,5 +1,5 @@
 module larklish/backend
 
-go 1.27
+go 1.26
 
 require github.com/larksuite/oapi-sdk-go/v3 v3.11.0
