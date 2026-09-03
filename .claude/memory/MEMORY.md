@@ -5,3 +5,4 @@
 - [Dev box adb tunnel](devbox-adb-tunnel.md) — dev box is 10.251.236.182, not the DNS name "devbox"; port 5037 reverse tunnel
 - [Read docs after compaction](read-docs-after-compaction.md) — Max: fully read CLAUDE.md, plan.md, progress.md after every compaction
 - [ByteDance backend references](bytedance-backend-references.md) — expert answers folder, Tika conversation id, fsopen.bytedance.net Feishu API mirror (verified), lark-cli cannot use it
+- [Lark bot-notification auto-mute](lark-bot-notification-automute.md) — Lark silences a bot in a group after a burst; probes go quiet; unmute via desktop bot list, right-click

@@ -1790,3 +1790,25 @@ Next:
 
 - Soak with the Backend up: `tools/larklish-helper events --since 2026-09-03T06:20 grade`.
   The first cut Original with the Backend running is the missing verification.
+
+### 2026-09-02 — found it: Lark had muted the bot's notifications in the test group
+
+- 🔍 On the Mac (computer use) the test group showed a banner: "Notifications from 'Max
+  Coplan's Feishu CLI' are off in this group to reduce distractions." Lark did that on its own
+  after the evening's burst of probes. The chat itself was not muted (no bell-slash on either
+  device), so the mute filter and every Lark setting looked innocent. Right-clicking the bot in
+  the group's bot list → "Unmute Bot Notifications" fixed it; the unread count jumped 16 → 27
+  as the silenced messages came back. Memory: `.claude/memory/lark-bot-notification-automute.md`.
+- ✅ Probes relay again within seconds of the send.
+- 🆕 But the bot's Originals now arrive **uncut**: an 80-character Han message came through with
+  its whole text in `android.text` (117 characters, no `...`), so the phone records
+  `not-truncated` and never asks the Backend. A colleague's long post at 22:58 was cut as
+  always. So bot probes no longer exercise the Update path; real traffic does, and the Backend
+  is up for it.
+- ⏳ Bot DMs still post no Original (a long DM at 23:47 produced nothing in 20 s); the DM chat
+  may carry the same bot mute. Checked next.
+
+Next:
+
+- Real traffic with the Backend running is the verification of the Update path:
+  `tools/larklish-helper events --since 2026-09-03T06:44 grade`.

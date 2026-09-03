@@ -78,6 +78,8 @@ the table below; `CONTEXT.md` holds the words.
 | Weekday grade | 31 of 34 readable cut Previews Updated (91 %); 11 of the 31 through the localized-mention close rule, all correct | same §1–2 |
 | Feishu API intranet mirror | `open.feishu.cn` → `fsopen.bytedance.net` serves the tenant-token and translate endpoints, from the office network and inside the IDC. `lark-cli` hard-codes the public host by brand, so it cannot use the mirror | `docs/progress.md` 2026-09-02 |
 | The phone reaches the intranet | On the office Wi-Fi `Inspire Creativity` with no VPN, and on cellular through the SealSuite VPN (`fsopen` answers 200 in 1.1 s with Wi-Fi off) | same |
+| Lark auto-mutes a bot in a group | After a burst of bot messages, Lark turns that bot's notifications off in the group ("to reduce distractions"); the chat is not muted, no API shows it, and every probe goes silent while colleagues' messages relay. Undo on the desktop: group → View Bot List → right-click the bot → Unmute Bot Notifications | `docs/progress.md` 2026-09-02 night |
+| Bot Originals now carry the full text | Tonight's bot messages arrived with the whole text in `android.text` (117 characters, no `...`), so `not-truncated` and no Update. Human messages are still cut (a 22:58 colleague post was) | same |
 
 ## Layers
 
