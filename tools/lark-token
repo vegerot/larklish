@@ -31,7 +31,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -83,7 +83,11 @@ def mask(secret):
 
 
 def when(ms):
-    return datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d %H:%M")
+    return (
+        datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+        .astimezone()
+        .strftime("%Y-%m-%d %H:%M")
+    )
 
 
 def read_store():
@@ -135,7 +139,9 @@ def main():
     print(f"app {app_id}  secret {mask(app_secret)}")
     values = {"lark.appId": app_id, "lark.appSecret": app_secret}
     if token:
-        expired = token["refreshExpiresAt"] < datetime.now().timestamp() * 1000
+        expired = (
+            token["refreshExpiresAt"] < datetime.now(timezone.utc).timestamp() * 1000
+        )
         print(
             f"user {token['userOpenId']}  refresh token {mask(token['refreshToken'])} "
             f"({len(token['refreshToken'])} chars) valid to {when(token['refreshExpiresAt'])}"
