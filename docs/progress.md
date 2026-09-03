@@ -1728,3 +1728,44 @@ Next:
 Next:
 
 - Commit 7: the app calls the Backend; `MessageFetcher.kt` and its tests go.
+
+### 2026-09-02 — Backend, commit 7: the app calls the Backend; `MessageFetcher.kt` is gone
+
+- 🧩 `Backend.kt` (~50 lines): `POST /lookup` with the title, the raw Preview text, `postTime`
+  and the user token. It tries `http://127.0.0.1:8787` first — the phone's own port, which
+  `adb reverse tcp:8787 tcp:8787` maps to the Mac while the phone hangs on USB (Max: no rebuild
+  every time the phone is unplugged) — and falls back to `larklish.backendUrl` from
+  `local.properties` → `BuildConfig`. `probe` sets the reverse on every run.
+- 🧩 `LarkListener.update()` is one HTTP call: `skipped` → `recorder.skipped(reason)`; `found` →
+  Update with the Backend's English, or with the phone's own `translator.englishOf` when it is
+  null (Lark once more, then ML Kit `~`), so the record and `events grade` are unchanged.
+- ✂️ Deleted: `MessageFetcher.kt`, `PickMessageTest`, `MentionsTest`, `MessageTextTest`,
+  `ReplayTest`, the `thread` hook. Kept: `Preview.kt` + its test (the Relay still parses),
+  `UserToken.kt`, `LarkHttp.kt` (the `user` hook), the Translator stack.
+- 🐛 Found on the way, fixed: `UserToken` accepted `user-token.json` only when its `seed` matched
+  the build's, so a rebuild whose `local.properties` carried another seed threw a **healthy**
+  chain away and burned the stale build seed (`20064 revoked`). Now the file is the chain; the
+  build's seed is used only when there is no file, or when the file's chain itself answers
+  `20064`. Refresh tokens are single-use, so this is the difference between a rebuild and a
+  re-login.
+- 🧰 Helper: `chats` reads `GET /chats` (`LARKLISH_BACKEND`, default `127.0.0.1:8787`);
+  `chats --clear` is gone (restart the Backend); `LOG_TAGS` drops `MessageFetcher`.
+- ✅ Verified: 48 → 30 JVM tests green (the moved ones live in Go); `installDebug` upgraded in
+  place; the `fetch` hook went phone → Backend over `adb reverse` → Lark → phone: `found`, the
+  Full text, Lark's English; `chats` lists the cached group; a Backend transport failure came
+  back as `skipped error: Lark /open-apis/im/v1/chats/search: …`, the record's vocabulary.
+- ⚠️ Not verified: the listener's `update()` on a real Original. Lark on the phone has posted
+  **no notification since 20:44**, real traffic included. Two causes found, one open: (1) at home
+  the phone still held its office Wi-Fi lease (`100.70.168.217`) and had no network until a
+  reboot (Max's call) — that covers 20:44 → 22:23; (2) after the reboot, with internet confirmed
+  from the phone and Lark running in the background, four test messages still posted nothing.
+  Lark's scheduled Do Not Disturb (免打扰, starts at 22:00 for many) is the leading suspect;
+  Max checks the phone. Lark desktop has run on the Mac since Aug 26, through every soak, so
+  "desktop active" is not it.
+
+Next:
+
+- When Lark posts again: `tools/larklish-helper probe "<60 Han chars>"` with the Backend up
+  (`go -C backend run .`) → Relay `Sender: ...` → Update through the Backend; then soak a day
+  and `events --since <then> grade` against 31 of 34.
+- Commit 8 after the soak. Then ByteFaaS under `coplan.lark.*`.

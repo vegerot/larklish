@@ -6,9 +6,11 @@
     <!-- Android 13+: posting the Relay needs this runtime permission. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- usesCleartextTraffic: the Backend (Layer 7) is the Mac over plain HTTP for now. -->
     <application
         android:label="Larklish"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
 
         <!-- Layer 2: translator screen. Also the debug hook: `am start` with a
              string extra named `text` translates at once (see MainActivity). -->

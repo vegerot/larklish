@@ -7,3 +7,4 @@ local.properties
 
 # Replay corpus: real colleagues' messages, pulled by `tools/larklish replay fetch`. Never commit.
 replay-corpus/
+__pycache__/

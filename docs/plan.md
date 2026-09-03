@@ -197,7 +197,7 @@ was cleared once (`rm files/chats.json`, force-stop) and cannot come back.
 Then soak again and re-grade with `tools/larklish-helper events stats` — now including `fallback` rows,
 which say whether the Translator hit an outage or an input Lark will not translate.
 
-### Layer 7 — Backend v0 🚧 building
+### Layer 7 — Backend v0 ✅ built, soaking
 
 Larklish is also Max's entry in a full-stack hackathon, which needs a front end **and** a
 back end. Max uses it daily, so the Relay stays as fast as it is and the app keeps solving its
@@ -295,7 +295,7 @@ two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are l
   remember(…)` caches a clean miss, and a chat Max cannot read answers a clean miss under
   time bounds (`ok, items: []` masks `230002`). `ByteDance Research 技术交流群` sits in
   `chats.json` that way. Harm 0 so far (all three Originals under that title were cards), so
-  it waits — ~1 line when it bites, or `chats --clear` by hand. Evidence:
+  it waits — ~1 line in `backend/fetcher.go` when it bites, or a Backend restart. Evidence:
   `docs/experiments/14-weekday-soak.md` "Also seen".
 - [x] **Fetch only when the Preview ends in `...`.** ✅ Done 2026-08-31: `Preview.truncated`
   gates the Update, and a Relay that skips it records `skipped not-truncated` so a soak can
@@ -390,9 +390,8 @@ adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
 tools/larklish-helper probe "中文消息"                          # post to the test group, then show the Relay
 tools/larklish-helper probe --install --thread "中文消息"       #   …after installDebug; --thread adds a reply in a thread
-tools/larklish-helper probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch, thread
-tools/larklish-helper chats                                   # what the chat-id cache holds
-tools/larklish-helper chats --clear                           #   reset it (deletes the file *and* force-stops)
+tools/larklish-helper probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch
+tools/larklish-helper chats                                   # what the Backend's chat-id cache holds
 tools/larklish-helper events stats                            # the Relay record; views: list, stats, grade, pull
 tools/larklish-helper events --since 2026-08-29T00:30 --han list
 tools/larklish-helper events --since 2026-09-01T03:50 grade   #   the soak grade: cut Previews vs their Update outcome

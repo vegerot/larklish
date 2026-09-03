@@ -28,6 +28,11 @@ android {
             "LARK_USER_REFRESH_TOKEN",
             "\"${local["lark.userRefreshToken"]}\"",
         ) // Layer 5 seed
+        buildConfigField(
+            "String",
+            "LARKLISH_BACKEND_URL",
+            "\"${local["larklish.backendUrl"]}\"",
+        ) // Layer 7: http://<mac>:8787
     }
 
     testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in JVM tests

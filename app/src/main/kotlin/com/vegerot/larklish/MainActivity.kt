@@ -30,14 +30,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import java.io.File
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private const val TAG = "Translator"
 private val TIME = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(ZoneId.systemDefault())
@@ -50,16 +50,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val recorder = Recorder(File(filesDir, "events.jsonl"))
         // Debug hooks (Layer 5): `am start --es debug user|refresh` logs whose token the app holds;
-        // `--es debug fetch --es title <group> [--es text "<Sender>: <message>"]` logs the Full
-        // text.
-        // `--es debug thread` repeats that fetch under a title that names no chat (Layer 6 fix 5).
+        // `--es debug fetch --es title <group> [--es text "<Sender>: <message>"]` asks the Backend for the Full text.
         intent.getStringExtra("debug")?.let { what ->
             CoroutineScope(Dispatchers.IO).launch {
-                debugHook(
-                    what,
-                    intent.getStringExtra("title").orEmpty(),
-                    intent.getStringExtra("text").orEmpty(),
-                )
+                debugHook(what, intent.getStringExtra("title").orEmpty(), intent.getStringExtra("text").orEmpty())
             }
         }
         setContent {
@@ -70,35 +64,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private suspend fun MainActivity.debugHook(what: String, title: String, text: String) =
-    runCatching {
-        if (what == "fetch" || what == "thread") {
-            val fetcher = defaultMessageFetcher(this)
-            val preview = Preview.parse(text.ifEmpty { "..." })
-            val now = System.currentTimeMillis()
-            Log.i(TAG, "debug fetch [$title]: " + fetcher.fullTextOf(title, preview, now))
-            // A thread reply's title names no chat. The same fetcher must still find the message
-            // through the chats it just used (Layer 6 fix 5).
-            if (what == "thread") {
-                Log.i(
-                    TAG,
-                    "debug thread [no chat]: " +
-                        fetcher.fullTextOf("no chat named this $now", preview, now),
-                )
-            }
-            return@runCatching
-        }
-        val token = defaultUserToken(this)
-        if (what == "refresh") token.refresh()
-        val user =
-            LarkHttp.getJson("/open-apis/authen/v1/user_info", emptyMap(), token.bearer())
-                .getJSONObject("data")
-        Log.i(
-            TAG,
-            "debug $what: user token belongs to ${user.optString("open_id")} (${user.optString("name")})",
-        )
+private suspend fun MainActivity.debugHook(what: String, title: String, text: String) = runCatching {
+    if (what == "fetch") {
+        // Layer 7: the Lookup runs on the Backend; this asks it the way the listener does.
+        val answer = Backend.lookup(title, text.ifEmpty { "..." }, System.currentTimeMillis(), defaultUserToken(this).bearer())
+        Log.i(TAG, "debug fetch [$title]: $answer")
+        return@runCatching
     }
-    .onFailure { Log.w(TAG, "debug $what failed: $it") }
+    val token = defaultUserToken(this)
+    if (what == "refresh") token.refresh()
+    val user = LarkHttp.getJson("/open-apis/authen/v1/user_info", emptyMap(), token.bearer()).getJSONObject("data")
+    Log.i(TAG, "debug $what: user token belongs to ${user.optString("open_id")} (${user.optString("name")})")
+}.onFailure { Log.w(TAG, "debug $what failed: $it") }
 
 @Composable
 private fun Screen(translator: Translator, recorder: Recorder, initialText: String) {
@@ -130,11 +107,7 @@ private fun Screen(translator: Translator, recorder: Recorder, initialText: Stri
 
         HorizontalDivider()
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Events",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-            )
+            Text("Events", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { events = recorder.readAll() }) { Text("Refresh") }
         }
         LazyColumn(
@@ -172,23 +145,17 @@ private fun EventRow(event: JSONObject) {
                 )
                 Text(event.optString("relayText"), style = MaterialTheme.typography.bodyMedium)
             }
-            "skipped" ->
-                Text(
-                    "$at  skipped: ${event.optString("reason")}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            "removed" ->
-                Text(
-                    "$at  removed (reason ${event.optInt("reason")})  ${event.optString("key").substringAfter("suite|").substringBefore("|")}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            else ->
-                Text(
-                    "$at  ${event.optString("event")}",
-                    style = MaterialTheme.typography.labelMedium,
-                )
+            "skipped" -> Text(
+                "$at  skipped: ${event.optString("reason")}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            "removed" -> Text(
+                "$at  removed (reason ${event.optInt("reason")})  ${event.optString("key").substringAfter("suite|").substringBefore("|")}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            else -> Text("$at  ${event.optString("event")}", style = MaterialTheme.typography.labelMedium)
         }
     }
 }
