@@ -778,8 +778,8 @@ def compose(slug: str, caption: str) -> str:
     larklish = rounded(
         Image.open(f"{SHOWCASE_DIR}/{slug}-larklish.png").convert("RGBA")
     )
-    font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 44)
-    small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 36)
+    font = ImageFont.truetype("/Library/Fonts/Helvetica.ttc", 44)
+    small = ImageFont.truetype("/Library/Fonts/Helvetica.ttc", 36)
     top = PAD + 70 + 40  # caption line, label line
     page = Image.new(
         "RGB",

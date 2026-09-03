@@ -1888,3 +1888,12 @@ Max's exception to the "many times first" rule: the showcase images will be re-s
   the guard message from an isolated env; `showcase --no-send` on the pair in the shade.
 
 Next: unchanged — Max picks the showcase images; the stale-Relay check is a Later item.
+
+### 2026-09-03 — showcase 1 re-shot on the push path
+
+Max asked why the Chinese Original in showcase 1 was whole: Lark's process had been in the
+foreground six minutes earlier and composed the notification itself. Re-shot with the phone in
+deep idle: the same 90-character alert arrived cut at 45 characters, the Backend found it
+(15:20), and the Relay shows all of it in English. `docs/showcase/01-chinese.png` replaced.
+
+Next: unchanged.
