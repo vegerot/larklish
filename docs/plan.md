@@ -49,7 +49,7 @@ the table below; `CONTEXT.md` holds the words.
 | Deep links | Lark's tap target lives in unreadable intent extras; copying the `PendingIntent` inherits it. Documented AppLinks (`client/chat/open?openChatId=`, `openId=`, `client/bot/open?appId=`) work when we fire them; no AppLink opens a message or thread | `docs/experiments/07-deep-links.md` |
 | Layer 4 soak | 36 Relays on real traffic: 0 fallback rows; 8 Han rows graded 5 ✅ / 3 ⚠️ / 0 ❌; first Han group title readable; `romanize()` mangles bot Senders with Han (`Triton数据安全` → pinyin) | `docs/experiments/05-lark-api.md` "Soak" |
 | Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
-| lark-cli token store | AES-256-GCM blobs (12-byte IV \| ciphertext \| tag) under one master key: macOS keychain `lark-cli` / `master.key` (`go-keyring-base64:` + base64 of the base64 key), Linux raw `~/.local/share/lark-cli/master.key`. User token blob `<appId>_<openId>.enc` = JSON `StoredUAToken`; app secret `appsecret_<appId>.enc`. A second `auth login` (Debian) did not invalidate the Mac's token | `tools/lark-token`; lark-cli `internal/keychain` |
+| lark-cli token store | AES-256-GCM blobs (12-byte IV \| ciphertext \| tag) under one master key: macOS keychain `lark-cli` / `master.key` (`go-keyring-base64:` + base64 of the base64 key), Linux raw `~/.local/share/lark-cli/master.key`. User token blob `<appId>_<openId>.enc` = JSON `StoredUAToken`; app secret `appsecret_<appId>.enc`. A second `auth login` (Debian) did not invalidate the Mac's token | `tools/larklish-helper token`; lark-cli `internal/keychain` |
 | User-token refresh on the phone | `POST authen/v2/oauth/token` (JSON, `grant_type=refresh_token`) from the seed works; every refresh rotates the refresh token; the pair persists in `filesDir/user-token.json` | `UserToken.kt`, debug hook `--es debug refresh` |
 | `messages/search` for DMs | Without `query` the `chat_type` filter is ignored (mixed hits), so filter on `meta_data.is_p2p_chat`; `display_info` = `<peer name>\n<Sender>: <text>` (HTML-escaped). Bot DM Originals have title `Lark`; the Sender is the bot | `MessageFetcher.dmChatId`; commit 6 test |
 | Layer 5 on the phone | Group: Relay `Sender: ...` → Update with the full English 4 s later; a newer Original on the key cancels the older Update; bot DM: first Update 7 s (search), cached 3 s | `docs/progress.md` 2026-08-27 |
@@ -148,7 +148,7 @@ fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
 - Mismatch rule: newest message inside `[when − 15 s, when + 5 s]` whose text starts
   with the Preview stem. Count mismatches during the soak before tightening it.
 - Debug builds post every error as an "Errors" notification.
-- Token: `tools/lark-token` copies Max's refresh token from lark-cli's store into
+- Token: `tools/larklish-helper token` copies Max's refresh token from lark-cli's store into
   `local.properties` → `BuildConfig`; the app persists rotations in
   `filesDir/user-token.json` (2 h access, 7-day sliding refresh, Experiment 06 E4).
 
@@ -324,7 +324,7 @@ gap, not an oversight. The future backend removes most of them.
 - The fat CLI app's secret is in the APK (`local.properties` → `BuildConfig`). A public
   build needs a dedicated app with only `translation:text` + `im:message` scopes.
 - Max's user refresh token is bootstrapped into the APK the same way
-  (`tools/lark-token`). The app persists rotations in `filesDir`, so the APK copy is
+  (`tools/larklish-helper token`). The app persists rotations in `filesDir`, so the APK copy is
   only a seed — and a consumed one: refresh tokens are single-use, so the machine that
   ran `tools/lark-token --write` needs `lark-cli auth login` again (Experiment 08).
 - No sign-in screen. A public build needs the device-code flow lark-cli uses. It is also
@@ -366,9 +366,11 @@ cp debug.keystore ~/.android/debug.keystore              # once per machine: sam
 ln -s "$PWD/.claude/memory" \
   ~/.claude/projects/"$(pwd | tr '/.' '--')"/memory  # once per machine: Claude's project memory is in the repo
 echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
-tools/larklish-helper token --write                              # Layers 4–5: lark.appId, lark.appSecret,
+uv venv && uv pip install --system-certs -r tools/requirements.txt   # once per machine: the helper's venv, only for
+                                                          #   `showcase` (Pillow) and `token` (cryptography);
+                                                          #   Debian: curl -LsSf https://astral.sh/uv/install.sh | sh
+uv run --script tools/larklish-helper token --write       # Layers 4–5: lark.appId, lark.appSecret,
                                                           #   lark.userRefreshToken from lark-cli's store
-                                                          #   (needs uv; Debian: curl -LsSf https://astral.sh/uv/install.sh | sh)
 lark-cli auth login                                       #   …then log lark-cli in again: the phone consumes
                                                           #   that refresh token (single-use, Experiment 08)
 adb exec-out run-as com.vegerot.larklish cat files/user-token.json   # …or seed from the phone's own live
@@ -403,6 +405,8 @@ tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # 
 tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits, and how often they appear
 tools/larklish-helper translate '先别发布' --repeat 30          # one Lark translate call, with its code (rate-limit probe)
 tools/larklish-helper phone shade shot.png              # adb helpers: top, home, shot, shade
+uv run --script tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish side by side
+                                                          #   → docs/showcase/; force-idle the phone first for the cut
 tools/larklish-helper replay fetch                            # pull replay-corpus/ (gitignored: real messages)
 ./gradlew testDebugUnitTest --tests '*ReplayTest*' -i  #   …score the shipped rules over it
 python3 -c 'import sys; sys.path.insert(0, "tools"); from larklish_helper import read_events; …'   # one-off scripts: the helper is the library

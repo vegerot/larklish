@@ -1869,3 +1869,22 @@ Next:
 - Max picks the images for the hackathon. Optional fourth pair (`@all` + emoji) waits: the bot
   has posted 5 times this hour and Lark auto-mutes it around 6.
 - Later item to add: the stale-Relay check in `update()`.
+
+### 2026-09-03 — the helper gets a venv; `showcase` and `token` are subcommands
+
+Max's exception to the "many times first" rule: the showcase images will be re-shot, so
+`tools/showcase.py` and `tools/lark-token` moved into `tools/larklish_helper.py` as
+`showcase` (send, expand the shade by uiautomator bounds, crop, compose) and `token`
+(lark-cli's AES-GCM store → `local.properties`, masked unless `--write`). Both files are gone.
+
+- 🧰 `tools/requirements.txt` (Pillow, cryptography) and a repo `.venv` from `uv venv`
+  (gitignored; `uv pip install --system-certs …` — the corporate proxy's certificate fails
+  uv's own trust store). The helper's shebang stays `python3`: the two packages are imported
+  where they are used through `need()`, which exits with the `uv run --script tools/larklish-helper …`
+  line when a package is missing, so every other subcommand runs without the venv (Max's ask).
+- 📏 Checked: `uv run --script` finds `.venv` from the repo root and from `tools/`; from
+  outside the repo it falls back to the base interpreter.
+- ✅ `--help` and `events stats` on plain python3; `token` under the venv (masked output);
+  the guard message from an isolated env; `showcase --no-send` on the pair in the shade.
+
+Next: unchanged — Max picks the showcase images; the stale-Relay check is a Later item.

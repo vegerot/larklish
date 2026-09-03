@@ -12,6 +12,7 @@
     tools/larklish-helper chats                         # the Backend's chat-id cache
     tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
     tools/larklish-helper replay fetch                  # pull the corpus ReplayTest scores against
+    tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish, side by side
     tools/larklish-helper token --write                 # credentials from lark-cli's store
 
 `--help` works at every level: `tools/larklish-helper events --help`, `… events list --help`.
@@ -24,11 +25,17 @@ This file is also the library for the one-off scripts it does not cover — the 
         if r["cut"] and r["outcome"] != "updated (text)":
             print(when(r), r["outcome"], r["text"])
 
-`tools/larklish-helper` is a symlink to this file. `token` runs `tools/lark-token`, which stays its
-own file: it is the only piece that needs uv and cryptography.
+`tools/larklish-helper` is a symlink to this file. Two subcommands need packages the system
+Python lacks — `showcase` Pillow, `token` cryptography — and import them where they are used, so
+everything else runs on plain `python3`. For those two, the repo's venv (once per machine:
+`uv venv && uv pip install --system-certs -r tools/requirements.txt`) and then
+`uv run --script tools/larklish-helper token --write`.
 """
 
 import argparse
+import base64
+import importlib
+import io
 import json
 import os
 import pathlib
@@ -38,6 +45,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import datetime
 from typing import Any
@@ -46,6 +54,17 @@ Event = dict[str, Any]      # one line of events.jsonl (Recorder.kt): `event`, `
 Relay = dict[str, Any]      # an Event of kind `relayed`, plus `outcome` and `cut` (relays_with_outcomes)
 Message = dict[str, Any]    # one item of im/v1/messages: `msg_type`, `create_time`, `body.content`, …
 ChatCache = dict[str, str]  # the Backend's chat cache (GET /chats): title or `dm:<Sender>` → chat id
+
+
+def need(module: str) -> Any:
+    """A venv-only package (Pillow, cryptography), imported where it is used so that the rest of
+    the helper runs on plain python3."""
+    try:
+        return importlib.import_module(module)
+    except ImportError:
+        sys.exit(f"{module} is not installed for this python — run the helper in the repo's venv:\n"
+                 f"  uv run --script tools/larklish-helper {' '.join(sys.argv[1:])}\n"
+                 "(once per machine: uv venv && uv pip install --system-certs -r tools/requirements.txt)")
 
 
 # ══ library ═══════════════════════════════════════════════════════════════════
@@ -226,6 +245,7 @@ def relays_with_outcomes(events: list[Event]) -> list[Relay]:
 # ── the Open API under Max's user identity, through `lark-cli api` ────────────
 TEST_CHAT = "oc_e2feee77ba20b6c5285d22fb8aa90eb4"  # Larklish 测试群
 TEST_TITLE = "Larklish 测试群"
+TEST_TITLE_EN = "Larklish test group"  # the Relay's title: Lark's translation of TEST_TITLE
 
 
 def lark_cli(method: str, path: str, payload: dict[str, Any], identity: str = "user") -> dict[str, Any]:
@@ -365,6 +385,228 @@ def message_row(chat: str, m: Message) -> str:
     else:
         payload = ""
     return "\t".join([chat, kind, m["create_time"], "1" if m.get("deleted") else "0", mentions, payload])
+
+
+# ── credentials: lark-cli's encrypted store (AES-256-GCM under one master key) ─
+# macOS: the key is keychain item service `lark-cli`, account `master.key`, value
+# `go-keyring-base64:` + base64(base64(key)); blobs in ~/Library/Application Support/lark-cli/.
+# Linux: a raw 32-byte `master.key` next to the blobs in ~/.local/share/lark-cli/ (or
+# $LARKSUITE_CLI_DATA_DIR/lark-cli). The user token blob is `<appId>_<openId>.enc` (JSON
+# `StoredUAToken`, lark-cli `internal/auth/token_store.go`); the app secret is
+# `appsecret_<appId>.enc`. Refresh tokens are single-use: once the app refreshes from the copied
+# token, this machine's lark-cli must `auth login` again (Experiment 08).
+REPO = pathlib.Path(__file__).resolve().parent.parent
+LOCAL_PROPERTIES = REPO / "local.properties"
+DARWIN = sys.platform == "darwin"
+
+
+def store_dir() -> pathlib.Path:
+    if DARWIN:
+        return pathlib.Path.home() / "Library/Application Support/lark-cli"
+    return pathlib.Path(os.environ.get("LARKSUITE_CLI_DATA_DIR", pathlib.Path.home() / ".local/share")) / "lark-cli"
+
+
+def master_key(store: pathlib.Path) -> bytes:
+    if not DARWIN:
+        return (store / "master.key").read_bytes()
+    out = subprocess.run(
+        ["security", "find-generic-password", "-s", "lark-cli", "-a", "master.key", "-w"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    prefix = "go-keyring-base64:"
+    assert out.startswith(prefix), "unexpected keychain value format"  # go-keyring v0.2.8 always prefixes
+    return base64.b64decode(base64.b64decode(out[len(prefix):]))
+
+
+def decrypt(blob: bytes, key: bytes) -> str:
+    aead = need("cryptography.hazmat.primitives.ciphers.aead")
+    return aead.AESGCM(key).decrypt(blob[:12], blob[12:], None).decode()
+
+
+def mask(secret: str) -> str:
+    return "****" + secret[-4:]
+
+
+def read_store() -> tuple[str, str, dict[str, Any] | None]:
+    """(appId, appSecret, the user token or None) from lark-cli's store."""
+    store = store_dir()
+    key = master_key(store)
+    users = sorted(store.glob("cli_*_ou_*.enc"))
+    assert len(users) <= 1, f"more than one user token in {store}: {[u.name for u in users]}"  # one login per machine
+    token = json.loads(decrypt(users[0].read_bytes(), key)) if users else None
+    if token:
+        app_id = token["appId"]
+    else:
+        # No user login yet: the app id comes from the only real app-secret blob.
+        secrets = [p for p in store.glob("appsecret_cli_*.enc") if len(p.stem) == len("appsecret_cli_") + 16]
+        assert len(secrets) == 1, f"cannot pick the app id in {store}: {[p.name for p in secrets]}"
+        app_id = secrets[0].stem.removeprefix("appsecret_")
+    app_secret = decrypt((store / f"appsecret_{app_id}.enc").read_bytes(), key)
+    return app_id, app_secret, token
+
+
+def write_local(values: dict[str, str]) -> None:
+    """Replace the `lark.*` lines of local.properties; keep every other line."""
+    lines = LOCAL_PROPERTIES.read_text().splitlines() if LOCAL_PROPERTIES.exists() else []
+    kept = [line for line in lines if not line.startswith("lark.")]
+    LOCAL_PROPERTIES.write_text("\n".join(kept + [f"{k}={v}" for k, v in values.items()]) + "\n")
+
+
+# ── the shade, by uiautomator bounds (showcase) ────────────────────────────────
+# Lark posts an Original two ways (progress.md 2026-09-03): composed by its own process when it
+# was recently in the foreground (whole text, `[N message(s)]` in the header), or from the push
+# payload when the process sat idle for hours — title and text cut at 45 characters. The cut is
+# what `showcase` exists to show; `adb shell dumpsys deviceidle force-idle` reproduces it on
+# demand (`unforce` after). Killing Lark's process does not: the restarted process withdraws
+# the pushed Original half a second later.
+SHOWCASE_DIR = "docs/showcase"
+ROW = "com.android.systemui:id/expandableNotificationRow"
+SHADE_BOTTOM = 2261  # the shade's scroller ends here on the Pixel 4a (below it: Clear all)
+Node = ET.Element
+Bounds = tuple[int, int, int, int]
+
+
+def ui_dump() -> tuple[Node, dict[Node, Node]]:
+    """The screen's view tree (only what is on screen), and each node's parent."""
+    raw = subprocess.run(["adb", "exec-out", "uiautomator", "dump", "/dev/tty"],
+                         capture_output=True, text=True).stdout
+    raw = raw[raw.find("<?xml"):]
+    raw = raw[: raw.rfind(">") + 1]
+    root = ET.fromstring(raw)
+    return root, {c: p for p in root.iter() for c in p}
+
+
+def bounds(node: Node) -> Bounds:
+    left, top, right, bottom = (int(x) for x in node.get("bounds", "").replace("][", ",").strip("[]").split(","))
+    return left, top, right, bottom
+
+
+def tap(node: Node) -> None:
+    left, top, right, bottom = bounds(node)
+    adb("shell", "input", "tap", str((left + right) // 2), str((top + bottom) // 2))
+    time.sleep(1.5)
+
+
+def scroll_shade(px: int) -> None:
+    adb("shell", "input", "swipe", "540", str(1200 + px // 2), "540", str(1200 - px // 2), "300")
+    time.sleep(1.2)
+
+
+def rows_of(node: Node, parent: dict[Node, Node]) -> list[Node]:
+    """The notification rows around a node, innermost first: the chat's row, then its app group."""
+    out = []
+    while node is not None:
+        if node.get("resource-id") == ROW:
+            out.append(node)
+        node = parent.get(node)
+    return out
+
+
+def find_node(root: Node, **attrs: str) -> Node | None:
+    for n in root.iter("node"):
+        if all(n.get(k) == v for k, v in attrs.items()):
+            return n
+    return None
+
+
+def button(container: Node, desc: str) -> Node | None:
+    for n in container.iter("node"):
+        if n.get("class") == "android.widget.Button" and n.get("content-desc") == desc:
+            return n
+    return None
+
+
+def header_button(group: Node) -> Node | None:
+    """The chevron in the header of a group or a standalone notification."""
+    for n in group.iter("node"):
+        if n.get("class") == "android.widget.Button" and bounds(n)[1] < bounds(group)[1] + 200:
+            return n
+    return None
+
+
+def shade_open() -> tuple[Node, dict[Node, Node]]:
+    root, parent = ui_dump()
+    if find_node(root, **{"resource-id": "com.android.systemui:id/notification_stack_scroller"}) is None:
+        adb("shell", "cmd", "statusbar", "expand-notifications")
+        time.sleep(2.5)
+        root, parent = ui_dump()
+    return root, parent
+
+
+def locate(app: str, title: str) -> tuple[Node, Node]:
+    """The row that shows `title`, and the group row around it (the same row when standalone).
+    A collapsed group lists only its first lines, so open the app's group first; uiautomator
+    lists only what is on screen, so scroll when it is still missing."""
+    for _ in range(5):
+        root, parent = shade_open()
+        node = find_node(root, text=title)
+        if node is not None:
+            rows = rows_of(node, parent)
+            return rows[0], rows[-1]
+        header = find_node(root, **{"resource-id": "android:id/app_name_text", "text": app})
+        chevron = button(rows_of(header, parent)[-1], "Expand") if header is not None else None
+        if chevron is not None and bounds(chevron)[1] < bounds(header)[3] + 100:
+            tap(chevron)  # the collapsed group's chevron
+        else:
+            scroll_shade(900)
+    raise AssertionError(f"no {title!r} under {app} in the shade")
+
+
+def capture(app: str, title: str, out_png: str) -> Bounds:
+    """Expand the chat's row under `app`, crop it with its group header into out_png."""
+    child, group = locate(app, title)
+    chevron = header_button(group)
+    if chevron is not None and chevron.get("content-desc") == "Expand":
+        tap(chevron)  # a collapsed group's chevron, or a standalone notification's
+        child, group = locate(app, title)
+    if child is not group and (chevron := button(child, "Expand")) is not None:
+        tap(chevron)  # the chat row's own chevron: the full text
+        child, group = locate(app, title)
+    left, top, right, _ = bounds(group)
+    bottom = bounds(child)[3]
+    if bottom > SHADE_BOTTOM - 60:
+        scroll_shade(bottom - SHADE_BOTTOM + 200)
+        child, group = locate(app, title)
+        left, top, right, _ = bounds(group)
+        bottom = bounds(child)[3]
+    png = subprocess.run(["adb", "exec-out", "screencap", "-p"], capture_output=True).stdout
+    need("PIL.Image").open(io.BytesIO(png)).crop((left, top, right, bottom)).save(out_png)
+    if (chevron := button(group, "Collapse")) is not None:
+        tap(chevron)  # so the next group moves up
+    return left, top, right, bottom
+
+
+PAGE_BG, INK, LABEL = (246, 247, 249), (32, 33, 36), (95, 99, 104)
+GAP, PAD, RADIUS = 48, 56, 56
+
+
+def rounded(card: Any) -> Any:
+    Image, ImageDraw = need("PIL.Image"), need("PIL.ImageDraw")
+    mask_ = Image.new("L", card.size, 0)
+    ImageDraw.Draw(mask_).rounded_rectangle((0, 0, card.width - 1, card.height - 1), RADIUS, fill=255)
+    out = Image.new("RGBA", card.size, PAGE_BG + (255,))
+    out.paste(card, (0, 0), mask_)
+    return out
+
+
+def compose(slug: str, caption: str) -> str:
+    """<slug>-lark.png and <slug>-larklish.png side by side under a caption → <slug>.png."""
+    Image, ImageDraw, ImageFont = need("PIL.Image"), need("PIL.ImageDraw"), need("PIL.ImageFont")
+    lark = rounded(Image.open(f"{SHOWCASE_DIR}/{slug}-lark.png").convert("RGBA"))
+    larklish = rounded(Image.open(f"{SHOWCASE_DIR}/{slug}-larklish.png").convert("RGBA"))
+    font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 44)
+    small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 36)
+    top = PAD + 70 + 40  # caption line, label line
+    page = Image.new("RGB", (PAD + lark.width + GAP + larklish.width + PAD, top + max(lark.height, larklish.height) + PAD), PAGE_BG)
+    d = ImageDraw.Draw(page)
+    d.text((PAD, PAD), caption, fill=INK, font=font)
+    d.text((PAD, PAD + 70), "What Lark showed", fill=LABEL, font=small)
+    d.text((PAD + lark.width + GAP, PAD + 70), "What Larklish showed", fill=LABEL, font=small)
+    page.paste(lark, (PAD, top), lark)
+    page.paste(larklish, (PAD + lark.width + GAP, top), larklish)
+    out = f"{SHOWCASE_DIR}/{slug}.png"
+    page.save(out)
+    return out
 
 
 # ══ driver: the subcommands. Only these print. ════════════════════════════════
@@ -600,10 +842,44 @@ def cmd_replay(args: argparse.Namespace) -> None:
     print("score it with: ./gradlew testDebugUnitTest --tests '*ReplayTest*'")
 
 
-# ── token: lark-cli's encrypted store (its own file; needs uv + cryptography) ──
+# ── showcase: one message → Lark's Original and Larklish's Relay side by side ─
+def cmd_showcase(args: argparse.Namespace) -> None:
+    require_device()
+    if not args.no_send:
+        adb("shell", "cmd", "statusbar", "collapse")
+        print(f"sent {send_test_message(args.text)}")
+        time.sleep(14)  # Relay in ~1 s, the Update through the Backend a few seconds later
+    adb("shell", "input", "keyevent", "KEYCODE_HOME")
+    time.sleep(1)
+    adb("shell", "cmd", "statusbar", "expand-notifications")
+    time.sleep(2.5)
+    for app, title, half in (("Lark", TEST_TITLE, "lark"), ("Larklish", TEST_TITLE_EN, "larklish")):
+        out = f"{SHOWCASE_DIR}/{args.slug}-{half}.png"
+        left, top, right, bottom = capture(app, title, out)
+        print(f"{app}: {out} {right - left}x{bottom - top}")
+    adb("shell", "cmd", "statusbar", "collapse")
+    print(compose(args.slug, args.caption))
+
+
+# ── token: credentials from lark-cli's store, masked; --write puts them in local.properties ─
 def cmd_token(args: argparse.Namespace) -> None:
-    script = pathlib.Path(__file__).resolve().with_name("lark-token")
-    os.execv(str(script), [str(script), *args.rest])
+    app_id, app_secret, token = read_store()
+    print(f"store {store_dir()}")
+    print(f"app {app_id}  secret {mask(app_secret)}")
+    values = {"lark.appId": app_id, "lark.appSecret": app_secret}
+    if token:
+        expired = token["refreshExpiresAt"] < time.time() * 1000
+        valid_to = datetime.fromtimestamp(token["refreshExpiresAt"] / 1000).strftime("%Y-%m-%d %H:%M")
+        print(f"user {token['userOpenId']}  refresh token {mask(token['refreshToken'])} "
+              f"({len(token['refreshToken'])} chars) valid to {valid_to}"
+              + ("  EXPIRED — run `lark-cli auth login`" if expired else ""))
+        if not expired:
+            values["lark.userRefreshToken"] = token["refreshToken"]
+    else:
+        print("no user token — run `lark-cli auth login` first (only the app secret is available)")
+    if args.write:
+        write_local(values)
+        print(f"wrote {LOCAL_PROPERTIES.relative_to(REPO)}: {', '.join(values)}")
 
 
 def main() -> None:
@@ -673,8 +949,15 @@ def main() -> None:
     fetch.add_argument("--chats", help="read this saved chats.json instead of the Backend (DM senders)")
     r.set_defaults(fn=cmd_replay)
 
-    t = group.add_parser("token", help="credentials from lark-cli's store (runs tools/lark-token)")
-    t.add_argument("rest", nargs=argparse.REMAINDER, help="passed through, e.g. --write")
+    s = group.add_parser("showcase", help="post one message; crop Lark's Original and Larklish's Relay side by side into docs/showcase/")
+    s.add_argument("slug", help="file name stem, e.g. 02-english")
+    s.add_argument("text", help='the message to post; <at user_id="ou_…">Name</at> mentions someone')
+    s.add_argument("caption", help="one line above the pair")
+    s.add_argument("--no-send", action="store_true", help="the pair is in the shade already")
+    s.set_defaults(fn=cmd_showcase)
+
+    t = group.add_parser("token", help="credentials from lark-cli's store (masked); --write puts them in local.properties")
+    t.add_argument("--write", action="store_true", help="update local.properties (default: only show)")
     t.set_defaults(fn=cmd_token)
 
     args = p.parse_args()

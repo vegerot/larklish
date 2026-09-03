@@ -2,7 +2,7 @@
 
 Real captures of the Pixel 4a's notification shade, 2026-09-03. Each pair is one message
 posted to `Larklish 测试群` by the bot; the left card is Lark's Original, the right card is
-Larklish's Relay, cropped from the same shade and placed side by side (`tools/showcase.py`).
+Larklish's Relay, cropped from the same shade and placed side by side (`tools/larklish-helper showcase`).
 
 | File | What it shows |
 | --- | --- |
