@@ -145,10 +145,10 @@ fun resolveMentions(text: String, mentions: Map<String, String>): String =
 class MessageFetcher(private val token: UserToken, private val cacheFile: File) {
     private val chats: MutableMap<String, String> =
         HashMap<String, String>().apply {
-            if (cacheFile.exists())
-                JSONObject(cacheFile.readText()).let { j ->
-                    j.keys().forEach { put(it, j.getString(it)) }
-                }
+            if (cacheFile.exists()) {
+                val j = JSONObject(cacheFile.readText())
+                j.keys().forEach { put(it, j.getString(it)) }
+            }
         }
 
     /** Chats that produced a Full text, most recent first. Feeds the thread fallback below. */

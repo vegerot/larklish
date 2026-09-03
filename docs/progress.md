@@ -1612,4 +1612,8 @@ built-in Kotlin and formats the build script too. First run touched 20 files (im
 ASCII, KDoc rewrapped, long calls split); 48 JVM tests green, 1 skipped. On the dev box,
 `local.properties` is a symlink to the sibling worktree's copy.
 
+ktlint 1.8.0 over the ktfmt'd code: 258 findings, all wrapping disagreements with ktfmt except
+two PascalCase `@Composable` names (false positive) and two brace-less multiline `if`s. Braces
+added to those two; ktlint is not adopted.
+
 Next: unchanged.
