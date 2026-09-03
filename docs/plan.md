@@ -265,7 +265,7 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `127.0.0.1:8787` first (the Mac over `adb reverse`), then the FaaS URL from
   `larklish.backendUrl`.
 - **Updates**: push → SCM builds → `bytedcli faas revision scm create` → `faas release create`.
-- Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `test.sh` at the root.
+- Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `unittest.sh` at the root.
   Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
   URL → soak.
 

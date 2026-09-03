@@ -1923,8 +1923,8 @@ was verified rather than told.
   the SealSuite VPN always-on — no TLB public domain in this layer (a Later item, with the auth
   work it needs). veFaaS is out (no Volcano account; not sanctioned). spooky-bio's outbound
   WebSocket does not transfer: Lark is its caller, the phone is not Lark.
-- 🧰 Commit `19ef39f1d1e2`: `build.sh` (linux/amd64 binary into `output/`), `run.sh`, `test.sh`
-  at the repo root, `output/` ignored, `go.mod` 1.26 (the newest SCM image). `go vet`, `go test`
+- 🧰 Commit `19ef39f1d1e2`: `build.sh` (linux/amd64 binary into `output/`), `run.sh`, `unittest.sh` (SCM's name for the unit-test hook; the first build failed on `test.sh`)
+  at the repo root, `output/` ignored, `go.mod` 1.26, then 1.25 once SCM picked its default image `teslago1.25`. `go vet`, `go test`
   and `./build.sh` pass on the Mac; a first run without `GOARCH` produced an ARM binary, hence
   the pin.
 - 🏗️ Created: the Codebase repo `max.coplan/larklish` (id 1143814, level `limited`) via
