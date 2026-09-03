@@ -44,19 +44,34 @@ DARWIN = sys.platform == "darwin"
 def store_dir():
     if DARWIN:
         return Path.home() / "Library/Application Support/lark-cli"
-    return Path(os.environ.get("LARKSUITE_CLI_DATA_DIR", Path.home() / ".local/share")) / "lark-cli"
+    return (
+        Path(os.environ.get("LARKSUITE_CLI_DATA_DIR", Path.home() / ".local/share"))
+        / "lark-cli"
+    )
 
 
 def master_key(store):
     if not DARWIN:
         return (store / "master.key").read_bytes()
     out = subprocess.run(
-        ["security", "find-generic-password", "-s", "lark-cli", "-a", "master.key", "-w"],
-        check=True, capture_output=True, text=True,
+        [
+            "security",
+            "find-generic-password",
+            "-s",
+            "lark-cli",
+            "-a",
+            "master.key",
+            "-w",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
     prefix = "go-keyring-base64:"
-    assert out.startswith(prefix), "unexpected keychain value format"  # go-keyring v0.2.8 always prefixes
-    return base64.b64decode(base64.b64decode(out[len(prefix):]))
+    assert out.startswith(prefix), (
+        "unexpected keychain value format"
+    )  # go-keyring v0.2.8 always prefixes
+    return base64.b64decode(base64.b64decode(out[len(prefix) :]))
 
 
 def decrypt(blob, key):
@@ -76,14 +91,22 @@ def read_store():
     store = store_dir()
     key = master_key(store)
     users = sorted(store.glob("cli_*_ou_*.enc"))
-    assert len(users) <= 1, f"more than one user token in {store}: {[u.name for u in users]}"  # one login per machine
+    assert len(users) <= 1, (
+        f"more than one user token in {store}: {[u.name for u in users]}"
+    )  # one login per machine
     token = json.loads(decrypt(users[0].read_bytes(), key)) if users else None
     if token:
         app_id = token["appId"]
     else:
         # No user login yet: the app id comes from the only real app-secret blob.
-        secrets = [p for p in store.glob("appsecret_cli_*.enc") if len(p.stem) == len("appsecret_cli_") + 16]
-        assert len(secrets) == 1, f"cannot pick the app id in {store}: {[p.name for p in secrets]}"
+        secrets = [
+            p
+            for p in store.glob("appsecret_cli_*.enc")
+            if len(p.stem) == len("appsecret_cli_") + 16
+        ]
+        assert len(secrets) == 1, (
+            f"cannot pick the app id in {store}: {[p.name for p in secrets]}"
+        )
         app_id = secrets[0].stem.removeprefix("appsecret_")
     app_secret = decrypt((store / f"appsecret_{app_id}.enc").read_bytes(), key)
     return app_id, app_secret, token
@@ -97,8 +120,14 @@ def write_local(values):
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--write", action="store_true", help="update local.properties (default: only show)")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--write",
+        action="store_true",
+        help="update local.properties (default: only show)",
+    )
     args = p.parse_args()
 
     app_id, app_secret, token = read_store()
@@ -107,13 +136,17 @@ def main():
     values = {"lark.appId": app_id, "lark.appSecret": app_secret}
     if token:
         expired = token["refreshExpiresAt"] < datetime.now().timestamp() * 1000
-        print(f"user {token['userOpenId']}  refresh token {mask(token['refreshToken'])} "
-              f"({len(token['refreshToken'])} chars) valid to {when(token['refreshExpiresAt'])}"
-              + ("  EXPIRED — run `lark-cli auth login`" if expired else ""))
+        print(
+            f"user {token['userOpenId']}  refresh token {mask(token['refreshToken'])} "
+            f"({len(token['refreshToken'])} chars) valid to {when(token['refreshExpiresAt'])}"
+            + ("  EXPIRED — run `lark-cli auth login`" if expired else "")
+        )
         if not expired:
             values["lark.userRefreshToken"] = token["refreshToken"]
     else:
-        print("no user token — run `lark-cli auth login` first (only the app secret is available)")
+        print(
+            "no user token — run `lark-cli auth login` first (only the app secret is available)"
+        )
     if args.write:
         write_local(values)
 

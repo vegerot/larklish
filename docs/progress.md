@@ -1617,3 +1617,16 @@ two PascalCase `@Composable` names (false positive) and two brace-less multiline
 added to those two; ktlint is not adopted.
 
 Next: unchanged.
+
+### 2026-09-03 — Ruff formats the Python in `./tools`
+
+Same call as ktfmt: Ruff over Black or the older autopep8/yapf — a Rust, drop-in Black
+replacement, faster, one tool instead of stacking Black + isort + flake8. No install: `uvx ruff
+format tools` (`uvx` comes with `uv`, already on this box for `lark-token`). `ruff check` (the
+linter, separate from the formatter) found 11 real findings — a timezone-naive
+`datetime.fromtimestamp`, a manual `removesuffix`, others — left alone, same call as ktlint: a
+formatter run only touches formatting. First run: `larklish_helper.py` and `lark-token`
+reformatted (line wraps, the `dict[str, Any]` aligned-comment block broken onto multiple
+lines); `tools/larklish-helper events --help` and an import still work.
+
+Next: unchanged.
