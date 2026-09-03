@@ -1838,3 +1838,34 @@ Next:
 Next:
 
 - Daytime traffic: `tools/larklish-helper events --since 2026-09-03T06:44 grade`.
+
+### 2026-09-03 — showcase screenshots, and the two ways Lark posts an Original
+
+Max wants to show the app off. Three real shade captures are in `docs/showcase/` (Chinese alert;
+long English message cut at 45 characters and restored through the Backend; Chinese @-mention),
+made by `tools/showcase.py`: post as the bot, expand the shade with `uiautomator` bounds, crop
+Lark's Original and Larklish's Relay, compose them side by side.
+
+- 📏 Lark posts an Original two ways. With its process recently in the foreground it composes
+  the notification itself: whole text, whole title, `[N message(s)]` in the header — so a
+  100-character bot message arrived uncut at 14:11 and the phone never asked the Backend
+  (`not-truncated`). On the push path (process idle for hours, or the phone in deep idle) Lark
+  posts the FCM payload: title and text cut at 45 characters. `adb shell dumpsys deviceidle
+  force-idle` reproduces the push path on demand (`unforce` after); both cut demos used it.
+- 🐛 Killing Lark's process (`am kill`) is not a way to get the push path: the restarted process
+  ran a `cancelAll` 0.5 s after the pushed Original, and the Update re-posted the Relay 2.5 s
+  later — a **stale Relay** after a withdrawal. The Update should check that the Original is
+  still active before it calls `notify` (a Later item; first seen today, 14:14).
+- ⚠️ Side effect on Max's phone: while the capture script scrolled the shade, one swipe opened
+  Lark, which withdrew the four Originals in the shade (its usual `cancelAll` on open); the
+  Relays followed. Nothing in Lark is lost, but the shade was emptied once.
+- ✅ Soak note: `events --since 2026-09-03T06:44 grade` reads 4 of 7 cut Previews Updated
+  (3 posts, 1 text) — the Update success path on real cut colleague messages with the Backend
+  up, the hop that was still unseen last night. The two `error` rows (13:01, 13:06) fall before
+  the office-address rebuild.
+
+Next:
+
+- Max picks the images for the hackathon. Optional fourth pair (`@all` + emoji) waits: the bot
+  has posted 5 times this hour and Lark auto-mutes it around 6.
+- Later item to add: the stale-Relay check in `update()`.
