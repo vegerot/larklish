@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.io.File
 
 private const val TAG = "LarkListener"
 private const val LARK = "com.larksuite.suite"
@@ -23,8 +23,8 @@ private const val ERROR_ID = 2
 private const val MAX_TRANSLATE_CHARS = 1000 // the translation API's limit
 
 /**
- * Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws.
- * Layer 5: then fetch the Full text and Update the Relay with its translation.
+ * Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws. Layer
+ * 5: then fetch the Full text and Update the Relay with its translation.
  */
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -38,10 +38,14 @@ class LarkListener : NotificationListenerService() {
         super.onCreate()
         manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(RELAY_CHANNEL, "Relays", NotificationManager.IMPORTANCE_HIGH),
+            NotificationChannel(RELAY_CHANNEL, "Relays", NotificationManager.IMPORTANCE_HIGH)
         )
         manager.createNotificationChannel(
-            NotificationChannel(ERRORS_CHANNEL, "Errors (debug)", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(
+                ERRORS_CHANNEL,
+                "Errors (debug)",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
         )
     }
 
@@ -51,7 +55,10 @@ class LarkListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        Log.i(TAG, "connected; active Lark notifications: ${activeNotifications.count { it.packageName == LARK }}")
+        Log.i(
+            TAG,
+            "connected; active Lark notifications: ${activeNotifications.count { it.packageName == LARK }}",
+        )
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -70,10 +77,15 @@ class LarkListener : NotificationListenerService() {
         updates[sbn.key] = scope.launch {
             val relayTitle = translator.englishOf(title)
             val relaySender = translator.senderOf(preview.sender)
-            val relay = buildRelay(
-                this@LarkListener, sbn, relayTitle, relaySender, preview.mention,
-                translator.englishOf(preview.message),
-            )
+            val relay =
+                buildRelay(
+                    this@LarkListener,
+                    sbn,
+                    relayTitle,
+                    relaySender,
+                    preview.mention,
+                    translator.englishOf(preview.message),
+                )
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
             recorder.relayed(sbn.key, title, text, relayTitle, relayText)
@@ -106,10 +118,15 @@ class LarkListener : NotificationListenerService() {
                 is Pick.Skipped -> recorder.skipped(sbn.key, pick.reason)
                 is Pick.Found -> {
                     val fullText = pick.candidate.text
-                    val relay = buildRelay(
-                        this, sbn, relayTitle, relaySender, preview.mention,
-                        translator.englishOf(fullText.take(MAX_TRANSLATE_CHARS)),
-                    )
+                    val relay =
+                        buildRelay(
+                            this,
+                            sbn,
+                            relayTitle,
+                            relaySender,
+                            preview.mention,
+                            translator.englishOf(fullText.take(MAX_TRANSLATE_CHARS)),
+                        )
                     manager.notify(sbn.key, RELAY_ID, relay)
                     val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
                     recorder.updated(sbn.key, pick.candidate.msgType, fullText, relayText)

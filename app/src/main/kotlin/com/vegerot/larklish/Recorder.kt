@@ -1,13 +1,13 @@
 package com.vegerot.larklish
 
-import org.json.JSONObject
 import java.io.File
 import java.time.Instant
+import org.json.JSONObject
 
 /**
  * Append-only JSONL record of every Original → Relay pair, every Update or skip, and every removal.
- * File: `filesDir/events.jsonl`. Read it from the debug UI or with
- * `adb exec-out run-as com.vegerot.larklish cat files/events.jsonl`.
+ * File: `filesDir/events.jsonl`. Read it from the debug UI or with `adb exec-out run-as
+ * com.vegerot.larklish cat files/events.jsonl`.
  */
 class Recorder(private val file: File) {
 
@@ -19,7 +19,7 @@ class Recorder(private val file: File) {
                 .put("title", title)
                 .put("text", text)
                 .put("relayTitle", relayTitle)
-                .put("relayText", relayText),
+                .put("relayText", relayText)
         )
     }
 
@@ -31,7 +31,7 @@ class Recorder(private val file: File) {
                 .put("key", key)
                 .put("msgType", msgType)
                 .put("fullText", fullText)
-                .put("relayText", relayText),
+                .put("relayText", relayText)
         )
     }
 
@@ -40,7 +40,10 @@ class Recorder(private val file: File) {
         append(JSONObject().put("event", "skipped").put("key", key).put("reason", reason))
     }
 
-    /** Layer 6: the Translator fell back to ML Kit. `reason` separates an outage from an untranslatable input. */
+    /**
+     * Layer 6: the Translator fell back to ML Kit. `reason` separates an outage from an
+     * untranslatable input.
+     */
     fun fallback(reason: String) {
         append(JSONObject().put("event", "fallback").put("reason", reason))
     }

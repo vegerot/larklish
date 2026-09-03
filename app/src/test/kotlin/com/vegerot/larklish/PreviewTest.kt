@@ -19,7 +19,11 @@ class PreviewTest {
             Preview.parse("Bits@you: Sync Task Conflicted"),
         )
         assertEquals(
-            Preview(sender = "Rachel Lam", mention = Mention.ALL, message = "Hello @all Please join us"),
+            Preview(
+                sender = "Rachel Lam",
+                mention = Mention.ALL,
+                message = "Hello @all Please join us",
+            ),
             Preview.parse("Rachel Lam@all: Hello @all Please join us"),
         )
     }
@@ -43,7 +47,10 @@ class PreviewTest {
     @Test
     fun emptyPreviewIsSenderColonDots() {
         // No boundary in the first 45 characters → Lark posts `Sender:...` (Experiment 06 E5).
-        assertEquals(Preview(sender = "Bits", mention = null, message = "..."), Preview.parse("Bits:..."))
+        assertEquals(
+            Preview(sender = "Bits", mention = null, message = "..."),
+            Preview.parse("Bits:..."),
+        )
         assertEquals("", Preview.parse("Bits:...").stem)
         assertEquals("这是一条很长的消息，", Preview.parse("Bits: 这是一条很长的消息，...").stem)
     }

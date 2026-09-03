@@ -6,8 +6,8 @@ import android.icu.text.Transliterator
 private val hanToLatin: Transliterator = Transliterator.getInstance("Han-Latin/Names; Latin-ASCII")
 
 /**
- * Romanize a Sender for a reader who does not read Chinese.
- * 温天信 → "Wen Tianxin"; Argos平台报警 → "Argos Ping Tai Bao Jing"; "Max Coplan" unchanged.
+ * Romanize a Sender for a reader who does not read Chinese. 温天信 → "Wen Tianxin"; Argos平台报警 → "Argos
+ * Ping Tai Bao Jing"; "Max Coplan" unchanged.
  */
 fun romanize(sender: String): String {
     if (sender.none { it.isHan() }) return sender

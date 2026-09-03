@@ -1,11 +1,12 @@
 package com.vegerot.larklish
 
+import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import java.io.File
 
-// The separators `tools/larklish-helper replay fetch` writes: items, paragraphs, fields of an element.
+// The separators `tools/larklish-helper replay fetch` writes: items, paragraphs, fields of an
+// element.
 private const val SEP_ITEM = '\u0001'
 private const val SEP_PARA = '\u0002'
 private const val SEP_FIELD = '\u0003'
@@ -18,7 +19,13 @@ private fun String.unescaped(): String {
         val c = this[i]
         if (c == '\\' && i + 1 < length) {
             i++
-            out.append(when (this[i]) { 'n' -> '\n'; 't' -> '\t'; else -> this[i] })
+            out.append(
+                when (this[i]) {
+                    'n' -> '\n'
+                    't' -> '\t'
+                    else -> this[i]
+                }
+            )
         } else {
             out.append(c)
         }
@@ -33,20 +40,26 @@ private data class Original(val whenMs: Long, val title: String, val text: Strin
 
 /**
  * Replays a day of real Originals against the rules the app ships, over a corpus pulled by
- * `tools/larklish-helper replay fetch`. Experiments 10 and 11 scored the same thing in Python, which
- * measured a *copy* of the rules; this measures `pickMessage`, `postText`, `unwrapHtml`,
+ * `tools/larklish-helper replay fetch`. Experiments 10 and 11 scored the same thing in Python,
+ * which measured a *copy* of the rules; this measures `pickMessage`, `postText`, `unwrapHtml`,
  * `resolveMentions` and `Preview.parse` themselves.
  *
- * The corpus is real colleagues' messages, so it is never committed. Without it this test
- * skips. Pull one, then read the breakdown:
+ * The corpus is real colleagues' messages, so it is never committed. Without it this test skips.
+ * Pull one, then read the breakdown:
  *
  *     tools/larklish-helper replay fetch
  *     ./gradlew testDebugUnitTest --tests '*ReplayTest*' -i
  */
 class ReplayTest {
-    private val corpus: File? = sequenceOf(
-        System.getProperty("larklish.corpus"), "../replay-corpus", "replay-corpus",
-    ).filterNotNull().map(::File).firstOrNull { File(it, "originals.tsv").exists() }
+    private val corpus: File? =
+        sequenceOf(
+                System.getProperty("larklish.corpus"),
+                "../replay-corpus",
+                "replay-corpus",
+            )
+            .filterNotNull()
+            .map(::File)
+            .firstOrNull { File(it, "originals.tsv").exists() }
 
     private fun rows(name: String) =
         File(corpus, name).readLines().filter { it.isNotBlank() }.map { it.split("\t") }
@@ -55,24 +68,35 @@ class ReplayTest {
         rows("messages.tsv").groupBy({ it[0] }) { r ->
             val kind = r[1]
             val deleted = r[3] == "1"
-            val mentions = r[4].items().associate {
-                val f = it.split(SEP_FIELD)
-                f[0].unescaped() to f[1].unescaped()
-            }
-            val payload = r.getOrElse(5) { "" }
-            val text = when {
-                deleted -> ""
-                kind == "text" -> unwrapHtml(payload.unescaped())
-                kind == "post" -> payload.split(SEP_PARA).let { parts ->
-                    postText(parts[0].unescaped(), parts.drop(1).map { para ->
-                        para.items().map {
-                            val f = it.split(SEP_FIELD)
-                            PostElement(f[0].unescaped(), f[1].unescaped(), f[2].unescaped(), f[3].unescaped())
-                        }
-                    })
+            val mentions =
+                r[4].items().associate {
+                    val f = it.split(SEP_FIELD)
+                    f[0].unescaped() to f[1].unescaped()
                 }
-                else -> ""
-            }
+            val payload = r.getOrElse(5) { "" }
+            val text =
+                when {
+                    deleted -> ""
+                    kind == "text" -> unwrapHtml(payload.unescaped())
+                    kind == "post" ->
+                        payload.split(SEP_PARA).let { parts ->
+                            postText(
+                                parts[0].unescaped(),
+                                parts.drop(1).map { para ->
+                                    para.items().map {
+                                        val f = it.split(SEP_FIELD)
+                                        PostElement(
+                                            f[0].unescaped(),
+                                            f[1].unescaped(),
+                                            f[2].unescaped(),
+                                            f[3].unescaped(),
+                                        )
+                                    }
+                                },
+                            )
+                        }
+                    else -> ""
+                }
             Candidate("", kind, r[2].toLong(), deleted, resolveMentions(text, mentions))
         }
 
@@ -80,9 +104,13 @@ class ReplayTest {
     fun theShippedRulesFindTheMessageBehindMostOriginals() {
         assumeTrue("no corpus — run `tools/larklish-helper replay fetch`", corpus != null)
         val messages = candidatesByChat()
-        val titles = rows("titles.tsv").associate { it[0].unescaped() to it.getOrElse(1) { "" }.items() }
+        val titles =
+            rows("titles.tsv").associate { it[0].unescaped() to it.getOrElse(1) { "" }.items() }
         val dms = rows("dms.tsv").associate { "dm:" + it[0].unescaped() to it[1] }
-        val originals = rows("originals.tsv").map { Original(it[0].toLong(), it[1].unescaped(), it[2].unescaped()) }
+        val originals =
+            rows("originals.tsv").map {
+                Original(it[0].toLong(), it[1].unescaped(), it[2].unescaped())
+            }
 
         // The policy MessageFetcher.fullTextOf runs, over a corpus instead of the network.
         val cache = HashMap<String, String>()
@@ -99,8 +127,9 @@ class ReplayTest {
             val preview = Preview.parse(o.text)
             val isDm = o.title == "Lark" || o.title == preview.sender
             val key = if (isDm) "dm:" + preview.sender else o.title
-            val candidates = cache[key]?.let { listOf(it) }
-                ?: if (isDm) listOfNotNull(dms[key]) else titles[o.title].orEmpty()
+            val candidates =
+                cache[key]?.let { listOf(it) }
+                    ?: if (isDm) listOfNotNull(dms[key]) else titles[o.title].orEmpty()
             var outcome: Pick = Pick.Skipped("no-chat")
             var hit: Pick? = null
             candidates.forEachIndexed { i, chatId ->
@@ -131,7 +160,11 @@ class ReplayTest {
 
         val found = outcomes.count { it == "found" }
         println("replay: $found of ${originals.size} Originals resolved")
-        outcomes.groupingBy { it }.eachCount().toList().sortedByDescending { it.second }
+        outcomes
+            .groupingBy { it }
+            .eachCount()
+            .toList()
+            .sortedByDescending { it.second }
             .forEach { (reason, n) -> println("  ${n.toString().padStart(4)}  $reason") }
         // Experiment 11 measured 119 of 210 for these rules. The floor allows for a corpus
         // pulled over a different span; a real regression drops it far below this.

@@ -1,9 +1,9 @@
 package com.vegerot.larklish
 
+import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.IOException
 
 private class Fixed(private val out: String) : Translator {
     override suspend fun zhToEn(text: String) = out
@@ -27,6 +27,7 @@ private class FlakyThenFixed(private val failures: Int, private val out: String)
 
 private object Untranslatable : Translator {
     var calls = 0
+
     override suspend fun zhToEn(text: String): String {
         calls++
         throw NotTranslated()

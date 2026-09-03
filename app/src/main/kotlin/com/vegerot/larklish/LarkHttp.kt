@@ -1,16 +1,16 @@
 package com.vegerot.larklish
 
-import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import org.json.JSONObject
 
 private const val HOST = "https://open.feishu.cn" // Feishu-brand tenant (Experiment 05)
 
 /**
- * The Lark Open API over raw HTTP. Blocking: call it on `Dispatchers.IO`.
- * Every call throws [IOException] on a non-200 status or a non-zero Lark `code`.
+ * The Lark Open API over raw HTTP. Blocking: call it on `Dispatchers.IO`. Every call throws
+ * [IOException] on a non-200 status or a non-zero Lark `code`.
  */
 object LarkHttp {
     fun postJson(path: String, body: JSONObject, bearer: String? = null): JSONObject =
@@ -21,7 +21,8 @@ object LarkHttp {
         }
 
     fun getJson(path: String, params: Map<String, String>, bearer: String): JSONObject {
-        val query = params.entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
+        val query =
+            params.entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, "UTF-8")}" }
         return request("GET", path, "$path?$query", bearer) {}
     }
 
@@ -42,7 +43,11 @@ object LarkHttp {
         val stream = if (status == 200) conn.inputStream else conn.errorStream
         val json = JSONObject(stream.bufferedReader().readText())
         if (status != 200 || json.optInt("code") != 0) {
-            val msg = json.optString("msg", json.optString("error_description")) // OAuth endpoints use error_description
+            val msg =
+                json.optString(
+                    "msg",
+                    json.optString("error_description"),
+                ) // OAuth endpoints use error_description
             throw IOException("Lark $path: http $status code ${json.optInt("code")} $msg")
         }
         return json

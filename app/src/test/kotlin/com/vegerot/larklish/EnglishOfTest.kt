@@ -7,6 +7,7 @@ import org.junit.Test
 /** Records what reaches the engine; the two gates must keep non-Han text out. */
 private class FakeTranslator : Translator {
     val received = mutableListOf<String>()
+
     override suspend fun zhToEn(text: String): String {
         received += text
         return "translated($text)"
@@ -37,9 +38,9 @@ class EnglishOfTest {
 }
 
 /**
- * The Sender gate. `romanize` is right only for a bare Han name; everything else must go to
- * the engine. The romanizing branch needs Android's ICU, so it is covered by `RomanizeTest`
- * on the phone — every case here stays off that path.
+ * The Sender gate. `romanize` is right only for a bare Han name; everything else must go to the
+ * engine. The romanizing branch needs Android's ICU, so it is covered by `RomanizeTest` on the
+ * phone — every case here stays off that path.
  */
 class SenderOfTest {
     private val fake = FakeTranslator()

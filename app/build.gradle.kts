@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.ncorti.ktfmt.gradle") version "0.27.0"
 }
 
 // Lark credentials live in local.properties (gitignored; written by tools/lark-token) and land
@@ -22,7 +23,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "LARK_APP_ID", "\"${local["lark.appId"]}\"")
         buildConfigField("String", "LARK_APP_SECRET", "\"${local["lark.appSecret"]}\"")
-        buildConfigField("String", "LARK_USER_REFRESH_TOKEN", "\"${local["lark.userRefreshToken"]}\"") // Layer 5 seed
+        buildConfigField(
+            "String",
+            "LARK_USER_REFRESH_TOKEN",
+            "\"${local["lark.userRefreshToken"]}\"",
+        ) // Layer 5 seed
     }
 
     testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in JVM tests
@@ -44,3 +49,7 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
 }
+
+// Formatter: `./gradlew ktfmtFormat` rewrites, `./gradlew ktfmtCheck` verifies. The Android Studio
+// ktfmt plugin with the same style gives identical output.
+ktfmt { kotlinLangStyle() }

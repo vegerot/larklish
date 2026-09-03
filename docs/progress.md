@@ -1602,3 +1602,14 @@ Next:
 - Soak on the new build; `tools/larklish-helper events --since 2026-09-02T22:02 stats`.
   An `error: … 20064` row means the seed trap again.
 - Levers (1)–(4) from the entry above: Max's call.
+
+### 2026-09-03 — ktfmt formats the Kotlin
+
+Max picked ktfmt over ktlint and the IDE formatter. `com.ncorti.ktfmt.gradle` 0.27.0 in
+`app/build.gradle.kts` with `kotlinLangStyle()` (the official Kotlin style, 100 columns).
+`./gradlew ktfmtFormat` rewrites, `ktfmtCheck` verifies; the plugin works under AGP 9.3.2's
+built-in Kotlin and formats the build script too. First run touched 20 files (imports sorted
+ASCII, KDoc rewrapped, long calls split); 48 JVM tests green, 1 skipped. On the dev box,
+`local.properties` is a symlink to the sibling worktree's copy.
+
+Next: unchanged.

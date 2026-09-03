@@ -31,6 +31,7 @@ unless the situation changes. Read `CONTEXT.md` for the glossary and use its ter
 ## 🛠️ Commands
 
 - The phone is connected over `adb`. Use it directly for experiments.
+- Format Kotlin with ktfmt before you commit: `./gradlew ktfmtFormat` (`ktfmtCheck` verifies).
 - Prefer running commands through the Android Studio MCP unless running `./gradlew` is a lot easier.
 - Do not search the home directory or `/` broadly.
 - Turn frequently-run one-liners into tools in `./tools`
