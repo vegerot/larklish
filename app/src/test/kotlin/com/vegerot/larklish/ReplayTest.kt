@@ -123,7 +123,7 @@ class ReplayTest {
                 }
             }
 
-        val outcomes = originals.map { o ->
+        val rows = originals.map { o ->
             val preview = Preview.parse(o.text)
             val isDm = o.title == "Lark" || o.title == preview.sender
             val key = if (isDm) "dm:" + preview.sender else o.title
@@ -132,6 +132,7 @@ class ReplayTest {
                     ?: if (isDm) listOfNotNull(dms[key]) else titles[o.title].orEmpty()
             var outcome: Pick = Pick.Skipped("no-chat")
             var hit: Pick? = null
+            var hitChat = ""
             candidates.forEachIndexed { i, chatId ->
                 if (hit == null) {
                     val pick = pickIn(chatId, preview.stem, o.whenMs)
@@ -139,6 +140,7 @@ class ReplayTest {
                     if (pick is Pick.Found) {
                         cache[key] = chatId
                         hit = pick
+                        hitChat = chatId
                     }
                 }
             }
@@ -148,15 +150,20 @@ class ReplayTest {
                     val pick = pickIn(chatId, preview.stem, o.whenMs)
                     if (pick is Pick.Found) {
                         hit = pick
+                        hitChat = chatId
                         break
                     }
                 }
             }
             when (val p = hit ?: outcome) {
-                is Pick.Found -> "found"
-                is Pick.Skipped -> p.reason
+                is Pick.Found -> "found\t$hitChat\t${p.candidate.createTime}"
+                is Pick.Skipped -> "${p.reason}\t\t"
             }
         }
+        // One line per Original — index, outcome, chat, create_time — for the diff against the
+        // Go replay (Layer 7). Message ids are not in the corpus, so the chat and time name the pick.
+        File(corpus, "outcomes-kotlin.tsv").writeText(rows.mapIndexed { i, r -> "$i\t$r\n" }.joinToString(""))
+        val outcomes = rows.map { it.substringBefore("\t") }
 
         val found = outcomes.count { it == "found" }
         println("replay: $found of ${originals.size} Originals resolved")
