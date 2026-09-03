@@ -1897,3 +1897,42 @@ deep idle: the same 90-character alert arrived cut at 45 characters, the Backend
 (15:20), and the Relay shows all of it in English. `docs/showcase/01-chinese.png` replaced.
 
 Next: unchanged.
+
+## Layer 8 — ByteFaaS
+
+### 2026-09-03 — Layer 8 planned: source → SCM → ByteFaaS, with the facts checked
+
+Max asked for every step from source code to a running Backend inside ByteDance, explained.
+Asked Tika (conversation `2994013011204`, three rounds) and Aime (session
+`829f8ff6-25ca-4939-bf0f-60a3ad1561df`), read `spooky-bio` (Max's one ByteFaaS service, PSM
+`coplan.lark.spooky`, service `n3e8d5na`) through `bytedcli` and the console, and the bytedcli
+source for the exact commands. Plan: `plan.md` Layer 8; the settled-facts rows carry what
+was verified rather than told.
+
+- 📏 Verified: the Pixel on the office Wi-Fi reaches `https://n3e8d5na.fn.bytedance.net`
+  (`GET /v1/ping` 200 in 0.78 s, IPv4 `10.8.15.207`); the certificate is a public GlobalSign
+  one; `fsopen.bytedance.net` has an AAAA record and `open.feishu.cn` has none, so an IPv6-only
+  instance must use the mirror; spooky-bio's SCM builds failed twice on a Go image older than
+  its `go.mod`; ByteFaaS releases are self-service tickets that take 1–3 min.
+- 🤖 Tika's first round invented `bytedcli` flags and a US region; corrected with the real
+  command list, it was factual and marked its guesses — one of which ("`*.fn.bytedance.net` is
+  probably blocked for phones") the phone disproved. Aime's CLI call timed out after 30 min; the
+  session had finished, `aime session get-output` read it. Both agree with the verified path.
+- 📐 Max's decisions: minimum instances 1; GitHub becomes the remote `github` (an artifact),
+  `code.byted.org/max.coplan/larklish` is the new `origin`; off the office Wi-Fi the phone keeps
+  the SealSuite VPN always-on — no TLB public domain in this layer (a Later item, with the auth
+  work it needs). veFaaS is out (no Volcano account; not sanctioned). spooky-bio's outbound
+  WebSocket does not transfer: Lark is its caller, the phone is not Lark.
+- 🧰 Commit `19ef39f1d1e2`: `build.sh` (linux/amd64 binary into `output/`), `run.sh`, `test.sh`
+  at the repo root, `output/` ignored, `go.mod` 1.26 (the newest SCM image). `go vet`, `go test`
+  and `./build.sh` pass on the Mac; a first run without `GOARCH` produced an ARM binary, hence
+  the pin.
+- 🏗️ Created: the Codebase repo `max.coplan/larklish` (id 1143814, level `limited`) via
+  `bytedcli codebase repo create --execute`; remotes renamed (`sl paths`: `default` is
+  code.byted.org, `github` is GitHub).
+
+Next:
+
+- Push `main` to Codebase; create the SCM repo `oec/seller/larklish` (`--git-trigger
+  --unit-test`) and build `1.0.0.1`; then the function in the console (PSM
+  `coplan.lark.larklish`, node `oec.seller.frontend`, 30 s, min 1, `LARK_HOST` + secrets).

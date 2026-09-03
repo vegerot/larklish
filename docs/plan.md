@@ -80,6 +80,10 @@ the table below; `CONTEXT.md` holds the words.
 | The phone reaches the intranet | On the office Wi-Fi `Inspire Creativity` with no VPN, and on cellular through the SealSuite VPN (`fsopen` answers 200 in 1.1 s with Wi-Fi off) | same |
 | Lark auto-mutes a bot in a group | After a burst of bot messages, Lark turns that bot's notifications off in the group ("to reduce distractions"); the chat is not muted, no API shows it, and every probe goes silent while colleagues' messages relay. Undo on the desktop: group → View Bot List → right-click the bot → Unmute Bot Notifications | `docs/progress.md` 2026-09-02 night |
 | Bot Originals now carry the full text | Tonight's bot messages arrived with the whole text in `android.text` (117 characters, no `...`), so `not-truncated` and no Update. Human messages are still cut (a 22:58 colleague post was) | same |
+| The phone reaches a ByteFaaS trigger URL | `https://<id>.fn.bytedance.net` is intranet-only (`10.8.x.x`, `fdbd::`), yet the Pixel on the office Wi-Fi got `GET /v1/ping` 200 in 0.78 s over IPv4; the certificate is GlobalSign's `*.fn.bytedance.net`, so Android trusts it with no manifest change. Off the VPN it is unreachable | `docs/progress.md` 2026-09-03 |
+| SCM's Go image must match `go.mod` | spooky-bio's builds failed twice on an image older than its `go.mod` and passed on the 1.26 image; SCM does not honour `GOTOOLCHAIN`. The newest image seen is `bytedance.golang.compile_tango_1_26_bookworm` | `bytedcli scm repo version list --repo-id 524000` |
+| An IPv6-only instance needs the intranet Lark host | `fsopen.bytedance.net` has A and AAAA records; `open.feishu.cn` has no AAAA, and public egress from ByteFaaS needs a Mesh Egress whitelist (Aime) | `dig`; spooky-bio's cluster env `LARK_API_BASE_URL` |
+| ByteFaaS releases are self-service tickets | spooky-bio's 11 releases: steps Build → ReleaseCanary → ReleaseRegion → Release_All, 1–3 min, no approver | `bytedcli faas release list --service-id n3e8d5na` |
 
 ## Layers
 
@@ -239,6 +243,32 @@ two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are l
   writes outcomes → the Lookup policy + the Go replay (the gate) → Lark client + server → the
   app calls the Backend → soak.
 
+### Layer 8 — ByteFaaS: the Backend leaves the Mac 🚧 in progress
+
+Layer 7's Backend runs on this Mac, so an Update lands only while the Mac is up and on the
+same network. ByteFaaS removes that. Planned 2026-09-03 from Tika, Aime, `spooky-bio` (Max's
+one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are rows above.
+
+- **Pipeline**: Codebase (`code.byted.org/max.coplan/larklish`, the new `origin`; GitHub is
+  the remote `github`, an artifact) → SCM (`oec/seller/larklish`: runs `build.sh` at the repo
+  root in its Go image, tars `output/`, builds on every push to `main`) → ByteFaaS (PSM
+  `coplan.lark.larklish` under `oec.seller.frontend`, runtime `native/v1` HTTP, cluster
+  `faas-cn-north`, created from the SCM version, `run_cmd /opt/bytefaas/run.sh`).
+- **Cluster**: request timeout 30 s (a DM Lookup polls ~12 s), init 120 s, IPv6-only as
+  spooky-bio, **minimum instances 1** (Max: no cold start, the chat cache survives idle hours;
+  it still restarts on each release). Env: `LARK_HOST=https://fsopen.bytedance.net` (an
+  IPv6-only instance cannot reach `open.feishu.cn`, and public egress needs a whitelist),
+  `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
+- **The phone** reaches `https://<id>.fn.bytedance.net` on the office Wi-Fi and through the
+  SealSuite VPN; the certificate is public (GlobalSign). Off the VPN it cannot, and Max chose
+  **always-on VPN** over a TLB public domain (a Later item). `Backend.kt` keeps
+  `127.0.0.1:8787` first (the Mac over `adb reverse`), then the FaaS URL from
+  `larklish.backendUrl`.
+- **Updates**: push → SCM builds → `bytedcli faas revision scm create` → `faas release create`.
+- Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `test.sh` at the root.
+  Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
+  URL → soak.
+
 ### Later (not experiments)
 
 - [ ] Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
@@ -315,6 +345,13 @@ two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are l
   instead of the whole translation.
 - [ ] **Tighten the Layer 5 match rule** if the soak shows mismatches (wrong message
   picked for an Original): compare more of the text, or use `messages/search`.
+- [ ] **A public name for the Backend (TLB).** The only sanctioned public ingress: apply at
+  <https://tlb.bytedance.net/> for a domain whose upstream is the FaaS trigger URL; a
+  security-review ticket and manager approval, 3–5 business days (Tika, 2026-09-03). Before
+  it goes public: a shared-secret header from the phone (`local.properties` → `BuildConfig`),
+  drop or protect `GET /chats`, and remove `usesCleartextTraffic`. Until then the phone
+  keeps the SealSuite VPN always-on off the office Wi-Fi. spooky-bio's outbound WebSocket
+  does not transfer: Lark is its caller; the phone is not Lark.
 
 ## Shortcuts (fix before Larklish is a public app)
 
@@ -335,6 +372,10 @@ gap, not an oversight. The future backend removes most of them.
   app secret sits in `local.properties` on the phone (Preview translate) and on the Mac
   (Full-text translate); the chat cache dies with the process. The Mac must be up and on the
   office Wi-Fi for an Update to land — ByteFaaS removes that.
+- ByteFaaS (Layer 8): the app id and secret are plain env vars on the cluster (TSP is the
+  grown-up way); the trigger URL has no auth of its own — `/lookup` needs Max's user token in
+  the body, but `GET /chats` lists chat names to anyone on the intranet; the phone needs the
+  SealSuite VPN whenever it is off the office Wi-Fi (always-on VPN, no public domain).
 
 ## Commands
 
@@ -379,8 +420,17 @@ adb exec-out run-as com.vegerot.larklish cat files/user-token.json   # …or see
 ./gradlew installDebug
 ./gradlew testDebugUnitTest                                # JVM tests
 go -C backend run .                                        # Layer 7: the Backend on this Mac, port 8787
-                                                          #   (local.properties: larklish.backendUrl=http://<mac-ip>:8787)
+                                                          #   (local.properties: larklish.backendUrl=http://<mac-ip>:8787,
+                                                          #    or the ByteFaaS trigger URL https://<id>.fn.bytedance.net)
 go -C backend test ./...                                   #   Go tests; the corpus replay runs when replay-corpus/ exists
+./build.sh && ls output                                    # Layer 8: what SCM builds (linux/amd64 binary + run.sh)
+sl push --to main                                          #   origin = code.byted.org/max.coplan/larklish; SCM builds on push
+bytedcli scm repo version list oec/seller/larklish --branch main      #   the SCM versions (1.0.0.N); build-log / diagnose on failure
+bytedcli faas function list --search larklish              #   the function's service id
+bytedcli faas log --service-id <id> --since 10m            #   the Backend's stdout on ByteFaaS
+bytedcli faas revision scm create --service-id <id> --scm-repo oec/seller/larklish --scm-version 1.0.0.N   # deploy step 1 (dry-run; add the printed --yes line)
+bytedcli faas release create --service-id <id> --code-revision <n>  #   deploy step 2; `faas release status` to watch
+LARK_APP_ID=… LARK_APP_SECRET=… bytedcli faas cluster update --service-id <id> --env-from-env LARK_APP_ID --env-from-env LARK_APP_SECRET   # secrets from the process env, never argv
 adb reverse tcp:8787 tcp:8787                              #   over USB the phone reaches the Mac as http://127.0.0.1:8787
 while true; do adb wait-for-usb-device reverse tcp:8787 tcp:8787; \
   adb wait-for-usb-disconnect; done                        #   …once per plug-in, then wait for the unplug (a background task on the Mac)
