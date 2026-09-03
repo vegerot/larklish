@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -15,17 +16,17 @@ type fakeSource struct {
 	calls    []string
 }
 
-func (s *fakeSource) GroupChatIDs(title string) ([]string, error) {
+func (s *fakeSource) GroupChatIDs(_ context.Context, title string) ([]string, error) {
 	s.calls = append(s.calls, "search:"+title)
 	return s.titles[title], nil
 }
 
-func (s *fakeSource) DMChatID(p Preview, whenMs int64) (string, error) {
+func (s *fakeSource) DMChatID(_ context.Context, p Preview, whenMs int64) (string, error) {
 	s.calls = append(s.calls, "dm:"+p.Sender)
 	return s.dms[p.Sender], nil
 }
 
-func (s *fakeSource) Messages(chatID string, whenMs int64) ([]Candidate, error) {
+func (s *fakeSource) Messages(_ context.Context, chatID string, whenMs int64) ([]Candidate, error) {
 	s.calls = append(s.calls, "msgs:"+chatID)
 	if s.broken[chatID] {
 		return nil, errors.New("Lark /open-apis/im/v1/messages: http 400 code 230002 Bot/User can NOT be out of the chat.")
@@ -56,14 +57,14 @@ func TestAnAmbiguousTitleAsksEachChatAndCachesOnlyTheConfirmedOne(t *testing.T) 
 	}
 	f := quiet(src)
 	p := ParsePreview("Bits: 【bytedcli MR 处理】#3245 ...")
-	pick := f.FullTextOf("【bytedcli MR 处理】...", p, at)
+	pick := f.FullTextOf(t.Context(), "【bytedcli MR 处理】...", p, at)
 	if pick.Found == nil || pick.ChatID != "oc_b" {
 		t.Fatalf("got %+v, want found in oc_b", pick)
 	}
 	if f.chats["【bytedcli MR 处理】..."] != "oc_b" {
 		t.Errorf("cache = %v, want the confirmed chat only", f.chats)
 	}
-	f.FullTextOf("【bytedcli MR 处理】...", p, at)
+	f.FullTextOf(t.Context(), "【bytedcli MR 处理】...", p, at)
 	if count(src.calls, "search:") != 1 {
 		t.Errorf("second Lookup searched again: %v", src.calls)
 	}
@@ -76,11 +77,11 @@ func TestAnUnreadableChatIsThatChatsMissAndIsNeverCached(t *testing.T) {
 		messages: map[string][]Candidate{"oc_good": {text("m", at-3_000, "ByteDance Research 技术交流群 直播开启")}},
 	}
 	f := quiet(src)
-	pick := f.FullTextOf("ByteDance Research...", ParsePreview("Yifei: ByteDance Research 技术交流群 直播开启..."), at)
+	pick := f.FullTextOf(t.Context(), "ByteDance Research...", ParsePreview("Yifei: ByteDance Research 技术交流群 直播开启..."), at)
 	if pick.Found == nil || pick.ChatID != "oc_good" {
 		t.Fatalf("got %+v, want found in oc_good past the unreadable chat", pick)
 	}
-	pick = f.FullTextOf("Private...", ParsePreview("Someone: 什么..."), at)
+	pick = f.FullTextOf(t.Context(), "Private...", ParsePreview("Someone: 什么..."), at)
 	if pick.Found != nil || !strings.HasPrefix(pick.Reason, "error: Lark") {
 		t.Errorf("got %+v, want the chat's error as the reason", pick)
 	}
@@ -98,11 +99,11 @@ func TestATitleNamingNoChatIsFoundThroughTheChatsJustUsed(t *testing.T) {
 		}},
 	}
 	f := quiet(src)
-	if pick := f.FullTextOf("Seller Center - FE Oncall", ParsePreview("A: Seller Center 报警：5xx 比例超过 1%..."), at-6_000); pick.Found == nil {
+	if pick := f.FullTextOf(t.Context(), "Seller Center - FE Oncall", ParsePreview("A: Seller Center 报警：5xx 比例超过 1%..."), at-6_000); pick.Found == nil {
 		t.Fatalf("first Lookup: %+v", pick)
 	}
 	// A reply in a thread carries the thread's root text as its title (Experiment 09).
-	pick := f.FullTextOf("Seller Center 报警：5xx 比例超过 1%", ParsePreview("B: 收到，我看一下..."), at)
+	pick := f.FullTextOf(t.Context(), "Seller Center 报警：5xx 比例超过 1%", ParsePreview("B: 收到，我看一下..."), at)
 	if pick.Found == nil || pick.ChatID != "oc_topic" {
 		t.Fatalf("got %+v, want the reply through the LRU", pick)
 	}
@@ -117,7 +118,7 @@ func TestADMOriginalUsesTheSenderKeyAndNeverTheGroupCache(t *testing.T) {
 		messages: map[string][]Candidate{"oc_dm": {text("m", at-3_000, "这是一条很长的消息，前四十五个字符里没有边界")}},
 	}
 	f := quiet(src)
-	pick := f.FullTextOf("Lark", ParsePreview("Max Coplan's Feishu CLI:..."), at)
+	pick := f.FullTextOf(t.Context(), "Lark", ParsePreview("Max Coplan's Feishu CLI:..."), at)
 	if pick.Found == nil || pick.ChatID != "oc_dm" {
 		t.Fatalf("got %+v", pick)
 	}
@@ -129,7 +130,7 @@ func TestADMOriginalUsesTheSenderKeyAndNeverTheGroupCache(t *testing.T) {
 func TestASingleCleanMissIsCached(t *testing.T) {
 	src := &fakeSource{titles: map[string][]string{"Quiet group": {"oc_q"}}}
 	f := quiet(src)
-	pick := f.FullTextOf("Quiet group", ParsePreview("A: 你好..."), at)
+	pick := f.FullTextOf(t.Context(), "Quiet group", ParsePreview("A: 你好..."), at)
 	if pick.Found != nil || pick.Reason != "no-message" {
 		t.Fatalf("got %+v, want no-message", pick)
 	}

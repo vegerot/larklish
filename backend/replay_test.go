@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -63,11 +64,13 @@ type corpusSource struct {
 	messages  map[string][]Candidate
 }
 
-func (c *corpusSource) GroupChatIDs(title string) ([]string, error) { return c.titles[title], nil }
-func (c *corpusSource) DMChatID(p Preview, whenMs int64) (string, error) {
+func (c *corpusSource) GroupChatIDs(_ context.Context, title string) ([]string, error) {
+	return c.titles[title], nil
+}
+func (c *corpusSource) DMChatID(_ context.Context, p Preview, whenMs int64) (string, error) {
 	return c.dms[p.Sender], nil
 }
-func (c *corpusSource) Messages(chatID string, whenMs int64) ([]Candidate, error) {
+func (c *corpusSource) Messages(_ context.Context, chatID string, whenMs int64) ([]Candidate, error) {
 	return c.messages[chatID], nil
 }
 
@@ -153,7 +156,7 @@ func TestReplayCorpus(t *testing.T) {
 	var lines []string
 	counts := map[string]int{}
 	for i, o := range src.originals {
-		pick := f.FullTextOf(o.title, ParsePreview(o.text), o.whenMs)
+		pick := f.FullTextOf(t.Context(), o.title, ParsePreview(o.text), o.whenMs)
 		if pick.Found != nil {
 			lines = append(lines, fmt.Sprintf("%d\tfound\t%s\t%d", i, pick.ChatID, pick.Found.CreateTime))
 			counts["found"]++

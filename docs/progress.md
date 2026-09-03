@@ -1711,3 +1711,20 @@ Next:
 Next:
 
 - Commit 6: the live `Source` on the official SDK, translate, and the HTTP server.
+
+### 2026-09-02 — Backend, commit 6: the live Lookup on the official SDK, and one real message through it
+
+- 🧩 `backend/live.go` is the `Source` over `oapi-sdk-go/v3`: `Im.V1.Chat.Search`,
+  `Im.V1.Message.Search` (time range in the filter, `is_p2p_chat` and the peer name checked as
+  before), `Im.V1.Message.List` with the same window as the phone; `translate.go` is
+  `Translation.V1.Text.Translate` with the phone's retry-once and `NotTranslated` rules;
+  `server.go` is `POST /lookup`, `GET /chats`, `GET /v1/ping`. The user token rides on the
+  request context (`withToken`); the tenant token is the SDK's business. No token code.
+- 🔑 App id and secret come from `local.properties` (or env), the file the app already builds from.
+- ✅ Live from the Mac: a 46-character Han message sent to `Larklish 测试群` as the bot, then
+  `POST /lookup` with the phone's own access token → `found`, the Full text, and Lark's English,
+  in 1 s; `/chats` shows the cached chat. `server_test.go` covers the same path on a fake Lark.
+
+Next:
+
+- Commit 7: the app calls the Backend; `MessageFetcher.kt` and its tests go.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -14,14 +15,15 @@ const botDMTitle = "Lark"
 const recentTries = 2
 
 // Source is where a Lookup reads: the live Open API (live.go), or a pulled corpus in tests.
+// The context carries the phone's user access token (withToken) and the request's deadline.
 type Source interface {
 	// GroupChatIDs: the chats a group title names — the exact name, or every name starting
 	// with the stem when Lark truncated the title with `...` (at most prefixTries).
-	GroupChatIDs(title string) ([]string, error)
+	GroupChatIDs(ctx context.Context, title string) ([]string, error)
 	// DMChatID: the p2p chat whose peer is the Sender, found around the Original's time; "" when none.
-	DMChatID(p Preview, whenMs int64) (string, error)
+	DMChatID(ctx context.Context, p Preview, whenMs int64) (string, error)
 	// Messages: the chat's newest messages inside the widest window pickMessage uses, newest first.
-	Messages(chatID string, whenMs int64) ([]Candidate, error)
+	Messages(ctx context.Context, chatID string, whenMs int64) ([]Candidate, error)
 }
 
 // Fetcher runs the Lookup (Layer 5): chat id → newest messages of the chat → pickMessage.
@@ -43,7 +45,7 @@ func NewFetcher(src Source) *Fetcher {
 
 // FullTextOf finds the Full text behind an Original. A chat that cannot be read is just one
 // chat's miss (pickIn); a failed *search* ends the Lookup, having no candidates to fall back on.
-func (f *Fetcher) FullTextOf(title string, p Preview, whenMs int64) Pick {
+func (f *Fetcher) FullTextOf(ctx context.Context, title string, p Preview, whenMs int64) Pick {
 	// A DM Original has title `Lark` — bots and people alike (Experiment 09) — or, in theory,
 	// the Sender's own name; everything else is a group. The two caches never cross: the bot
 	// that DMs Max also posts in groups.
@@ -60,7 +62,7 @@ func (f *Fetcher) FullTextOf(title string, p Preview, whenMs int64) Pick {
 	case ok:
 		candidates = []string{cached}
 	case isDm:
-		id, err := f.src.DMChatID(p, whenMs)
+		id, err := f.src.DMChatID(ctx, p, whenMs)
 		if err != nil {
 			return Pick{Reason: errorPrefix + err.Error()}
 		}
@@ -68,7 +70,7 @@ func (f *Fetcher) FullTextOf(title string, p Preview, whenMs int64) Pick {
 			candidates = []string{id}
 		}
 	default:
-		ids, err := f.src.GroupChatIDs(title)
+		ids, err := f.src.GroupChatIDs(ctx, title)
 		if err != nil {
 			return Pick{Reason: errorPrefix + err.Error()}
 		}
@@ -78,7 +80,7 @@ func (f *Fetcher) FullTextOf(title string, p Preview, whenMs int64) Pick {
 	// A truncated title can name several chats. Only the one holding the message is right,
 	// so ask each in turn and remember that one — never a guess (Experiment 09).
 	for i, chatID := range candidates {
-		pick := f.pickIn(chatID, title, p, whenMs)
+		pick := f.pickIn(ctx, chatID, title, p, whenMs)
 		if i == 0 {
 			outcome = pick
 		}
@@ -96,7 +98,7 @@ func (f *Fetcher) FullTextOf(title string, p Preview, whenMs int64) Pick {
 	// search can ever find it (Experiment 09). Such a reply follows other traffic in the same
 	// chat, so the chat is almost always one Larklish just used (Experiment 10).
 	for _, chatID := range f.recentChats() {
-		if pick := f.pickIn(chatID, title, p, whenMs); pick.Found != nil {
+		if pick := f.pickIn(ctx, chatID, title, p, whenMs); pick.Found != nil {
 			return pick
 		}
 	}
@@ -107,8 +109,8 @@ func (f *Fetcher) FullTextOf(title string, p Preview, whenMs int64) Pick {
 // chats/search returns chats Max can find but not read (`230002 Bot/User can NOT be out of
 // the chat`), and one of those must not skip the other candidates or the LRU (progress.md
 // 2026-08-31). The reason still reaches the record through Pick.Reason.
-func (f *Fetcher) pickIn(chatID, title string, p Preview, whenMs int64) Pick {
-	items, err := f.src.Messages(chatID, whenMs)
+func (f *Fetcher) pickIn(ctx context.Context, chatID, title string, p Preview, whenMs int64) Pick {
+	items, err := f.src.Messages(ctx, chatID, whenMs)
 	if err != nil {
 		f.Log("[%s] %s unreadable: %v", title, chatID, err)
 		return Pick{ChatID: chatID, Reason: errorPrefix + err.Error()}
