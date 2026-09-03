@@ -1824,3 +1824,17 @@ Next:
 Next:
 
 - Real cut traffic with the Backend up is the last unseen hop: `events --since 2026-09-03T06:44 grade`.
+
+### 2026-09-03 — the office path, and a reverse mapping that comes back on its own
+
+- ✅ At the office: `larklish.backendUrl` rebuilt to the Mac's office address; with no reverse
+  mapping the `fetch` hook went over the office Wi-Fi (phone `100.70.173.85`, Mac
+  `100.70.167.110`) and came back `found` with Lark's English in about 1 s.
+- 🔁 Max plugs and unplugs the phone all day, so a loop on the Mac re-creates the reverse
+  mapping on every plug-in: `while true; do adb wait-for-usb-device reverse tcp:8787 tcp:8787; sleep 5; done`.
+  Unplugged, the phone falls back to the Wi-Fi address; on cellular the Update fails as
+  `error:` and the Relay stands, which the record prices for the ByteFaaS layer.
+
+Next:
+
+- Daytime traffic: `tools/larklish-helper events --since 2026-09-03T06:44 grade`.
