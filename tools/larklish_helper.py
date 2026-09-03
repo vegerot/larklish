@@ -83,7 +83,9 @@ def read_events(path: str | None = None) -> list[Event]:
     else:
         require_device()
         text = adb("exec-out", "run-as", PACKAGE, "cat", "files/events.jsonl").stdout
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    # One JSON object per "\n". Not splitlines(): a message may carry U+2028 LINE SEPARATOR,
+    # which JSON leaves unescaped and splitlines() would split on (a Relay of 2026-09-02 did).
+    return [json.loads(line) for line in text.split("\n") if line.strip()]
 
 
 def backend_url() -> str:

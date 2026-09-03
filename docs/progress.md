@@ -1769,3 +1769,24 @@ Next:
   (`go -C backend run .`) → Relay `Sender: ...` → Update through the Backend; then soak a day
   and `events --since <then> grade` against 31 of 34.
 - Commit 8 after the soak. Then ByteFaaS under `coplan.lark.*`.
+
+### 2026-09-02 — night check: the listener fires into the Backend on real traffic; bot pushes are silent
+
+- 🐛 Fixed: `read_events` split the record with `splitlines()`, and a Relay carrying U+2028
+  LINE SEPARATOR (a colleague's sale post) broke every `events` view. JSON leaves that character
+  unescaped, so the helper now splits on `\n` only.
+- ✅ A real Original (`San Jose 1199…`, 22:58) went Relay → `update()` → Backend. The Backend was
+  down at that minute (stopped between tests), so the record shows `skipped error: … unexpected
+  end of stream` and the debug "Update failed" notification: the failure path, as designed. The
+  Backend now runs for the soak (`larklish-backend`, log in the session scratchpad); the Wi-Fi
+  fallback URL is the Mac's home LAN address (`192.168.251.184`), which the phone reaches.
+- 🔍 Lark's own troubleshooter on the phone: all six checks green, FCM connected since the
+  reboot, "Mute notifications on mobile when using Lark on desktop" is **off**. Its test
+  message relayed. Yet no **bot** message tonight (six to the test group, three DMs) produced a
+  notification, while a colleague's message did. No API reads a chat's mute state; Max checks
+  the test group and the bot's DM on the phone.
+
+Next:
+
+- Soak with the Backend up: `tools/larklish-helper events --since 2026-09-03T06:20 grade`.
+  The first cut Original with the Backend running is the missing verification.
