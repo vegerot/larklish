@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 private const val TAG = "LarkListener"
 private const val LARK = "com.larksuite.suite"
@@ -24,8 +24,8 @@ private const val ERROR_ID = 2
 private const val MAX_TRANSLATE_CHARS = 1000 // the translation API's limit
 
 /**
- * Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws.
- * Layer 7: then ask the Backend for the Full text in English and Update the Relay with it.
+ * Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws. Layer
+ * 7: then ask the Backend for the Full text in English and Update the Relay with it.
  */
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -39,10 +39,14 @@ class LarkListener : NotificationListenerService() {
         super.onCreate()
         manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(RELAY_CHANNEL, "Relays", NotificationManager.IMPORTANCE_HIGH),
+            NotificationChannel(RELAY_CHANNEL, "Relays", NotificationManager.IMPORTANCE_HIGH)
         )
         manager.createNotificationChannel(
-            NotificationChannel(ERRORS_CHANNEL, "Errors (debug)", NotificationManager.IMPORTANCE_DEFAULT),
+            NotificationChannel(
+                ERRORS_CHANNEL,
+                "Errors (debug)",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
         )
     }
 
@@ -52,7 +56,10 @@ class LarkListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        Log.i(TAG, "connected; active Lark notifications: ${activeNotifications.count { it.packageName == LARK }}")
+        Log.i(
+            TAG,
+            "connected; active Lark notifications: ${activeNotifications.count { it.packageName == LARK }}",
+        )
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -71,10 +78,15 @@ class LarkListener : NotificationListenerService() {
         updates[sbn.key] = scope.launch {
             val relayTitle = translator.englishOf(title)
             val relaySender = translator.senderOf(preview.sender)
-            val relay = buildRelay(
-                this@LarkListener, sbn, relayTitle, relaySender, preview.mention,
-                translator.englishOf(preview.message),
-            )
+            val relay =
+                buildRelay(
+                    this@LarkListener,
+                    sbn,
+                    relayTitle,
+                    relaySender,
+                    preview.mention,
+                    translator.englishOf(preview.message),
+                )
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
             recorder.relayed(sbn.key, title, text, relayTitle, relayText)
@@ -94,7 +106,10 @@ class LarkListener : NotificationListenerService() {
         }
     }
 
-    /** Layer 7: the Backend runs the Lookup and translates the Full text; the phone Updates the Relay with it. */
+    /**
+     * Layer 7: the Backend runs the Lookup and translates the Full text; the phone Updates the
+     * Relay with it.
+     */
     private suspend fun update(
         sbn: StatusBarNotification,
         title: String,
@@ -104,14 +119,19 @@ class LarkListener : NotificationListenerService() {
         preview: Preview,
     ) {
         try {
-            val answer = withContext(Dispatchers.IO) { Backend.lookup(title, text, sbn.postTime, userToken.bearer()) }
+            val answer =
+                withContext(Dispatchers.IO) {
+                    Backend.lookup(title, text, sbn.postTime, userToken.bearer())
+                }
             if (answer.outcome != "found") {
                 recorder.skipped(sbn.key, answer.reason)
                 return
             }
             // No English from the Backend means Lark would not translate it there. The phone's own
-            // Translator then tries Lark once more and falls back to ML Kit, marked `~`, as it always has.
-            val message = answer.english ?: translator.englishOf(answer.fullText.take(MAX_TRANSLATE_CHARS))
+            // Translator then tries Lark once more and falls back to ML Kit, marked `~`, as it
+            // always has.
+            val message =
+                answer.english ?: translator.englishOf(answer.fullText.take(MAX_TRANSLATE_CHARS))
             val relay = buildRelay(this, sbn, relayTitle, relaySender, preview.mention, message)
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()

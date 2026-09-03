@@ -6,7 +6,8 @@ plugins {
     id("com.ncorti.ktfmt.gradle") version "0.27.0"
 }
 
-// Lark credentials live in local.properties (gitignored; written by `tools/larklish-helper token`) and land
+// Lark credentials live in local.properties (gitignored; written by `tools/larklish-helper token`)
+// and land
 // in BuildConfig. Embedded in the APK for now — see plan.md "Shortcuts".
 val local = Properties().apply { rootProject.file("local.properties").inputStream().use(::load) }
 
