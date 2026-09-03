@@ -1644,3 +1644,31 @@ Max: fix them, not just skip them like ktlint. Mostly style (`subprocess.run`'s 
 `ruff check` and `ruff format --diff` both clean; `--help` at every level still runs.
 
 Next: unchanged.
+
+### 2026-09-02 — Backend grill opened: what the experts say, and what the phone can reach
+
+Max wants a v0 **Backend** that holds the secrets (the Lark app secret and the user refresh
+chain) and maybe more. Round 1 of the grill is out (the cut, the host, the words, the repo
+layout); no plan.md Layer until it settles.
+
+- 📄 Expert answers, outside the repo: `../expert-answers/`. Mira: ByteFaaS Native HTTP
+  (a long-lived process), TSP for secrets, TLB for a public domain, TCE only if a disk is
+  needed. Tika (`bytedcli tika chat`, conversation `2973462677508`): TCE with a persistent
+  volume. Both name the same crux: the refresh token rotates every 2 h and is single-use, so
+  a Backend instance that dies between a rotation and a write loses the chain. With
+  autoscaling, two instances refreshing the same chain would kill each other: pin one.
+- 📏 The Feishu Open API has an intranet mirror, `open.feishu.cn` → `fsopen.bytedance.net`.
+  Checked from the office network and inside the IDC: the tenant-token and translate
+  endpoints answer there. `lark-cli` hard-codes the public host by brand
+  (`internal/core/types.go`), so a Backend that shells out to it cannot use the mirror.
+- 📏 The phone reaches the intranet: on the office Wi-Fi `Inspire Creativity` with no VPN,
+  and on cellular through the SealSuite VPN (`fsopen.bytedance.net` 200 in 1.1 s with Wi-Fi
+  off). The internal doc that says mobile devices lost intranet access does not hold for
+  this phone today. So a Backend on an intranet address is reachable in Max's day; a TLB
+  public domain is the fallback, not the prerequisite.
+- 🗂️ Claude's project memory moved into the repo: `.claude/memory/`, symlinked from
+  `~/.claude/projects/<slug>/memory` (the `ln -s` line is in Commands).
+
+Next:
+
+- Max answers the grill. Then a plan.md Layer for the Backend, and its first commit.
