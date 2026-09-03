@@ -380,6 +380,8 @@ go -C backend run .                                        # Layer 7: the Backen
                                                           #   (local.properties: larklish.backendUrl=http://<mac-ip>:8787)
 go -C backend test ./...                                   #   Go tests; the corpus replay runs when replay-corpus/ exists
 adb reverse tcp:8787 tcp:8787                              #   over USB the phone reaches the Mac as http://127.0.0.1:8787
+while true; do adb wait-for-usb-device reverse tcp:8787 tcp:8787; \
+  adb wait-for-usb-disconnect; done                        #   …once per plug-in, then wait for the unplug (a background task on the Mac)
 curl -s localhost:8787/v1/ping; curl -s localhost:8787/chats   #   liveness; the Backend's chat cache
 ssh -N -o ExitOnForwardFailure=yes devbox                 # when working remotely on devbox: on the Mac: carry its adb server to the dev box
                                                           #   (~/.ssh/config: Host devbox, HostName 10.251.236.182,
