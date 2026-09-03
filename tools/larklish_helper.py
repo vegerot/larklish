@@ -785,11 +785,7 @@ def caption_font(size: int) -> Any:
 
 def compose(slug: str, caption: str) -> str:
     """<slug>-lark.png and <slug>-larklish.png side by side under a caption → <slug>.png."""
-    Image, ImageDraw, ImageFont = (
-        need("PIL.Image"),
-        need("PIL.ImageDraw"),
-        need("PIL.ImageFont"),
-    )
+    Image, ImageDraw = need("PIL.Image"), need("PIL.ImageDraw")
     lark = rounded(Image.open(f"{SHOWCASE_DIR}/{slug}-lark.png").convert("RGBA"))
     larklish = rounded(
         Image.open(f"{SHOWCASE_DIR}/{slug}-larklish.png").convert("RGBA")
