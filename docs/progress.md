@@ -1630,3 +1630,17 @@ reformatted (line wraps, the `dict[str, Any]` aligned-comment block broken onto 
 lines); `tools/larklish-helper events --help` and an import still work.
 
 Next: unchanged.
+
+### 2026-09-03 — `ruff check` findings fixed too (11 of 11)
+
+Max: fix them, not just skip them like ktlint. Mostly style (`subprocess.run`'s explicit
+`check=False`, `str.removesuffix()` over a slice ternary ×2, `f.writelines` over a per-line
+`f.write` loop, an unpacked `sender` never used → `_sender`). The naive
+`datetime.fromtimestamp()`/`.now()` calls were a real bug, not just a lint nit: `cmd_msgs`'s
+`--utc` flag was a no-op, since `fromtimestamp()` with no `tz` already returns local time and
+`strftime` ignores `tzinfo` — both branches printed the same string. Fixed in both
+`larklish_helper.py` and `lark-token`'s `when()` by building the aware UTC instant first
+(`tz=timezone.utc`) and only converting to local with `.astimezone()` when `--utc` is absent.
+`ruff check` and `ruff format --diff` both clean; `--help` at every level still runs.
+
+Next: unchanged.
