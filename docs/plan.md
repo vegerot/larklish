@@ -452,7 +452,8 @@ adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
 tools/larklish-helper probe "中文消息"                          # post to the test group, then show the Relay
 tools/larklish-helper probe --install --thread "中文消息"       #   …after installDebug; --thread adds a reply in a thread
 tools/larklish-helper probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch
-tools/larklish-helper chats                                   # what the Backend's chat-id cache holds
+tools/larklish-helper chats                                   # what the Backend's chat-id cache holds (ByteFaaS;
+                                                          #   LARKLISH_BACKEND=http://127.0.0.1:8787 for a Mac Backend)
 tools/larklish-helper events stats                            # the Relay record; views: list, stats, grade, pull
 tools/larklish-helper events --since 2026-08-29T00:30 --han list
 tools/larklish-helper events --since 2026-09-01T03:50 grade   #   the soak grade: cut Previews vs their Update outcome

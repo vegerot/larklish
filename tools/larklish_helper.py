@@ -123,8 +123,9 @@ def read_events(path: str | None = None) -> list[Event]:
 
 
 def backend_url() -> str:
-    """The Backend (Layer 7) runs on this machine; `LARKLISH_BACKEND` overrides."""
-    return os.environ.get("LARKLISH_BACKEND", "http://127.0.0.1:8787")
+    """The Backend on ByteFaaS (Layer 8); `LARKLISH_BACKEND=http://127.0.0.1:8787` for a Backend
+    running on this machine (`go -C backend run .`)."""
+    return os.environ.get("LARKLISH_BACKEND", "https://jmc8tl6s.fn.bytedance.net")
 
 
 def read_chat_cache(path: str | None = None) -> ChatCache:
