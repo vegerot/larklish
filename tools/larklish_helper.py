@@ -48,7 +48,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 Event = dict[
@@ -86,14 +86,14 @@ LOG_TAGS = ["LarkListener:I", "Translator:I", "FallbackTranslator:W", "*:S"]
 
 def run(args: list[str], **kw: Any) -> str:
     """Run a command and fail loudly with whatever it said."""
-    out = subprocess.run(args, capture_output=True, text=True, **kw)
+    out = subprocess.run(args, capture_output=True, text=True, check=False, **kw)
     if out.returncode != 0:
         sys.exit(f"{args[0]}: {(out.stderr or out.stdout).strip()}")
     return out.stdout
 
 
 def adb(*args: str, allow_fail: bool = False) -> subprocess.CompletedProcess[str]:
-    out = subprocess.run(["adb", *args], capture_output=True, text=True)
+    out = subprocess.run(["adb", *args], capture_output=True, text=True, check=False)
     if out.returncode != 0 and not allow_fail:
         sys.exit(f"adb {' '.join(args)}: {(out.stderr or out.stdout).strip()}")
     return out
@@ -101,7 +101,9 @@ def adb(*args: str, allow_fail: bool = False) -> subprocess.CompletedProcess[str
 
 def require_device() -> None:
     """`adb logcat` waits forever when no phone is attached, so check before anything blocks."""
-    out = subprocess.run(["adb", "devices"], capture_output=True, text=True)
+    out = subprocess.run(
+        ["adb", "devices"], capture_output=True, text=True, check=False
+    )
     if not [
         ln for ln in out.stdout.splitlines()[1:] if ln.strip().endswith("\tdevice")
     ]:
@@ -233,7 +235,7 @@ def one_line(s: str) -> str:
 
 def preview_message(text: str) -> str:
     """The message part of an Original's text, as `Preview.parse` sees it (after the first `: `)."""
-    sender, sep, message = text.partition(": ")
+    _sender, sep, message = text.partition(": ")
     return message if sep else text
 
 
@@ -315,6 +317,7 @@ def lark_cli(
         ["lark-cli", "api", method, path, flag, json.dumps(payload), "--as", identity],
         capture_output=True,
         text=True,
+        check=False,
     )
     try:
         return json.loads(out.stdout)
@@ -379,7 +382,7 @@ def resolve_chat(name: str) -> tuple[str, str]:
     Returns `(chat_id, how)`; exits when nothing names the chat."""
     if name.startswith("oc_"):
         return name, ""
-    stem = name[:-3] if name.endswith("...") else name
+    stem = name.removesuffix("...")
     for title, chat in read_chat_cache().items():
         if title == name or title.startswith(stem):
             return chat, f"{title}  (cache)"
@@ -623,6 +626,7 @@ def ui_dump() -> tuple[Node, dict[Node, Node]]:
         ["adb", "exec-out", "uiautomator", "dump", "/dev/tty"],
         capture_output=True,
         text=True,
+        check=False,
     ).stdout
     raw = raw[raw.find("<?xml") :]
     raw = raw[: raw.rfind(">") + 1]
@@ -750,7 +754,7 @@ def capture(app: str, title: str, out_png: str) -> Bounds:
         left, top, right, _ = bounds(group)
         bottom = bounds(child)[3]
     png = subprocess.run(
-        ["adb", "exec-out", "screencap", "-p"], capture_output=True
+        ["adb", "exec-out", "screencap", "-p"], capture_output=True, check=False
     ).stdout
     need("PIL.Image").open(io.BytesIO(png)).crop((left, top, right, bottom)).save(
         out_png
@@ -925,8 +929,7 @@ def events_grade(events: list[Event], args: argparse.Namespace) -> None:
 
 def events_pull(events: list[Event], args: argparse.Namespace) -> None:
     with open(args.out, "w", encoding="utf-8") as f:
-        for e in events:
-            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps(e, ensure_ascii=False) + "\n" for e in events)
     print(f"{len(events)} events → {args.out}")
 
 
@@ -1006,7 +1009,7 @@ def cmd_msgs(args: argparse.Namespace) -> None:
     if not items:
         print("no messages in the window (or a chat Max cannot read)")
     for m in sorted(items, key=lambda m: int(m["create_time"])):
-        t = datetime.fromtimestamp(int(m["create_time"]) / 1000)
+        t = datetime.fromtimestamp(int(m["create_time"]) / 1000, tz=timezone.utc)
         if not args.utc:
             t = t.astimezone()
         mentions = " ".join(
@@ -1090,7 +1093,7 @@ def cmd_replay(args: argparse.Namespace) -> None:
         title = e["title"]
         if title == "Lark" or title == preview_sender(e["text"]) or title in titles:
             continue
-        stem = title[:-3] if title.endswith("...") else title
+        stem = title.removesuffix("...")
         ids = [
             h["chat_id"]
             for h in chats_search(stem)
@@ -1152,8 +1155,10 @@ def cmd_token(args: argparse.Namespace) -> None:
     values = {"lark.appId": app_id, "lark.appSecret": app_secret}
     if token:
         expired = token["refreshExpiresAt"] < time.time() * 1000
-        valid_to = datetime.fromtimestamp(token["refreshExpiresAt"] / 1000).strftime(
-            "%Y-%m-%d %H:%M"
+        valid_to = (
+            datetime.fromtimestamp(token["refreshExpiresAt"] / 1000, tz=timezone.utc)
+            .astimezone()
+            .strftime("%Y-%m-%d %H:%M")
         )
         print(
             f"user {token['userOpenId']}  refresh token {mask(token['refreshToken'])} "
