@@ -1997,3 +1997,27 @@ Next:
 
 - This push should appear as version `1.0.0.3`, origin `Git trigger`.
 - Soak and the always-on VPN step, as above.
+
+### 2026-09-03 — four helper subcommands from the transcript's repeats
+
+Max asked what the helper is missing, judged by every tool call of this conversation
+(1,015 Bash and 64 bytedcli calls since Aug 25). The repeats the helper did not cover:
+`adb logcat` 84 times in 52 hand-typed variants (plus 23 `sed` runs to shorten notification
+keys), the pre-flight checks 78 times (`adb devices`, `pidof`, `ip addr`, `adb reverse`,
+`deviceidle get`), `force-idle`/`unforce` around every cut demo, and the Backend's five status
+calls with their flag lists 29 times. Added (`tools/larklish_helper.py`):
+
+- 🧰 `probe --idle`: HOME + `deviceidle force-idle` before the send, `unforce` after, so Lark
+  posts the cut push payload and the Update path runs.
+- 🧰 `phone log [-n N] [--clear]`: the app's logcat with keys shortened to `key=…`.
+- 🧰 `phone status`: device, app and Lark pids, the listener binding (dumpsys names it
+  `ComponentInfo{<pkg>/<pkg>.LarkListener}`), foreground, deep idle, Wi-Fi address, reverse.
+- 🧰 `backend status`: the trigger's `pong` with timing, the newest SCM version (state, origin,
+  commit), the cluster's revision and its SCM source, replicas, the last release — and a note
+  with the two deploy commands when a newer `build_ok` version is not deployed.
+- ⏳ `backend deploy` waits for a wider variety of deploys (Max).
+- ✅ Seen with `phone log`: real Updates at 17:40–17:47 read `via jmc8tl6s.fn.bytedance.net` in
+  the record — the `backend` field is live. `backend status` shows `1.0.0.4` built by the git
+  trigger and not deployed (the Backend code has not changed since `1.0.0.2`).
+
+Next: unchanged — soak, and the always-on VPN step.

@@ -8,9 +8,13 @@
     tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits
     tools/larklish-helper translate '先别发布' --repeat 30                          # one Lark translate call
     tools/larklish-helper probe "中文消息"               # post to the test group, show the Relay
+    tools/larklish-helper probe --idle "中文消息"        #   …with the phone in deep idle, so Lark cuts it
     tools/larklish-helper probe --debug fetch           #   …or run a MainActivity debug hook
     tools/larklish-helper chats                         # the Backend's chat-id cache
+    tools/larklish-helper phone status                  # adb pre-flight: app, listener, idle, Wi-Fi, reverse
+    tools/larklish-helper phone log -n 20               # the app's logcat, keys shortened (--clear resets)
     tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
+    tools/larklish-helper backend status                # ping, newest SCM build, what ByteFaaS runs
     tools/larklish-helper replay fetch                  # pull the corpus ReplayTest scores against
     tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish, side by side
     tools/larklish-helper token --write                 # credentials from lark-cli's store
@@ -41,6 +45,7 @@ import os
 import pathlib
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -81,6 +86,7 @@ def need(module: str) -> Any:
 # ══ library ═══════════════════════════════════════════════════════════════════
 # ── the phone, over adb ───────────────────────────────────────────────────────
 PACKAGE = "com.vegerot.larklish"
+LARK = "com.larksuite.suite"
 LOG_TAGS = ["LarkListener:I", "Translator:I", "FallbackTranslator:W", "*:S"]
 
 
@@ -172,6 +178,129 @@ def log_lines() -> list[str]:
         parts = line.split(None, 5)  # date time pid tid level tag: message
         out.append(" ".join(parts[1:2] + parts[4:]) if len(parts) > 5 else line)
     return out
+
+
+def short_keys(lines: list[str]) -> list[str]:
+    """Notification keys (`0|com.larksuite.suite|-1580155703|null|10229`) shortened to `key=…`."""
+    return [re.sub(r"key=\S+", "key=…", line) for line in lines]
+
+
+def phone_status() -> dict[str, str]:
+    """The pre-flight facts: device, app and Lark processes, the listener binding, the foreground
+    activity, deep idle, the Wi-Fi address, the reverse mapping to a Backend on this machine."""
+    devices = [
+        ln.split("\t")[0]
+        for ln in adb("devices").stdout.splitlines()[1:]
+        if ln.strip().endswith("\tdevice")
+    ]
+
+    def pid(pkg: str) -> str:
+        return adb("shell", "pidof", pkg, allow_fail=True).stdout.strip()
+
+    # dumpsys names a bound listener ComponentInfo{<pkg>/<pkg>.LarkListener}
+    listener = (
+        f"{PACKAGE}/{PACKAGE}.LarkListener"
+        in adb("shell", "dumpsys", "notification").stdout
+    )
+    idle = adb("shell", "dumpsys", "deviceidle", "get", "deep").stdout.strip()
+    inet = re.search(
+        r"inet (\S+)",
+        adb("shell", "ip", "-4", "addr", "show", "wlan0", allow_fail=True).stdout,
+    )
+    reverse = adb("reverse", "--list", allow_fail=True).stdout
+    return {
+        "device": ", ".join(devices) or "none",
+        "app": f"running (pid {pid(PACKAGE)})" if pid(PACKAGE) else "not running",
+        "listener": "bound"
+        if listener
+        else "NOT bound (cmd notification allow_listener …)",
+        "lark": f"running (pid {pid(LARK)})" if pid(LARK) else "not running",
+        "foreground": top(),
+        "deep idle": idle,
+        "wifi": inet.group(1) if inet else "no wlan0 address",
+        "reverse": "tcp:8787 → this machine" if "tcp:8787" in reverse else "none",
+    }
+
+
+SCM_REPO = "oec/seller/larklish"
+FAAS_SERVICE, FAAS_REGION, FAAS_CLUSTER = "jmc8tl6s", "cn-north", "faas-cn-north"
+
+
+def bytedcli(*args: str) -> Any:
+    """One `bytedcli --json …` call, its `data`."""
+    if not shutil.which("bytedcli"):
+        sys.exit("bytedcli is not installed (npm install -g @bytedance-dev/bytedcli)")
+    out = subprocess.run(
+        ["bytedcli", "--json", *args], capture_output=True, text=True, check=False
+    )
+    try:
+        reply = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        sys.exit(
+            f"bytedcli {' '.join(args)}: {(out.stderr or out.stdout).strip()[:300]}"
+        )
+    if reply.get("error"):
+        sys.exit(f"bytedcli {' '.join(args)}: {reply['error'].get('message')}")
+    return reply["data"]
+
+
+def backend_status() -> dict[str, str]:
+    """What is live (Layer 8): the trigger URL's answer, the newest SCM version, and the code the
+    ByteFaaS cluster runs — with a note when a newer build is not deployed."""
+    started = time.monotonic()
+    try:
+        with urllib.request.urlopen(backend_url() + "/v1/ping", timeout=20) as resp:
+            ping = (
+                f"{resp.read().decode().strip()} in {time.monotonic() - started:.2f} s"
+            )
+    except OSError as e:
+        ping = f"FAILED: {e}"
+    newest = bytedcli(
+        "scm",
+        "repo",
+        "version",
+        "list",
+        SCM_REPO,
+        "--branch",
+        "main",
+        "--page-size",
+        "1",
+    )["versions"][0]
+    faas = bytedcli(
+        "faas",
+        "cluster",
+        "get",
+        "--service-id",
+        FAAS_SERVICE,
+        "--region",
+        FAAS_REGION,
+        "--cluster",
+        FAAS_CLUSTER,
+    )
+    cluster, release = faas["cluster"], faas.get("latestRelease") or {}
+    replicas = ", ".join(
+        f"{zone} {lim['min']}–{lim['max']}"
+        for zone, lim in cluster["replicaLimit"].items()
+        if lim["max"]
+    )
+    deployed = faas["service"]["source"]  # <scm repo>:<version>
+    status = {
+        "backend": f"{backend_url()}  {ping}",
+        "scm": f"{SCM_REPO} {newest['version']}  {newest['status']}  ({newest['origin']}, "
+        f"{newest['base_commit_hash'][:7]}, {newest['finish_date'] or 'running'})  "
+        f"{newest['desc'].splitlines()[0][:70]}",
+        "bytefaas": f"{FAAS_SERVICE}/{FAAS_CLUSTER}  {cluster['status']}  revision "
+        f"{cluster['codeRevisionNumber']} = {deployed}  timeout {cluster['requestTimeoutSeconds']} s"
+        f"  replicas {replicas or 'none'}",
+        "release": f"{release.get('id', '-')} {release.get('status', '-')} {release.get('updatedAt', '')}",
+    }
+    if newest["status"] == "build_ok" and deployed != f"{SCM_REPO}:{newest['version']}":
+        status["note"] = (
+            f"newer build not deployed: {newest['version']} — "
+            f"bytedcli faas revision scm create --service-id {FAAS_SERVICE} "
+            f"--scm-repo {SCM_REPO} --scm-version {newest['version']}, then faas release create"
+        )
+    return status
 
 
 def top() -> str:
@@ -955,16 +1084,27 @@ def cmd_probe(args: argparse.Namespace) -> None:
         print("installing…")
         run(["./gradlew", "--quiet", "installDebug"])
     adb("logcat", "-c")
-    if args.debug:
-        debug_hook(args.debug, args.title, args.text or "")
-    else:
-        root = send_test_message(args.text)
-        print(f"sent {root}")
-        if args.thread:
-            time.sleep(min(args.wait, 8))
-            print(f"replied {send_test_message('回复：' + args.text, reply_to=root)}")
-    time.sleep(args.wait)
-    print(*log_lines(), sep="\n")
+    if args.idle:
+        # Lark composes a whole notification itself when its process was recently in the
+        # foreground; in deep idle the push path posts the FCM payload, cut at 45 characters.
+        adb("shell", "input", "keyevent", "KEYCODE_HOME")
+        adb("shell", "dumpsys", "deviceidle", "force-idle")
+    try:
+        if args.debug:
+            debug_hook(args.debug, args.title, args.text or "")
+        else:
+            root = send_test_message(args.text)
+            print(f"sent {root}")
+            if args.thread:
+                time.sleep(min(args.wait, 8))
+                print(
+                    f"replied {send_test_message('回复：' + args.text, reply_to=root)}"
+                )
+        time.sleep(args.wait)
+    finally:
+        if args.idle:
+            adb("shell", "dumpsys", "deviceidle", "unforce")
+    print(*short_keys(log_lines()), sep="\n")
 
 
 # ── chats: the Backend's chat-id cache (GET /chats; in memory, so a restart clears it) ──
@@ -1051,7 +1191,16 @@ def cmd_translate(args: argparse.Namespace) -> None:
 # ── phone: small adb helpers ───────────────────────────────────────────────────────────────────────────────────────────────────
 def cmd_phone(args: argparse.Namespace) -> None:
     require_device()
-    if args.act == "top":
+    if args.act == "status":
+        for k, v in phone_status().items():
+            print(f"{k:11} {v}")
+    elif args.act == "log":
+        if args.clear:
+            adb("logcat", "-c")
+            print("logcat cleared")
+        else:
+            print(*short_keys(log_lines())[-args.n :], sep="\n")
+    elif args.act == "top":
         print(top())
     elif args.act == "home":
         adb("shell", "input", "keyevent", "KEYCODE_HOME")
@@ -1064,6 +1213,12 @@ def cmd_phone(args: argparse.Namespace) -> None:
         if args.file:
             shot(args.file)
             print(f"screenshot: {args.file}")
+
+
+# ── backend: what is live on ByteFaaS (Layer 8) ──────────────────────────────
+def cmd_backend(args: argparse.Namespace) -> None:
+    for k, v in backend_status().items():
+        print(f"{k:9} {v}")
 
 
 # ── replay: pull the corpus that ReplayTest scores the shipped rules against ───
@@ -1226,6 +1381,12 @@ def main() -> None:
         metavar="HOOK",
         help="run a MainActivity hook: user, refresh or fetch",
     )
+    b.add_argument(
+        "--idle",
+        action="store_true",
+        help="deep-idle the phone first (HOME, deviceidle force-idle) so Lark posts the cut push"
+        " payload; unforce after",
+    )
     b.add_argument("--title", default=TEST_TITLE, help="title for --debug fetch")
     b.add_argument(
         "--wait",
@@ -1294,6 +1455,15 @@ def main() -> None:
 
     f = group.add_parser("phone", help="adb helpers")
     act = f.add_subparsers(dest="act", required=True)
+    act.add_parser(
+        "status",
+        help="pre-flight: device, app, listener, Lark, foreground, idle, Wi-Fi, reverse",
+    )
+    lg = act.add_parser(
+        "log", help="the app's logcat so far, notification keys shortened"
+    )
+    lg.add_argument("-n", type=int, default=20, help="last N lines (default 20)")
+    lg.add_argument("--clear", action="store_true", help="clear logcat instead")
     act.add_parser("top", help="foreground activity")
     act.add_parser("home", help="press HOME")
     act.add_parser("shot", help="screenshot to FILE").add_argument("file")
@@ -1301,6 +1471,12 @@ def main() -> None:
         "file", nargs="?"
     )
     f.set_defaults(fn=cmd_phone)
+
+    bk = group.add_parser("backend", help="what is live on ByteFaaS")
+    bk.add_subparsers(dest="act", required=True).add_parser(
+        "status", help="ping, the newest SCM build, the cluster's revision and replicas"
+    )
+    bk.set_defaults(fn=cmd_backend)
 
     r = group.add_parser(
         "replay", help="the corpus ReplayTest scores the shipped rules against"
