@@ -251,7 +251,7 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 
 - **Pipeline**: Codebase (`code.byted.org/max.coplan/larklish`, the new `origin`; GitHub is
   the remote `github`, an artifact) → SCM (`oec/seller/larklish`: runs `build.sh` at the repo
-  root in its Go image, tars `output/`; `--git-trigger` was set but no push has built a version yet — `bytedcli scm repo build oec/seller/larklish --branch main --type online` until the trigger is sorted in the SCM console) → ByteFaaS (PSM
+  root in its Go image, tars `output/`, builds on every push to `main` — the trigger branch is set in the SCM console; `bytedcli scm repo create --git-trigger` only flips the switch) → ByteFaaS (PSM
   `coplan.lark.larklish` under `oec.seller.frontend`, runtime `native/v1` HTTP, cluster
   `faas-cn-north`, created from the SCM version, `run_cmd /opt/bytefaas/run.sh`).
 - **Cluster**: request timeout 30 s (a DM Lookup polls ~12 s), init 120 s, IPv6-only as
