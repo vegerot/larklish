@@ -255,8 +255,11 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `coplan.lark.larklish` under `oec.seller.frontend`, runtime `native/v1` HTTP, cluster
   `faas-cn-north`, created from the SCM version, `run_cmd /opt/bytefaas/run.sh`).
 - **Cluster**: request timeout 30 s (a DM Lookup polls ~12 s), init 120 s, IPv6-only as
-  spooky-bio, **minimum instances 1** (Max: no cold start, the chat cache survives idle hours;
-  it still restarts on each release). Env: `LARK_HOST=https://fsopen.bytedance.net` (an
+  spooky-bio, **one instance, always** (Max: no cold start, the chat cache survives idle
+  hours; it still restarts on each release): IDC `hl` min 1 max 1, every other IDC 0–0, set in
+  the console under Resource and scaling → Resources → Configure instance number (bytedcli's
+  `faas trigger replica-limit update` is for MQ triggers; on an HTTP trigger it answers
+  "record not found"). Env: `LARK_HOST=https://fsopen.bytedance.net` (an
   IPv6-only instance cannot reach `open.feishu.cn`, and public egress needs a whitelist),
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
 - **The phone** reaches `https://<id>.fn.bytedance.net` on the office Wi-Fi and through the
@@ -431,6 +434,8 @@ bytedcli faas log --service-id <id> --since 10m            #   the Backend's std
 bytedcli faas revision scm create --service-id <id> --scm-repo oec/seller/larklish --scm-version 1.0.0.N   # deploy step 1 (dry-run; add the printed --yes line)
 bytedcli faas release create --service-id <id> --code-revision <n>  #   deploy step 2; `faas release status` to watch
 LARK_APP_ID=… LARK_APP_SECRET=… bytedcli faas cluster update --service-id <id> --env-from-env LARK_APP_ID --env-from-env LARK_APP_SECRET   # secrets from the process env, never argv
+bytedcli faas cluster get --service-id jmc8tl6s --region cn-north --cluster faas-cn-north   #   replicaLimit (hl 1–1), timeouts, env keys
+curl -s https://jmc8tl6s.fn.bytedance.net/v1/ping             #   the Backend on ByteFaaS (service jmc8tl6s, PSM coplan.lark.larklish)
 adb reverse tcp:8787 tcp:8787                              #   over USB the phone reaches the Mac as http://127.0.0.1:8787
 while true; do adb wait-for-usb-device reverse tcp:8787 tcp:8787; \
   adb wait-for-usb-disconnect; done                        #   …once per plug-in, then wait for the unplug (a background task on the Mac)

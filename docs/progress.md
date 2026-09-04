@@ -1936,3 +1936,40 @@ Next:
 - Push `main` to Codebase; create the SCM repo `oec/seller/larklish` (`--git-trigger
   --unit-test`) and build `1.0.0.1`; then the function in the console (PSM
   `coplan.lark.larklish`, node `oec.seller.frontend`, 30 s, min 1, `LARK_HOST` + secrets).
+
+### 2026-09-03 — Layer 8 built: the Backend runs on ByteFaaS, and the phone reaches it
+
+- 🏭 SCM repo `oec/seller/larklish` (id 586146, `--git-trigger --unit-test`, image
+  `teslago1.25`): build `1.0.0.1` failed — SCM runs `unittest.sh`, not `test.sh` — and
+  `1.0.0.2` passed (28 s, 5.8 MB). `go.mod` went 1.27 → 1.26 → 1.25 to match the image, the
+  trap spooky-bio hit. Codebase had protected `main` on creation; the rule was removed so the
+  owner can push (`bytedcli codebase repo protected-branch rule delete`).
+- 🆕 ByteFaaS service `jmc8tl6s` (PSM `coplan.lark.larklish`, ByteTree node `oec.seller.frontend`)
+  and cluster `faas-cn-north`, both from `bytedcli faas … create --payload-file` (dry-run, then
+  `--yes`): 500 mCPU / 1 GB, request timeout 30 s, init 120 s, IPv6-only, `LARK_HOST`; the app
+  id and secret via `faas cluster update --env-from-env` (never in argv). First release ticket
+  `b8eir2uvjqqfucrp`: Build → Canary → Region, 1 min. Trigger `https://jmc8tl6s.fn.bytedance.net`,
+  `pong` in 0.89 s from the Mac.
+- 🐛 First probe with the Mac's Backend stopped: Relay yes, Update `error: unexpected end of
+  stream`. `Backend.lookup` moved to the next URL only on `ConnectException`, and `adb reverse`
+  to a closed Mac port answers with a reset instead. Fixed: any `IOException` moves on
+  (`9af34ed99cb5`). Second probe: Relay 16:50:15.6, Update with the full English 16:50:21.7,
+  through ByteFaaS. Two more probes: 5.1 s and 2.8 s.
+- 📼 Max: the record should name the Backend that answered. `Lookup.backend` is the URL that
+  did; `updated` and `skipped` events carry `backend`, `events list` prints `via <host>` on
+  U and S rows (same commit). The first Update from the new build is still to be seen.
+- 📉 One instance, always: `hl` 1–1 and the other IDCs 0–0, set in the console (Resource and
+  scaling → Resources → Configure instance number; the bytedcli trigger endpoint only serves
+  MQ triggers). Aime: quota is consumed all day; a release still restarts the process.
+- 🛑 The Mac's Backend is stopped for good; the phone's `larklish.backendUrl` is the trigger
+  URL, `127.0.0.1:8787` stays first for a Mac Backend over USB when one is running.
+- ⚠️ `uvx ruff check tools` with ruff 0.16.6 reports 12 findings in code untouched today
+  (`PLW1510`, `DTZ006`, `FURB…`); the earlier clean run used an older ruff. `ruff format` is
+  the rule; the findings wait.
+
+Next:
+
+- Soak: `tools/larklish-helper events --since 2026-09-03T16:50 grade`; the first real Update
+  should read `via jmc8tl6s.fn.bytedance.net` in `events list`.
+- Max: SealSuite always-on on the phone, then a probe on cellular (step 5.2).
+- `sl push --to main` after the soak entry; a Later item for the ruff findings if they stay.
