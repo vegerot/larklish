@@ -435,7 +435,8 @@ bytedcli faas revision scm create --service-id <id> --scm-repo oec/seller/larkli
 bytedcli faas release create --service-id <id> --code-revision <n>  #   deploy step 2; `faas release status` to watch
 LARK_APP_ID=… LARK_APP_SECRET=… bytedcli faas cluster update --service-id <id> --env-from-env LARK_APP_ID --env-from-env LARK_APP_SECRET   # secrets from the process env, never argv
 bytedcli faas cluster get --service-id jmc8tl6s --region cn-north --cluster faas-cn-north   #   replicaLimit (hl 1–1), timeouts, env keys
-curl -s https://jmc8tl6s.fn.bytedance.net/v1/ping             #   the Backend on ByteFaaS (service jmc8tl6s, PSM coplan.lark.larklish)
+curl -s https://jmc8tl6s.fn.bytedance.net/v1/ping             #   the Backend on ByteFaaS (service jmc8tl6s, PSM coplan.lark.larklish):
+                                                          #   `pong go1.25.x linux/amd64` — the Go that built the running binary
 adb reverse tcp:8787 tcp:8787                              #   over USB the phone reaches the Mac as http://127.0.0.1:8787
 while true; do adb wait-for-usb-device reverse tcp:8787 tcp:8787; \
   adb wait-for-usb-disconnect; done                        #   …once per plug-in, then wait for the unplug (a background task on the Mac)

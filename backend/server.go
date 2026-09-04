@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 )
 
 // LookupRequest is what the phone sends for one cut Preview: the Original's title, its raw
@@ -36,7 +38,11 @@ func (s *Server) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /lookup", s.handleLookup)
 	mux.HandleFunc("GET /chats", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, s.fetcher.Chats()) })
-	mux.HandleFunc("GET /v1/ping", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("pong")) })
+	// ByteFaaS's liveness probe; the body names the Go that built the running binary, so a
+	// deploy is visible from the outside (`tools/larklish-helper backend status`).
+	mux.HandleFunc("GET /v1/ping", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "pong %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	})
 	return mux
 }
 
