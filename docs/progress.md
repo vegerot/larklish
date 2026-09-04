@@ -2021,3 +2021,32 @@ calls with their flag lists 29 times. Added (`tools/larklish_helper.py`):
   trigger and not deployed (the Backend code has not changed since `1.0.0.2`).
 
 Next: unchanged — soak, and the always-on VPN step.
+
+### 2026-09-03 — first deploy through the whole chain, from `sl push` to a probe
+
+Max asked for the steps and then for a real run. The change was small and visible on purpose:
+`GET /v1/ping` answers `pong <go version> <os>/<arch>` (`2166df899cf8`).
+
+- 🚀 17:55:20 `sl push --to main` → SCM version `1.0.0.6` (`Git trigger`) `build_ok` at
+  17:55:51, 31 s. It built on `compile_tango_1_26_bookworm`, not `teslago1.25`: the console's
+  edit form re-resolved the image when the trigger branch was saved — harmless with `go 1.25`
+  in `go.mod`, and the ping now says which Go built the running binary.
+- 🧾 `bytedcli faas revision scm create --service-id jmc8tl6s --scm-repo oec/seller/larklish
+  --scm-version 1.0.0.6`: the dry run named base `1.0.1` → new `1.0.2`; rerun with
+  `--from-revision 1.0.1 --number 1.0.2 --yes` → revision `noqjsjokow`.
+- 🚢 `faas release create … --code-revision noqjsjokow` (the revision **id**; the number
+  `1.0.2` answers `failed to find code revision`): ticket `ynseiuj30expow1p`, Build → Canary →
+  Region, success in 37 s.
+- ✅ `tools/larklish-helper backend status`: `pong go1.26.4 linux/amd64 in 0.77 s`, revision
+  `1.0.2 = oec/seller/larklish:1.0.0.6`, no "newer build" note. Then
+  `tools/larklish-helper probe --idle "端到端部署验证…"`: Relay 17:58:59.3 (cut), Update
+  17:59:04.1 `via jmc8tl6s.fn.bytedance.net` with the full English. 4 min from push to a
+  verified Update, three commands by hand.
+- 📐 Why two ByteFaaS steps: SCM versions (`1.0.0.N`) and ByteFaaS code revisions (`1.0.N`)
+  are separate number spaces; a revision is a pointer to one tarball, and the cluster deploys a
+  revision. The console's Release button does both in one click; bytedcli splits them.
+
+Next:
+
+- `backend deploy` when the pattern has repeated across a wider variety of deploys (Max).
+- Soak on `1.0.0.6`; always-on VPN step.

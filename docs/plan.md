@@ -267,7 +267,11 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   **always-on VPN** over a TLB public domain (a Later item). `Backend.kt` keeps
   `127.0.0.1:8787` first (the Mac over `adb reverse`), then the FaaS URL from
   `larklish.backendUrl`.
-- **Updates**: push → SCM builds → `bytedcli faas revision scm create` → `faas release create`.
+- **Updates** (first run 2026-09-03, 4 min end to end): `sl push --to main` → SCM builds `1.0.0.N`
+  (31 s) → `bytedcli faas revision scm create … --scm-version 1.0.0.N` (dry run prints
+  `--from-revision`/`--number`; rerun with them and `--yes`) → `faas release create …
+  --code-revision <revision id>` (37 s, Build → Canary → Region) → `tools/larklish-helper
+  backend status` (the ping names the Go that built the binary) → `probe --idle`.
 - Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `unittest.sh` at the root.
   Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
   URL → soak.
@@ -432,7 +436,7 @@ bytedcli scm repo version list oec/seller/larklish --branch main      #   the SC
 bytedcli faas function list --search larklish              #   the function's service id
 bytedcli faas log --service-id <id> --since 10m            #   the Backend's stdout on ByteFaaS
 bytedcli faas revision scm create --service-id <id> --scm-repo oec/seller/larklish --scm-version 1.0.0.N   # deploy step 1 (dry-run; add the printed --yes line)
-bytedcli faas release create --service-id <id> --code-revision <n>  #   deploy step 2; `faas release status` to watch
+bytedcli faas release create --service-id <id> --region cn-north --cluster faas-cn-north --code-revision <revision id>   # deploy step 2 (the id from step 1, not the number); `faas release list --limit 1` to watch
 LARK_APP_ID=… LARK_APP_SECRET=… bytedcli faas cluster update --service-id <id> --env-from-env LARK_APP_ID --env-from-env LARK_APP_SECRET   # secrets from the process env, never argv
 bytedcli faas cluster get --service-id jmc8tl6s --region cn-north --cluster faas-cn-north   #   replicaLimit (hl 1–1), timeouts, env keys
 curl -s https://jmc8tl6s.fn.bytedance.net/v1/ping             #   the Backend on ByteFaaS (service jmc8tl6s, PSM coplan.lark.larklish):
