@@ -124,7 +124,7 @@ class LarkListener : NotificationListenerService() {
                     Backend.lookup(title, text, sbn.postTime, userToken.bearer())
                 }
             if (answer.outcome != "found") {
-                recorder.skipped(sbn.key, answer.reason)
+                recorder.skipped(sbn.key, answer.reason, answer.backend)
                 return
             }
             // No English from the Backend means Lark would not translate it there. The phone's own
@@ -135,8 +135,8 @@ class LarkListener : NotificationListenerService() {
             val relay = buildRelay(this, sbn, relayTitle, relaySender, preview.mention, message)
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-            recorder.updated(sbn.key, answer.msgType, answer.fullText, relayText)
-            Log.i(TAG, "updated key=${sbn.key} text=[$relayText]")
+            recorder.updated(sbn.key, answer.msgType, answer.fullText, relayText, answer.backend)
+            Log.i(TAG, "updated key=${sbn.key} via ${answer.backend} text=[$relayText]")
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

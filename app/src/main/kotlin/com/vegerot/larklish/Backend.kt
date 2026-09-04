@@ -1,14 +1,14 @@
 package com.vegerot.larklish
 
 import java.io.IOException
-import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
 
 /**
  * The Backend's answer to one Lookup (Layer 7). `english` is null when Lark would not translate the
- * Full text.
+ * Full text. `backend` is the URL that answered (Layer 8: the Mac over USB, the Mac over Wi-Fi, or
+ * the ByteFaaS trigger), so the record shows which one served each Update.
  */
 data class Lookup(
     val outcome: String,
@@ -16,6 +16,7 @@ data class Lookup(
     val msgType: String,
     val fullText: String,
     val english: String?,
+    val backend: String,
 )
 
 /**
@@ -28,7 +29,9 @@ object Backend {
     /**
      * Where the Backend is: on the phone's own port when it hangs on USB (`adb reverse tcp:8787
      * tcp:8787`, which `tools/larklish-helper probe` sets), else on the Mac's address from
-     * `local.properties`. A refused connection moves on to the next.
+     * `local.properties` (the Mac, or the ByteFaaS trigger URL since Layer 8). Any failure on a URL
+     * moves on to the next: a refused connection, but also the reset `adb reverse` answers with
+     * when the Mac's port is closed, and a 5xx. The last URL's failure is the caller's.
      */
     private val urls = listOf("http://127.0.0.1:8787", BuildConfig.LARKLISH_BACKEND_URL)
 
@@ -39,15 +42,15 @@ object Backend {
                 .put("text", text)
                 .put("whenMs", whenMs)
                 .put("userToken", userToken)
-        var refused: ConnectException? = null
+        var failure: IOException? = null
         for (url in urls) {
             try {
                 return post(url, body)
-            } catch (e: ConnectException) {
-                refused = e
+            } catch (e: IOException) {
+                failure = e
             }
         }
-        throw refused!!
+        throw failure!!
     }
 
     private fun post(url: String, body: JSONObject): Lookup {
@@ -74,6 +77,7 @@ object Backend {
             json.optString("fullText"),
             if (json.isNull("english")) null
             else json.getString("english"), // optString would read JSON null as "null"
+            backend = url,
         )
     }
 }

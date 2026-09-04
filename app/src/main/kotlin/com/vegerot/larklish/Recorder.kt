@@ -23,8 +23,17 @@ class Recorder(private val file: File) {
         )
     }
 
-    /** Layer 5: the Relay was Updated with the translated Full text. */
-    fun updated(key: String, msgType: String, fullText: String, relayText: String) {
+    /**
+     * Layer 5: the Relay was Updated with the translated Full text. `backend` (Layer 8) is the
+     * Backend URL that answered.
+     */
+    fun updated(
+        key: String,
+        msgType: String,
+        fullText: String,
+        relayText: String,
+        backend: String,
+    ) {
         append(
             JSONObject()
                 .put("event", "updated")
@@ -32,12 +41,18 @@ class Recorder(private val file: File) {
                 .put("msgType", msgType)
                 .put("fullText", fullText)
                 .put("relayText", relayText)
+                .put("backend", backend)
         )
     }
 
-    /** Layer 5: no Update; `reason` is `no-chat`, `no-match`, `type:<msg_type>` or `error: …`. */
-    fun skipped(key: String, reason: String) {
-        append(JSONObject().put("event", "skipped").put("key", key).put("reason", reason))
+    /**
+     * Layer 5: no Update; `reason` is `no-chat`, `no-match`, `type:<msg_type>` or `error: …`.
+     * `backend` is the URL that answered a skip; null when none did (`error:`, `not-truncated`).
+     */
+    fun skipped(key: String, reason: String, backend: String? = null) {
+        val json = JSONObject().put("event", "skipped").put("key", key).put("reason", reason)
+        if (backend != null) json.put("backend", backend)
+        append(json)
     }
 
     /**

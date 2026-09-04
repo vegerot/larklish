@@ -44,6 +44,7 @@ import shlex
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -264,6 +265,13 @@ def select(
             continue
         out.append(e)
     return out
+
+
+def served_by(e: Event) -> str:
+    """` via <host>` for an Update or skip that names the Backend that answered (Layer 8); the
+    host alone, so `127.0.0.1:8787` (the Mac over USB) reads next to `jmc8tl6s.fn.bytedance.net`."""
+    backend = e.get("backend")
+    return f" via {urllib.parse.urlparse(backend).netloc}" if backend else ""
 
 
 def relays_with_outcomes(events: list[Event]) -> list[Relay]:
@@ -831,10 +839,12 @@ def events_list(events: list[Event], args: argparse.Namespace) -> None:
             print(f"{'':11}  → [{e['relayTitle']}] {e['relayText']}")
         elif kind == "updated":
             mark = "~" if e["relayText"].startswith("~") else " "
-            print(f"{when(e, args.utc)} U{mark} ({e['msgType']}) {e['fullText']}")
+            print(
+                f"{when(e, args.utc)} U{mark} ({e['msgType']}){served_by(e)} {e['fullText']}"
+            )
             print(f"{'':11}  → {e['relayText']}")
         elif kind == "skipped":
-            print(f"{when(e, args.utc)} S  {e['reason']}")
+            print(f"{when(e, args.utc)} S  {e['reason']}{served_by(e)}")
         elif kind == "fallback":
             print(f"{when(e, args.utc)} F  {e['reason']}")
         else:
