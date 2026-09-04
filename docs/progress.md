@@ -1973,3 +1973,9 @@ Next:
   should read `via jmc8tl6s.fn.bytedance.net` in `events list`.
 - Max: SealSuite always-on on the phone, then a probe on cellular (step 5.2).
 - `sl push --to main` after the soak entry; a Later item for the ruff findings if they stay.
+- SCM's git trigger has not fired for the three pushes after `1.0.0.2` (versions are still
+  `origin: SCM`, i.e. by hand); spooky-bio's fire. Check the repo's trigger/online-branch
+  setting in the SCM console; until then `bytedcli scm repo build … --branch main --type online`.
+- The 17:11 real Update (a colleague's `post`, `english: null` → the phone's own fallback)
+  went through ByteFaaS on the build before the `backend` field; the next cut Original shows
+  `via`.
