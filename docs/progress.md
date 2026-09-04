@@ -1973,9 +1973,27 @@ Next:
   should read `via jmc8tl6s.fn.bytedance.net` in `events list`.
 - Max: SealSuite always-on on the phone, then a probe on cellular (step 5.2).
 - `sl push --to main` after the soak entry; a Later item for the ruff findings if they stay.
-- SCM's git trigger has not fired for the three pushes after `1.0.0.2` (versions are still
-  `origin: SCM`, i.e. by hand); spooky-bio's fire. Check the repo's trigger/online-branch
-  setting in the SCM console; until then `bytedcli scm repo build … --branch main --type online`.
 - The 17:11 real Update (a colleague's `post`, `english: null` → the phone's own fallback)
   went through ByteFaaS on the build before the `backend` field; the next cut Original shows
   `via`.
+
+### 2026-09-03 — SCM's git trigger: a switch with no branch; ruff clean; the helper asks ByteFaaS
+
+- 🔍 Compared the two SCM repos in the console (`cloud.bytedance.net/scm/<id>/editConfig`).
+  spooky-bio: Git trigger on, trigger branch `master` → Production version, unit test `test.sh`,
+  image `compile_tango_1_26` (its Configuration details tab shows Max moving it from 1.24 on
+  2026-06-02, the failed-build day). larklish: Git trigger on, **no trigger branch** —
+  `bytedcli scm repo create --git-trigger` flips the switch and nothing else. Added `main` →
+  Production version and submitted; the next push is the test.
+- 🧹 The 12 findings of ruff 0.16.6 were all real (`3725e2e7715d`): explicit `check=False` on
+  the six `subprocess.run` calls that read `returncode` themselves, `removesuffix` for the two
+  `...` stems, `writelines` in `events pull`, an unused unpacked `sender`, and the two naive
+  `fromtimestamp` calls (aware UTC first, local only for display). `ruff check` is clean again.
+- 🧰 The helper's `chats` and `msgs <title>` ask ByteFaaS by default
+  (`https://jmc8tl6s.fn.bytedance.net`); `LARKLISH_BACKEND=http://127.0.0.1:8787` for a Backend
+  on this machine (`101c65073c8a`). `uvx` needs `--system-certs` on this Mac to fetch ruff.
+
+Next:
+
+- This push should appear as version `1.0.0.3`, origin `Git trigger`.
+- Soak and the always-on VPN step, as above.
