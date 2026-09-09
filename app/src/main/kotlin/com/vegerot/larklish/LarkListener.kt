@@ -89,7 +89,7 @@ class LarkListener : NotificationListenerService() {
                 )
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-            recorder.relayed(sbn.key, title, text, relayTitle, relayText)
+            recorder.relayed(sbn.key, title, text, relayTitle, relayText, preview.truncated)
             // Debug builds keep the Original next to the Relay for comparison while we
             // develop. Release builds cancel it (Max, 2026-08-25).
             if (!BuildConfig.DEBUG) cancelNotification(sbn.key)

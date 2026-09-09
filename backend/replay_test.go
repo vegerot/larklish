@@ -1,58 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
+
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
 )
-
-// The separators `tools/larklish-helper replay fetch` writes: items, paragraphs, fields of an element.
-const (
-	sepItem  = "\x01"
-	sepPara  = "\x02"
-	sepField = "\x03"
-)
-
-// unescaped undoes the escaping the corpus applies to every leaf string.
-func unescaped(s string) string {
-	var b strings.Builder
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c == '\\' && i+1 < len(s) {
-			i++
-			switch s[i] {
-			case 'n':
-				b.WriteByte('\n')
-			case 't':
-				b.WriteByte('\t')
-			default:
-				b.WriteByte(s[i])
-			}
-		} else {
-			b.WriteByte(c)
-		}
-	}
-	return b.String()
-}
-
-func items(s string) []string {
-	var out []string
-	for _, it := range strings.Split(s, sepItem) {
-		if it != "" {
-			out = append(out, it)
-		}
-	}
-	return out
-}
 
 type original struct {
-	whenMs      int64
-	title, text string
+	WhenMs int64  `json:"whenMs"`
+	Title  string `json:"title"`
+	Text   string `json:"text"`
 }
 
 // corpusSource is a Lark that answers from a pulled corpus: what chats a title names, which
@@ -74,70 +39,51 @@ func (c *corpusSource) Messages(_ context.Context, chatID string, whenMs int64) 
 	return c.messages[chatID], nil
 }
 
-func rows(t *testing.T, dir, name string) [][]string {
+func readJSON(t *testing.T, dir, name string, into any) {
 	data, err := os.ReadFile(filepath.Join(dir, name))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var out [][]string
-	for _, line := range strings.Split(string(data), "\n") {
-		if strings.TrimSpace(line) != "" {
-			out = append(out, strings.Split(line, "\t"))
+	if err := json.Unmarshal(data, into); err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+}
+
+func jsonLines(t *testing.T, dir, name string) [][]byte {
+	data, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out [][]byte
+	for _, line := range bytes.Split(data, []byte("\n")) {
+		if len(bytes.TrimSpace(line)) > 0 {
+			out = append(out, line)
 		}
 	}
 	return out
 }
 
+// loadCorpus reads what `tools/larklish-helper replay fetch` wrote. The messages are the raw
+// API items, decoded into the SDK's struct and turned into Candidates by the same candidateOf
+// the live Source uses — so the replay measures the shipped rules.
 func loadCorpus(t *testing.T, dir string) *corpusSource {
 	src := &corpusSource{titles: map[string][]string{}, dms: map[string]string{}, messages: map[string][]Candidate{}}
-	for _, r := range rows(t, dir, "originals.tsv") {
-		when, _ := strconv.ParseInt(r[0], 10, 64)
-		src.originals = append(src.originals, original{when, unescaped(r[1]), unescaped(r[2])})
+	for _, line := range jsonLines(t, dir, "originals.jsonl") {
+		var o original
+		if err := json.Unmarshal(line, &o); err != nil {
+			t.Fatal(err)
+		}
+		src.originals = append(src.originals, o)
 	}
-	for _, r := range rows(t, dir, "titles.tsv") {
-		ids := ""
-		if len(r) > 1 {
-			ids = r[1]
+	readJSON(t, dir, "titles.json", &src.titles)
+	readJSON(t, dir, "dms.json", &src.dms)
+	for _, line := range jsonLines(t, dir, "messages.jsonl") {
+		var m larkim.Message
+		if err := json.Unmarshal(line, &m); err != nil {
+			t.Fatal(err)
 		}
-		src.titles[unescaped(r[0])] = items(ids)
-	}
-	for _, r := range rows(t, dir, "dms.tsv") {
-		src.dms[unescaped(r[0])] = r[1]
-	}
-	for _, r := range rows(t, dir, "messages.tsv") {
-		chat, kind := r[0], r[1]
-		created, _ := strconv.ParseInt(r[2], 10, 64)
-		deleted := r[3] == "1"
-		mentions := map[string]string{}
-		for _, it := range items(r[4]) {
-			f := strings.Split(it, sepField)
-			mentions[unescaped(f[0])] = unescaped(f[1])
-		}
-		payload := ""
-		if len(r) > 5 {
-			payload = r[5]
-		}
-		text := ""
-		switch {
-		case deleted:
-		case kind == "text":
-			text = unwrapHtml(unescaped(payload))
-		case kind == "post":
-			parts := strings.Split(payload, sepPara)
-			var paragraphs [][]PostElement
-			for _, para := range parts[1:] {
-				var elements []PostElement
-				for _, it := range items(para) {
-					f := strings.Split(it, sepField)
-					elements = append(elements, PostElement{unescaped(f[0]), unescaped(f[1]), unescaped(f[2]), unescaped(f[3])})
-				}
-				paragraphs = append(paragraphs, elements)
-			}
-			text = postText(unescaped(parts[0]), paragraphs)
-		}
-		src.messages[chat] = append(src.messages[chat], Candidate{
-			MsgType: kind, CreateTime: created, Deleted: deleted, Text: resolveMentions(text, mentions),
-		})
+		chat := str(m.ChatId)
+		src.messages[chat] = append(src.messages[chat], candidateOf(&m))
 	}
 	return src
 }
@@ -145,10 +91,10 @@ func loadCorpus(t *testing.T, dir string) *corpusSource {
 // TestReplayCorpus replays a day of real Originals through the Lookup the Backend ships, over
 // a corpus pulled by `tools/larklish-helper replay fetch`. The corpus is real colleagues'
 // messages, so it is never committed; without it this test skips. It writes one line per
-// Original to outcomes-go.tsv, the file the gate diffs against the Kotlin replay's.
+// Original to outcomes-go.tsv (the Layer 7 gate diffed it against the Kotlin replay's).
 func TestReplayCorpus(t *testing.T) {
 	dir := "../replay-corpus"
-	if _, err := os.Stat(filepath.Join(dir, "originals.tsv")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "originals.jsonl")); err != nil {
 		t.Skip("no corpus — run `tools/larklish-helper replay fetch`")
 	}
 	src := loadCorpus(t, dir)
@@ -156,7 +102,7 @@ func TestReplayCorpus(t *testing.T) {
 	var lines []string
 	counts := map[string]int{}
 	for i, o := range src.originals {
-		pick := f.FullTextOf(t.Context(), o.title, ParsePreview(o.text), o.whenMs)
+		pick := f.FullTextOf(t.Context(), o.Title, ParsePreview(o.Text), o.WhenMs)
 		if pick.Found != nil {
 			lines = append(lines, fmt.Sprintf("%d\tfound\t%s\t%d", i, pick.ChatID, pick.Found.CreateTime))
 			counts["found"]++

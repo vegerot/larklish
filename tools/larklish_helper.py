@@ -15,7 +15,7 @@
     tools/larklish-helper phone log -n 20               # the app's logcat, keys shortened (--clear resets)
     tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
     tools/larklish-helper backend status                # ping, newest SCM build, what ByteFaaS runs
-    tools/larklish-helper replay fetch                  # pull the corpus ReplayTest scores against
+    tools/larklish-helper replay fetch                  # pull the corpus the Go replay test scores
     tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish, side by side
     tools/larklish-helper token --write                 # credentials from lark-cli's store
 
@@ -363,12 +363,6 @@ def one_line(s: str) -> str:
     return s.replace("\n", " ⏎ ")
 
 
-def preview_message(text: str) -> str:
-    """The message part of an Original's text, as `Preview.parse` sees it (after the first `: `)."""
-    _sender, sep, message = text.partition(": ")
-    return message if sep else text
-
-
 def preview_sender(text: str) -> str:
     if text.endswith(":...") and ": " not in text:
         text = text[:-3] + " ..."
@@ -409,15 +403,15 @@ def served_by(e: Event) -> str:
 def relays_with_outcomes(events: list[Event]) -> list[Relay]:
     """Each Relay with what the Update did to it: `updated (<msgType>)`, `skipped <reason>`, or
     `canceled` (a newer Original took the key before the fetch returned), and `cut` — whether Lark
-    cut the Preview. Outcomes are keyed by the Original, so they pair by key, in order."""
+    cut the Preview (`None` when not recorded). Outcomes are keyed by the Original, so they
+    pair by key, in order."""
     relays: list[Relay] = []
     open_by_key: dict[str, Relay] = {}
     for e in events:
         kind = e["event"]
         if kind == "relayed":
-            r: Relay = dict(
-                e, outcome="canceled", cut=preview_message(e["text"]).endswith("...")
-            )
+            # Use the phone's decision (Preview.truncated); missing is unknown, not complete.
+            r: Relay = dict(e, outcome="canceled", cut=e.get("truncated"))
             relays.append(r)
             open_by_key[e["key"]] = r
         elif kind == "updated" and e["key"] in open_by_key:
@@ -580,62 +574,16 @@ def flat_text(m: Message) -> str:
     return f"[{kind}] {body[:80]}"
 
 
-# ── the replay corpus (`replay fetch` writes it, ReplayTest.kt reads it) ──────
+# ── the replay corpus (`replay fetch` writes it, backend/replay_test.go reads it) ─────
 #
-# Four tab-separated files, so the Kotlin side needs no JSON library and the rules it
-# measures are the app's own. Leaf strings escape \, newline and tab; sub-lists use the
-# control separators \x01 (items), \x02 (paragraphs) and \x03 (fields of one element).
+# JSON, so the Go side decodes the messages with the SDK's own struct and runs the same
+# `candidateOf` the Backend runs — the replay measures the shipped rules, not a copy of them.
 #
-#     originals.tsv  atMs, title, text
-#     titles.tsv     title, chatIds…                 (every chat chats/search names)
-#     dms.tsv        sender, chatId                  (from the phone's chat cache)
-#     messages.tsv   chatId, msgType, createTime, deleted, mentions, payload
-CORPUS_FILES = ("originals.tsv", "titles.tsv", "dms.tsv", "messages.tsv")
-SEP_ITEM, SEP_PARA, SEP_FIELD = "\x01", "\x02", "\x03"
-
-
-def esc(s: str | None) -> str:
-    s = (s or "").replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
-    assert not any(c in s for c in (SEP_ITEM, SEP_PARA, SEP_FIELD)), (
-        "text contains a separator"
-    )
-    return s
-
-
-def message_row(chat: str, m: Message) -> str:
-    kind, body = m["msg_type"], m["body"]["content"]
-    mentions = SEP_ITEM.join(
-        f"{esc(x['key'])}{SEP_FIELD}{esc(x['name'])}" for x in (m.get("mentions") or [])
-    )
-    if m.get("deleted"):
-        payload = ""
-    elif kind == "text":
-        payload = esc(json.loads(body)["text"])
-    elif kind == "post":
-        post = json.loads(body)
-        paras = [
-            SEP_ITEM.join(
-                SEP_FIELD.join(
-                    esc(e.get(k, ""))
-                    for k in ("tag", "text", "user_name", "emoji_type")
-                )
-                for e in para
-            )
-            for para in post["content"]
-        ]
-        payload = SEP_PARA.join([esc(post.get("title") or "")] + paras)
-    else:
-        payload = ""
-    return "\t".join(
-        [
-            chat,
-            kind,
-            m["create_time"],
-            "1" if m.get("deleted") else "0",
-            mentions,
-            payload,
-        ]
-    )
+#     originals.jsonl  {whenMs, title, text} per Relay
+#     titles.json      {title: [chatId, …]}            (every chat chats/search names)
+#     dms.json         {sender: chatId}                (from the Backend's chat cache)
+#     messages.jsonl   one raw im/v1/messages item per line, as the API returned it
+CORPUS_FILES = ("originals.jsonl", "titles.json", "dms.json", "messages.jsonl")
 
 
 # ── credentials: lark-cli's encrypted store (AES-256-GCM under one master key) ─
@@ -1039,11 +987,15 @@ def events_grade(events: list[Event], args: argparse.Namespace) -> None:
     """The soak grade (Experiments 12–14): `not-truncated` is by design, so the denominator is the
     Relays whose Preview Lark cut — and the list of those that did not Update is the work list."""
     relays = relays_with_outcomes(selected(events, args))
-    cut = [r for r in relays if r["cut"]]
+    cut = [r for r in relays if r["cut"] is True]
+    complete = sum(r["cut"] is False for r in relays)
+    unknown = sum(r["cut"] is None for r in relays)
     updated = [r for r in cut if r["outcome"].startswith("updated")]
     print(
-        f"Relays {len(relays)}   Preview cut {len(cut)}   complete {len(relays) - len(cut)} (skipped by design)"
+        f"Relays {len(relays)}   Preview cut {len(cut)}   complete {complete} (skipped by design)"
     )
+    if unknown:
+        print(f"Excluded {unknown} Relays without recorded truncation from the grade.")
     print(f"\ncut Previews → Updated {len(updated)} of {len(cut)}")
     for outcome, n in Counter(r["outcome"] for r in cut).most_common():
         print(f"  {n:4}  {outcome}")
@@ -1221,7 +1173,13 @@ def cmd_backend(args: argparse.Namespace) -> None:
         print(f"{k:9} {v}")
 
 
-# ── replay: pull the corpus that ReplayTest scores the shipped rules against ───
+# ── replay: pull the corpus that the Go replay test scores ──────────────────
+def jsonl(path: pathlib.Path, rows: Any) -> None:
+    """One JSON object per line."""
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+
+
 def cmd_replay(args: argparse.Namespace) -> None:
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -1230,18 +1188,19 @@ def cmd_replay(args: argparse.Namespace) -> None:
     if not relayed:
         sys.exit("no Relays in the record — nothing to replay")
 
-    (out / "originals.tsv").write_text(
-        "".join(
-            f"{event_ms(e)}\t{esc(e['title'])}\t{esc(e['text'])}\n" for e in relayed
+    jsonl(
+        out / "originals.jsonl",
+        (
+            {"whenMs": event_ms(e), "title": e["title"], "text": e["text"]}
+            for e in relayed
         ),
-        encoding="utf-8",
     )
 
-    # the phone's own DM cache: `messages/search` is not replayable offline
+    # The Backend's DM cache: `messages/search` is not replayable offline.
     cached = read_chat_cache(args.chats)
     dms = {k[3:]: v for k, v in cached.items() if k.startswith("dm:")}
-    (out / "dms.tsv").write_text(
-        "".join(f"{esc(k)}\t{v}\n" for k, v in dms.items()), encoding="utf-8"
+    (out / "dms.json").write_text(
+        json.dumps(dms, ensure_ascii=False, indent=1), encoding="utf-8"
     )
 
     titles, chats = {}, set(dms.values())
@@ -1258,25 +1217,24 @@ def cmd_replay(args: argparse.Namespace) -> None:
         titles[title] = ids
         chats.update(ids)
         print(f"  {len(ids)} chat(s) for [{title}]")
-    (out / "titles.tsv").write_text(
-        "".join(f"{esc(t)}\t{SEP_ITEM.join(ids)}\n" for t, ids in titles.items()),
-        encoding="utf-8",
+    (out / "titles.json").write_text(
+        json.dumps(titles, ensure_ascii=False, indent=1), encoding="utf-8"
     )
 
     start, end = (
         min(map(event_ms, relayed)) // 1000 - 120,
         max(map(event_ms, relayed)) // 1000 + 120,
     )
-    rows = []
+    rows: list[Message] = []
     for i, chat in enumerate(sorted(chats), 1):
         got = messages_of(chat, start, end)
         print(f"  [{i}/{len(chats)}] {chat} {len(got)} messages")
-        rows += [message_row(chat, m) for m in got]
-    (out / "messages.tsv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+        rows += got  # raw, as the API returned them; Go runs candidateOf on each
+    jsonl(out / "messages.jsonl", rows)
     print(
         f"\ncorpus → {out}/  ({len(relayed)} Originals, {len(chats)} chats, {len(rows)} messages)"
     )
-    print("score it with: ./gradlew testDebugUnitTest --tests '*ReplayTest*'")
+    print("score it with: go -C backend test ./... -run Replay -v")
 
 
 # ── showcase: one message → Lark's Original and Larklish's Relay side by side ─

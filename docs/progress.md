@@ -2050,3 +2050,26 @@ Next:
 
 - `backend deploy` when the pattern has repeated across a wider variety of deploys (Max).
 - Soak on `1.0.0.6`; always-on VPN step.
+
+### 2026-09-09 — finish the helper/replay refactor
+
+Max asked to finish and commit the five pending files from the interrupted Sep 3 work.
+
+- 🧹 Replay now stores raw API JSON and uses production `candidateOf`; removed the custom
+  TSV encoder/decoder. The Go `msgs` rendering subtool stays in the Later list.
+- 📝 Relays record the phone's `Preview.truncated`. Grading treats missing values as
+  unknown and reports their exclusion, instead of counting them as complete Previews.
+- 📱 Build/install succeeded on the Pixel; 21 Kotlin tests green (cached), Ruff clean.
+  Fresh records verified both boolean values and an Update through ByteFaaS. Grading
+  reported 1 cut, 1 complete, and 744 older records excluded, with Updated 1 of 1.
+- 🧪 Rebuilt the same 165-Original corpus: 28 chats, 324 raw messages. All 14 other Go
+  tests passed. Replay resolved 67/165 and failed the existing 50% threshold; the committed
+  TSV replay on identical data also resolved 67/165, with **zero differing outcomes**.
+  This is an existing sample-dependent failure, not a refactor regression; the threshold
+  remains unchanged. Evidence: `docs/experiments/16-helper-replay.md`.
+
+Next:
+
+- Resume the soak and the always-on VPN step.
+- Revisit the replay's sample-dependent threshold when improving its regression gate.
+- Keep the `msgs` Go rendering subtool deferred until an investigation needs it.

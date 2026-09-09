@@ -352,6 +352,13 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   instead of the whole translation.
 - [ ] **Tighten the Layer 5 match rule** if the soak shows mismatches (wrong message
   picked for an Original): compare more of the text, or use `messages/search`.
+- [ ] **`msgs` should show what the Lookup matches.** The helper's `flat_text` is a Python copy of
+  the Backend's `candidateOf` (`postText`, `unwrapHtml`, `resolveMentions`) and already differs:
+  no HTML unwrap, `@_user_1` left unresolved, `[img]` for `[image]`. The fix is the `token`
+  arrangement in Go: move the rules out of `package main` into `backend/rules`, add
+  `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
+  to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
+  to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
 - [ ] **A public name for the Backend (TLB).** The only sanctioned public ingress: apply at
   <https://tlb.bytedance.net/> for a domain whose upstream is the FaaS trigger URL; a
   security-review ticket and manager approval, 3–5 business days (Tika, 2026-09-03). Before

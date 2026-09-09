@@ -11,7 +11,15 @@ import org.json.JSONObject
  */
 class Recorder(private val file: File) {
 
-    fun relayed(key: String, title: String, text: String, relayTitle: String, relayText: String) {
+    /** `truncated`: Lark cut the Preview (`Preview.truncated`), so an Update was due. */
+    fun relayed(
+        key: String,
+        title: String,
+        text: String,
+        relayTitle: String,
+        relayText: String,
+        truncated: Boolean,
+    ) {
         append(
             JSONObject()
                 .put("event", "relayed")
@@ -20,6 +28,7 @@ class Recorder(private val file: File) {
                 .put("text", text)
                 .put("relayTitle", relayTitle)
                 .put("relayText", relayText)
+                .put("truncated", truncated)
         )
     }
 
