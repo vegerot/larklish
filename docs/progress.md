@@ -2142,3 +2142,206 @@ Next:
   failures with verified corporate access separately from off-network failures.
 - Keep withdrawal, late-error pairing, translation fallback quality, and the replay
   threshold as separate follow-ups. This review sent no probes or deployments.
+
+### 2026-09-09 — public-ingress research: NetLink, TLB, and Consul
+
+Max reopened the Later item: make the Backend reachable from the public internet,
+without depending on office Wi-Fi or SealSuite. Asked Tika (conversation
+`3061971753988`) and two Aime conversations (CLI session
+`af0dc8d2-162c-4873-9b3b-9d91cce6738a`; research session
+`f7ebe5bc-a173-41b8-b80c-09b5b5c44ecc`), read their cited ByteFaaS and NetLink
+documents, and inspected the open TLB page. No domain, DNS, certificate, trigger,
+TLB route, NetLink instance, or security-review request was created.
+
+- 📏 The default `https://<function-id>.fn.bytedance.net` HTTP trigger is an
+  intranet endpoint. The Pixel can reach the CN endpoint on office Wi-Fi and through
+  SealSuite, but that does not make it a public cellular endpoint. Current documents
+  do not describe a switch that turns this default trigger into a public endpoint.
+- 🧭 The smallest documented public path is:
+  `public domain → TLB → ByteFaaS Gateway → RuntimeAgent → function`.
+  **TLB** (Toutiao Load Balancing) is the Layer-7 HTTP/HTTPS edge and owns the
+  domain group, certificate, routes, and backend service. **NetLink** is the traffic
+  management workflow that provisions and publishes this configuration; it is not
+  an additional proxy in the request path. The earlier Aime report's wording
+  `TLB → NetLink private connectivity → FaaS` was therefore too literal.
+- 🔗 A Consul trigger is needed for the documented TLB custom-domain path because
+  ByteFaaS function instances are not registered in Consul. The trigger registers
+  the business PSM as an alias for the regional ByteFaaS gateway's service-discovery
+  result. TLB normally discovers a PSM backend through Consul, so entering
+  `coplan.lark.larklish` in TLB alone does not create that alias or give TLB a
+  routable function backend. The gateway then identifies the function from the
+  service/cluster routing identity; current docs list `destination-service` and
+  `destination-cluster` headers as one supported form.
+- 🔀 Consul is not intrinsic to every ByteFaaS call. An internal upstream using Mesh
+  can discover FaaS through the FaaS service-discovery API without a Consul trigger.
+  It is relevant here because the documented custom-domain/TLB workflow uses Consul
+  service discovery.
+- 🔐 The public domain and TLS certificate terminate at the managed edge. The
+  recommended TLB-to-FaaS backend protocol is HTTP inside the data center. No current
+  primary source retrieved requires a `Host` rewrite or upstream TLS SNI rewrite for
+  the supported PSM/cluster flow; do not build the route around proxying the private
+  trigger URL or a legacy function-ID header unless the current I18N contract requires
+  it.
+- 🌍 An external-domain NetLink/TLB request selects **External domain** and starts a
+  security assessment. The exact domain, certificate owner, I18N-TT TLB cluster,
+  serving rooms, gateway cluster (`faas-sg` versus `faas-default`), Native/v1 support,
+  Host behavior, health check, and route publication remain to be verified in the
+  real I18N form before submission.
+- 👀 The open TLB tab was an existing production domain/configuration unrelated to
+  Larklish. It was inspected and a screenshot was captured, but it is not a template
+  or upstream to reuse for `coplan.lark.larklish`.
+- 🛡️ Public ingress needs application work before publication. Backend v0 has no
+  phone-to-Backend authentication: `/lookup` accepts Max's user token in the request
+  body, and `/chats` exposes cached chat names. Add a shared-secret request header at
+  minimum, protect or remove `/chats`, review logs/token redaction and rate/request
+  limits, and remove the Android cleartext-traffic allowance before using a public
+  domain. These are separate from TLB's TLS and routing controls.
+- 📚 Primary references used:
+  [Consul trigger](https://cloud.bytedance.net/developer/docs/faas/docs/63d786117df7d2021dfc68e3/63e13a783d23a3021df0bf3c),
+  [HTTP-trigger traffic management/custom domains](https://cloud.bytedance.net/developer/docs/faas/docs/63d786117df7d2021dfc68e3/63db78756773b3023794d611),
+  [NetLink Layer-7 access](https://cloud.bytedance.net/developer/docs/netlink/docs/653a37a304438602f814d09a/6576fdedbb004402f6cef7b8), and
+  [NetLink route management](https://cloud.bytedance.net/developer/docs/netlink/docs/653a37a304438602f814d09a/6709e70aaf6047031bca82e4).
+  Tika correctly found the general Consul-trigger/TLB workflow but overclaimed exact
+  cluster and Host/SNI behavior. Aime's long research report correctly retained the
+  Native/v1, region, and routing uncertainties. This entry records the primary-source
+  intersection, not either assistant's unsupported specifics.
+
+The migration to I18N-TT is the next prerequisite because the public edge and the
+Backend should be validated in the intended RoW/Singapore control plane before a
+domain is published. This also supersedes the old Later-item assumption that TLB's
+upstream should simply be the private `*.fn.bytedance.net` URL.
+
+### 2026-09-09 — prepare I18N-TT migration; release policy blocks deployment
+
+- 🌐 Max requested moving the Backend to I18N-TT as the next step toward public
+  access. Aime confirmed that Singapore uses a separate ByteFaaS function, while
+  the existing CN SCM repository can supply artifacts synchronized to Singapore.
+  CN, I18N, and TTP functions/configuration do not share function IDs or releases;
+  the I18N function therefore needs its own service, revision, cluster, and release.
+- 📦 SCM's **Product synchronization** is useful for this move: it copies an already
+  built CN artifact to an I18N storage region. **Sync repo to TTP** is a different
+  workflow for US-TTP: it synchronizes source and SCM configuration to the TTP
+  control plane, where a separate build/package is required. It is unnecessary for
+  an I18N-TT Singapore deployment. TAR is the usable artifact format here; BVC is
+  disabled by the repository's L3/L4 classification.
+- ✅ Synchronized the x86_64 TAR for SCM `oec/seller/larklish:1.0.0.10`
+  (version ID `164320179`, commit `46d5d2be65c414a27c1cdf66ddf9fde33edbc4b9`)
+  to Singapore through **Product synchronization**; its status panel shows success.
+  The legacy `sync_oss` version field still reads false after this manual operation;
+  use the synchronization task status to verify a manual copy.
+  Also saved Singapore as the repository's default TAR synchronization destination;
+  readback shows **Build artifacts storage: China, Singapore | TAR**.
+- ✅ Created I18N-TT function `kpb2dvsn`, same PSM `coplan.lark.larklish`,
+  Native HTTP `native/v1`, region `sg`, cluster `faas-sg`, 500 mCPU / 1024 MB,
+  request timeout 30 s and initialization timeout 120 s. Created code revision
+  `1.0.1` / `8zk4fzlkza` from the synchronized SCM version, with startup command
+  `/opt/bytefaas/run.sh`. The service is bridge-networked and not IPv6-only. Creation
+  and code save are **not** a runtime release.
+- 🔎 The creation wizard did not retain the requested instance limits. Readback
+  shows 0–10 in `sg1`, `my`, `my2`, and `my3`; the resource UI marks `sg1` disabled.
+  Before cutover, select an enabled IDC and set one warm instance (1–1), others
+  0–0. **Configure instance number** is currently disabled before first release.
+- 🚧 Both CLI environment update and the console's full cluster-update/release
+  workflow were blocked by IAM policy
+  `lockdown_smith_GEC_release_time_window_control`, policy ID
+  `4d863a0d-eb42-42f4-b707-3c5762cb619e`, node `26089240`, message
+  `unsupported platform`. The console draft contains the existing app settings
+  and `LARK_HOST=https://fsopen.bytedance.net`; at this point they had not been
+  applied. The 19:00 result below supersedes this historical state.
+  A normal three-hour exemption request is prepared in the console but has not
+  been submitted. Max asked about the release window rather than authorizing the
+  request. Emergency approval bypass is off.
+- 📱 CN function `jmc8tl6s` / `faas-cn-north` is unchanged and remains the phone's
+  Backend. No I18N runtime health check, Lookup, phone cutover, Consul trigger,
+  NetLink domain, or TLB route has been completed.
+
+Next:
+
+- Resolve the live IAM block through the normal approved workflow, then release
+  the new function and verify instance limits, `/v1/ping`, and real Lookup/API
+  connectivity before changing the phone's Backend URL.
+- The release policy excludes working-day 09:00–12:00, 13:00–18:00, and
+  19:00–22:00 in the operator's People-profile time zone. Its retrieved IAM
+  condition confirms `request.user.time_zone` and the user's work-day calendar.
+  `bytedcli --site i18n-tt iam user get --name max.coplan --type user --json`
+  confirms `TimeZone: America/Los_Angeles`. The attempt occurred during the
+  18:00–19:00 gap. Retry in the next allowed window, 19:00–22:00 PDT on September 9,
+  before requesting an exception. The custom API's `unsupported platform`
+  message does not establish that ByteFaaS itself is unsupported; deployment still
+  needs a successful retry and runtime verification.
+- Asked Mira with a compacted record of both Aime conversations and the current
+  live policy evidence: https://mira.byteintl.net/chat/457862652179 . Mira agreed
+  with the normal 19:00 retry, but a source-quality follow-up established that
+  it could not independently retrieve the exact IAM policy or timing docs;
+  several ingress citations came from the supplied Aime report. Treat its answer
+  as review of our evidence, not an additional independent verification.
+- For public ingress, follow the documented Consul trigger + NetLink/TLB flow in
+  I18N-TT. The default function URL is not evidence of public accessibility.
+
+### 2026-09-09 — release window opens; continue through Bits
+
+- At 19:00 PDT, the same ByteFaaS cluster environment update succeeded without
+  an exception. `LARK_APP_ID`, `LARK_APP_SECRET`, and
+  `LARK_HOST=https://fsopen.bytedance.net` are now saved in the pending I18N-TT
+  cluster configuration. The runtime is not deployed yet.
+- At 19:02, the normal console release hit a different IAM policy:
+  `国际化电商_Faas未走bytecycle平台发布拦截策略_20221118`, requiring ByteCycle
+  for FaaS releases. No ByteFaaS release ticket was created. This is distinct from
+  the time-window policy; no exception was submitted for either policy.
+- ByteCycle's live UI blocks this business because it has migrated to Bits and
+  directs the operator to GEC Frontend Unified Standard Space `470900839426`.
+  Located the existing FaaS component `coplan.lark.larklish` in Bits AppCenter and
+  associated that space, enabling its development/release actions.
+- 📚 The current Bits FaaS guide says the production-stage FaaS atoms are protected:
+  create/update the release ticket, build the image, then drive canary/region/full
+  rollout. They cannot be removed or edited in an ordinary project template. The
+  documented **Single Release** flow is the clean fit for an existing artifact: it
+  takes an SCM version directly, does not require a development task, and does not
+  rebuild when **SCM Version** is selected. This workspace has no general Single
+  Release template, so no such ticket was created and no shared template was changed.
+- Created the normal **Feature Release Flow** development task **Deploy Larklish
+  to I18N-TT Singapore**, ID `2820325`, targeting only I18N-TT. In the project
+  form, **Multimode switching → SCM version** selects existing build `1.0.0.10`
+  without a development branch. The self-testing pipeline started automatically;
+  its pipeline ID is `1226057296642`. No hotfix ticket or new branch was created.
+  Task: https://bits.bytedance.net/app_center/detail/function/bytefaas/coplan.lark.larklish/devops/470900839426/develop/detail/2820325
+- The project self-test pipeline `1225984815362`, run `1227088457986`, finished
+  with a BOE environment-creation failure. Job `3235751028` failed while looking
+  up the production baseline: `[cn] GetEnvFunction prod
+  psm=coplan.lark.larklish` returned `mongo: no documents in result` in environment
+  ticket `2097871444997844992`. The CN function exists, so this does not establish
+  that the service is missing; the exact baseline/control-plane mismatch remains
+  unresolved.
+- The parallel PPE path succeeded: environment creation, upgrade ticket, image
+  build, and all-DC deployment (last job `3235751035`) completed for
+  `ppe_deploy_i18n_1`. This is deployment evidence, not an application health or
+  Lookup test. Production readback still shows `faas-sg` pending and zero release
+  tickets for `kpb2dvsn`.
+- Aime found documented PPE-only testing and direct-SCM Single Release workflows.
+  The workspace's 25 release templates contain Feature, Train, Hotfix, test, and
+  team-specific release flows, but no general Single Release template; do not use
+  another team's dedicated template. A generic Hotfix is also wrong for an initial
+  deployment and would create an unnecessary emergency branch. The existing task's normal
+  **Run → Environment configuration** form exposes editable BOE/PPE targets,
+  although **Details → Environment and clusters** has read-only lane controls.
+  Deselecting BOE did not let **Next** advance; the lane-removal attempt also left
+  the BOE row present. Cancelled the unsubmitted rerun. API readback confirms the
+  saved BOE/PPE scope is unchanged. No pipeline step or required gate was skipped.
+- The other required gate is **Quality gatekeeper (GEC)**. Automated checks report
+  four passes and two warnings (no matching test plans), with five manual items
+  awaiting confirmation: regional dependencies, DECC data-handling labels, TCC
+  switches for non-US deployment, ROW/TTP data-sharing approval, and RDS schema
+  change approval. The Go backend has no RDS or TCC integration, but that alone
+  does not establish the data-classification or regional-dependency attestations.
+  These remain unconfirmed; the review panel is open in the Bits task.
+- Mira received the compacted history of both Aime conversations, the release
+  window question and evidence, and subsequent Bits results. Its independent
+  search found a similar baseline-lookup failure, not an exact root cause. Sent a
+  correction that disabled lane controls on the Details page do not prove BOE is
+  mandated: the Run form has active selectors, but this attempt did not save.
+  Mira task: https://mira.byteintl.net/chat/457862652179
+
+Next: resolve the normal task's BOE baseline/environment-selection failure and
+complete the applicable GEC manual checks, then finish the normal Bits workflow
+and verify the SG runtime, its instance limits and API connectivity before
+changing the phone or adding public ingress. CN and the phone remain unchanged.
