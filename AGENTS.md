@@ -35,6 +35,7 @@ follows the repo across machines. Once per machine, point Claude Code's memory p
 ## 🛠️ Commands
 
 - The phone is connected over `adb`. Use it directly for experiments.
+    + If you have questions about adb, search the web and look at ~/code/googlesource.com/android/platform/packages/modules/adb/
 - Format Kotlin with ktfmt before you commit: `./gradlew ktfmtFormat` (`ktfmtCheck` verifies).
 - Format `./tools` Python with Ruff before you commit: `uvx ruff format tools`.
 - Prefer running commands through the Android Studio MCP unless running `./gradlew` is a lot easier.
