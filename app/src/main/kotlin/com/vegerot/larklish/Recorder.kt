@@ -9,7 +9,10 @@ import org.json.JSONObject
  * File: `filesDir/events.jsonl`. Read it from the debug UI or with `adb exec-out run-as
  * com.vegerot.larklish cat files/events.jsonl`.
  */
-class Recorder(private val file: File) {
+class Recorder(
+    private val file: File,
+    private val networkState: () -> JSONObject? = { null },
+) {
 
     /** `truncated`: Lark cut the Preview (`Preview.truncated`), so an Update was due. */
     fun relayed(
@@ -85,6 +88,7 @@ class Recorder(private val file: File) {
 
     private fun append(json: JSONObject) {
         json.put("at", Instant.now().toString())
+        networkState()?.let { json.put("network", it) }
         file.appendText(json.toString() + "\n")
     }
 }

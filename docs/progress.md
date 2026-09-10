@@ -2073,3 +2073,72 @@ Next:
 - Resume the soak and the always-on VPN step.
 - Revisit the replay's sample-dependent threshold when improving its regression gate.
 - Keep the `msgs` Go rendering subtool deferred until an investigation needs it.
+
+### 2026-09-09 — Backend soak graded across September 3–9
+
+- 📏 Since September 3 06:44 UTC: 300 Relays, 213 complete Previews, 34 of 87 cut
+  Previews Updated (39%). Excluding the dedicated test group: 24 of 76 (32%).
+- 🔍 48 raw transport-error events, including 30 connection failures to ByteFaaS;
+  the helper pairs 47 with cut Previews and one late error with a newer uncut Relay.
+  Nineteen Updates explicitly name ByteFaaS; the phone's `/v1/ping` returns 200 now.
+- 🐛 The only recorded Update after withdrawal is the known September 3 showcase
+  race. Eleven initial Relays and three Updates contain ML Kit fallback output.
+- 📱 Listener access is granted and the process is running. Retained exits: 13 low
+  memory, two signaled, one package update; no crash or app-not-responding exit.
+  The latest install is September 9 23:02:35 UTC, with only two test Relays since.
+- 📝 Evidence and limits: `docs/experiments/17-backend-soak.md`. The phone records
+  fields absent from this checkout, so this soak spans deployed revisions. No app
+  or Backend changes, reinstall, or probe messages in this session.
+
+Next:
+
+- Identify the deployed revision before making fixes; investigate Backend
+  reachability across networks, which dominates failed Updates.
+- Grade real traffic after September 9 23:02:35 UTC separately. Keep the withdrawal
+  race and the helper's late-error pairing as separate follow-ups.
+
+### 2026-09-09 — debug events record VPN state and Wi-Fi SSID
+
+- 🔄 Matched the other machine's remotes (`origin` = ByteDance, `github` = GitHub)
+  and rebased to `f31e72a`, preserving the soak notes. The newer helper deliberately
+  excludes old Relays without `truncated`; Experiment 17 names the earlier helper
+  used for its historical heuristic counts.
+- 📱 Every debug listener event now has `network: {vpn, wifiConnected, wifiSsid}`.
+  `vpn` describes this app's default network; an unavailable SSID is JSON `null`.
+  A Wi-Fi callback retains the SSID even when a VPN is the default network.
+- 🔐 Location permissions and network collection are debug-only. Release has no
+  location permissions; its existing network-state permission still comes from ML Kit.
+- ✅ Both APK variants built, 21 Kotlin tests passed, ktfmt passed, and both new
+  instrumented tests passed on the Pixel, including the real SSID. Installed the debug
+  build and granted its location permissions; listener bound after testing.
+- 📝 Setup, field meanings, permission inspection, and test limits are in
+  `docs/experiments/18-network-recording.md`. No probe messages sent.
+
+Next:
+
+- Grade the new soak by VPN state and SSID. A live VPN transition remains to be
+  observed; recording VPN presence alone does not prove corporate reachability.
+
+### 2026-09-09 — reconcile the soak with the pulled history
+
+- 📖 Reviewed the GitHub and ByteDance history through `f31e72a`. The Layer 8 plan
+  already chooses an internal-only Backend plus always-on SealSuite off the office
+  Wi-Fi. Verify that choice works on cellular before reconsidering public ingress.
+- 📏 Corrected Experiment 17: 34/87 (39%) is the older helper's historical estimate
+  using inferred truncation. The current helper, run on the same saved snapshot,
+  excludes 298 of 300 Relays and grades one cut test Preview, Updated 1 of 1. That
+  literal-ellipsis probe does not grade naturally cut traffic on the latest build.
+  The 34 Updates and 48 raw transport errors remain valid counts.
+- 🔧 `9af34ed` already fixes the USB-forwarded connection closing before the
+  ByteFaaS fallback and records which Backend answered. `f31e72a` preserves all
+  165 replay outcomes; both old and new replay fail the sample-dependent threshold.
+- 🧰 `backend status` distinguishes a new build from the deployed revision. The
+  phone's debug network recording does not itself require a Backend deployment.
+
+Next:
+
+- Finish/verify always-on SealSuite and the ByteFaaS Update path on cellular.
+- Grade fresh real traffic with recorded truncation and network state. Investigate
+  failures with verified corporate access separately from off-network failures.
+- Keep withdrawal, late-error pairing, translation fallback quality, and the replay
+  threshold as separate follow-ups. This review sent no probes or deployments.

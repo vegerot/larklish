@@ -460,6 +460,9 @@ export ADB_SERVER_SOCKET=tcp:localhost:5037                # on the dev box: adb
 export PATH="$HOME/Android/Sdk/platform-tools:$PATH"       # devbox: client and server versions must match
 adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
 adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
+adb shell pm grant com.vegerot.larklish android.permission.ACCESS_COARSE_LOCATION    # debug soak diagnostics only
+adb shell pm grant com.vegerot.larklish android.permission.ACCESS_FINE_LOCATION      # Wi-Fi SSID; Location must be on
+adb shell pm grant com.vegerot.larklish android.permission.ACCESS_BACKGROUND_LOCATION # listener runs in the background
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
 tools/larklish-helper probe "中文消息"                          # post to the test group, then show the Relay
 tools/larklish-helper probe --idle "中文消息"                   #   …in deep idle, so Lark posts the cut push payload (the Update path)

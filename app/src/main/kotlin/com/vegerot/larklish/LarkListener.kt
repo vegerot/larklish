@@ -29,7 +29,10 @@ private const val MAX_TRANSLATE_CHARS = 1000 // the translation API's limit
  */
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val recorder by lazy { Recorder(File(filesDir, "events.jsonl")) }
+    private lateinit var networkState: NetworkState
+    private val recorder by lazy {
+        Recorder(File(filesDir, "events.jsonl"), networkState::snapshot)
+    }
     private val translator by lazy { defaultTranslator(recorder::fallback) }
     private val userToken by lazy { defaultUserToken(this) }
     private val updates = HashMap<String, Job>() // in-flight Update per Original key
@@ -37,6 +40,7 @@ class LarkListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        networkState = NetworkState(this)
         manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(RELAY_CHANNEL, "Relays", NotificationManager.IMPORTANCE_HIGH)
@@ -52,6 +56,7 @@ class LarkListener : NotificationListenerService() {
 
     override fun onDestroy() {
         scope.cancel()
+        networkState.close()
         super.onDestroy()
     }
 
