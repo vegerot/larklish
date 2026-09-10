@@ -59,3 +59,4 @@ follows the repo across machines. Once per machine, point Claude Code's memory p
   - Lark client docs: <https://open.larkoffice.com/document/client-docs/intro.md> (landing page only)
 - `lark-cli` source: `~/code/github.com/larksuite/cli/` (use it to learn how Lark works)
   - The `lark-*` skills wrap `lark-cli`. `lark-cli auth status` shows the login state.
+- For ByteDance tooling: use `bytedcli` (source: `~/code/code.byted.org/byteapi/bytedcli`)
