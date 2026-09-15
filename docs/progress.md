@@ -2345,3 +2345,191 @@ Next: resolve the normal task's BOE baseline/environment-selection failure and
 complete the applicable GEC manual checks, then finish the normal Bits workflow
 and verify the SG runtime, its instance limits and API connectivity before
 changing the phone or adding public ingress. CN and the phone remain unchanged.
+
+
+### 2026-09-14 — network soak and public URL status
+
+- 📏 Graded 177 real Relays from the first network-recorded event on September 9
+  17:05 PDT through September 14 18:02 PDT: 134 complete Previews; 13 of 43 cut
+  Previews Updated (30%). Office Wi-Fi: 13/13; home Wi-Fi: 0/24; no Wi-Fi: 0/6.
+  All recorded VPN states were false. All Updates came from CN ByteFaaS.
+- 🔎 There were 29 raw transport errors (28 paired to cut Previews), dominated by
+  private-address connection timeouts. Successful Update latency: median 3.5 s,
+  max 5.7 s. This supports network reachability as the main failure.
+- 🐛 A new Update landed 0.848 s after reason-9 withdrawal on September 14
+  17:50 PDT. Twelve translation fallback events split evenly between unchanged
+  input and rate limiting. No retained crash/ANR exit; listener currently bound.
+- 🌐 Live I18N-TT query still returns zero production releases for `kpb2dvsn`,
+  and latest_release returns `release record not found`. Detailed Bits gates
+  were not refreshed; last recorded blockers are BOE baseline lookup and manual
+  GEC checks. Public ingress remains unfinished.
+- 📝 Evidence, scope, and limits: `docs/experiments/19-network-soak.md`.
+
+Next:
+
+- Resolve the Bits workflow and applicable GEC checks, then verify SG runtime
+  before public ingress and phone cutover. Add authentication and configure the
+  documented Consul + NetLink/TLB public path with required review.
+- Fix the withdrawal race separately. Grade VPN-on traffic if evaluating VPN as
+  the interim solution; this soak contains no VPN-on evidence.
+
+### 2026-09-14 — BOE removed; Singapore PPE self-test succeeds
+
+- ✅ Max removed BOE using the normal Bits Run form and started run #3 with SCM
+  `1.0.0.11`. The assistant's earlier claim of a form bug was premature: it had
+  first clicked the settings control and had not established why its removal
+  attempt failed. No API mutation was applied by the assistant; fresh readback
+  already showed BOE disabled with no lanes in both test stages and only the
+  Singapore PPE project configuration retained.
+- 📦 Project pipeline `1225984815362`, run `1229954492418`, and parent pipeline
+  `1226057296642`, run `1229968910850`, both succeeded. The runtime inputs have
+  `need_boe=false`, `need_ppe=true`. PPE function `mmyp0srw` / `faas-sg` deployed
+  revision `bwp54sd8mn`, ticket `6xt9jd97bdwhbla0`; the console shows six Ready
+  instances across MY, MY2, and MY3. Production `kpb2dvsn` remains unreleased.
+- 🌐 PPE `https://mmyp0srw.sg-fn.tiktok-row.net/v1/ping` returns HTTP 200,
+  `pong go1.26.4 linux/amd64` from this Mac. The alternate
+  `mmyp0srw.sg-fn.bytedance.net` host timed out, including an IPv4-only attempt.
+  This verifies PPE liveness, not public cellular access.
+- 📋 GEC automated checks report four passes and two warnings (no matching test
+  plans). Max explicitly confirmed **no TTP data in Larklish**. Source review
+  confirms no TCC or RDS/database integration. Drafted Not involved explanations
+  for those three manual checks; the form was not submitted. Regional dependency
+  and DECC-label applicability are being checked with Mira.
+- 🔎 Tika's policy answer contained suspect citations and expanded VA incorrectly;
+  do not use it as approval evidence. Max now prefers `bytedcli mira`. CLI login
+  required a Feishu QR scan and expired, so the existing Mira browser session
+  received the updated facts and the two remaining policy questions.
+
+- 🧪 PPE runtime verification: reconstructed a Lookup from the saved real Relay
+  at September 15 00:50:15 UTC (using Relay time because the recorder lacks the
+  Original postTime). Refreshed the phone's expired access token through its own
+  existing debug `user` hook; no new token chain or phone URL change. Direct PPE
+  request returned HTTP 200, `found`, post, 211 Full-text characters in 3.62 s,
+  with English absent. A second request via the ByteFaaS invoke API returned
+  `found` with English present; runtime logs confirm `LARK_HOST=fsopen.bytedance.net`.
+  Thus Lookup and translation work in SG PPE, with one transient/unchanged-input
+  translation outcome whose exact cause was not captured. General log query
+  returned no entries; invoke captured the request's logs.
+- 📚 Mira's DECC source was fetched directly with the Lark document skill:
+  `https://bytedance.larkoffice.com/wiki/TDzjwznEZiOe1Akd7pHcTGw2nYb`.
+  It describes DES-HDFS/Hive transfer jobs and includes TikTok CN↔RoW and
+  TT↔Non-TT scenarios in addition to TTP. This does not establish that a Lark
+  Open API call falls under that mechanism. Exact SCE and GEC checklist scope
+  remain under investigation; no blanket exemption was attested.
+
+- 📚 A focused deterministic `bytedcli insearch` query found the official
+  [DECC 3.0 overview](https://bytedance.larkoffice.com/wiki/Bk7cwOSbOi74R1kIpyvcqveZnfe),
+  fetched directly with `lark-cli docs +fetch`. It defines SCE as the special
+  US-TTP environment for SCM/build/deploy/code synchronization, so SCE is not
+  involved in this Singapore-only release. It also defines DES-RPC as cross-VGeo
+  HTTP/RPC control and distinguishes TikTok user data from allowed non-user
+  engineering/corporate data. The HDFS manual alone was insufficient evidence
+  for HTTP applicability; do not infer a blanket exemption from it.
+- 📋 The current Bits form has four draft Not involved conclusions with factual
+  remarks: regional application dependencies (SG-only; Lark API verified), TCC,
+  ROW/TTP data sharing, and RDS. DECC is unselected pending the owner's answer
+  about internal employee messages versus TikTok user/customer data. Bits rejects
+  partial submission until all five conclusions are selected. No manual gate
+  was submitted or bypassed. The browser form was retained for continuation.
+
+Next:
+
+- Resolve the remaining DECC data-scope declaration, submit the completed factual
+  checklist, then continue Test/Merge/Release in the normal Bits workflow.
+- Production health, instance limits, public authentication/ingress, cellular
+  verification, and phone cutover remain pending. Prefer `bytedcli mira`; its CLI
+  needs login on this machine, while the existing browser session works.
+
+### 2026-09-14 — manual checklist accepted; Test stage running
+
+- 🔑 Max approved the fresh Feishu login; `bytedcli mira` is authenticated. Mira
+  session `457862652179` reviewed the proposed declarations and found no concrete
+  contradiction when scoped to this change, rather than a blanket exemption.
+- 📋 Max clarified that Larklish is his personal demo processing his own
+  notifications. Submitted all five manual items as Not involved with factual
+  remarks: SG-only with Lark API verified; no new DECC gateway/transfer job or
+  US-TTP/SCE build; no TTP data/sharing; no TCC; no RDS/schema change. The remarks
+  do not claim that notifications are synthetic. Bits accepted the submission:
+  development exit checks 2/2 passed, two existing nonblocking test-plan warnings.
+- ✅ Completed Develop at 20:50 PDT. Test started automatically with main pipeline
+  `1228969903362` and project pipeline `1228970941186`, using the saved PPE-only
+  configuration. No gate or pipeline was force-skipped.
+
+Next:
+
+- Finish the normal Test/Merge/Release workflow and verify Singapore production.
+  Public ingress, authentication, and phone cutover remain pending.
+
+### 2026-09-14 — Test deployment passes; Nario metadata check blocks merge
+
+- ✅ Test project pipeline `1228970941186`, run `1229970226946`, completed PPE
+  deployment. Test-stage DECC and TLB manual declarations were submitted with
+  the same personal-demo scope and the fact that this release changes no TLB
+  configuration. Pipeline detection passed; no source MR was required in SCM mode.
+- 🚧 The remaining check is Nario Scenario Coverage Rate, report `2317925`, worker
+  `01M2HJZPFVRDXVT41692D93AJF@1@7`: QCSS cannot obtain the PSM and commit ID from
+  the worker ID. Retried just Nario after the deployment completed; the same
+  metadata error recurred. This is not an executed scenario-test failure.
+- 🔎 SCM version `1.0.0.11` independently identifies commit
+  `1e1b4aec818641c032f2bd694a58c0d810dc57be`, repo ID `586146`, version ID
+  `164345649`, and successful Singapore artifact synchronization. The missing
+  metadata is in the checker path, not absent from SCM.
+- 📋 Read-only inspection of the live Cerberus rule for PSM node `26089240`,
+  Test stage, shows Nario inherited from OEC, enabled, Force Inheritance off,
+  Allow Skip, coverage threshold >= 0, risk level Block. Prepared the ordinary
+  per-item skip with attribution Invalid block; it is not submitted, and no
+  shared rule or threshold was changed. Requested Max's confirmation for this
+  one blocking-check skip.
+- 🔎 Mira CLI research request timed out; saved history confirms receipt but no
+  answer yet. The generic bytedcli QCSS report reader targets a different report
+  surface and returned report-not-found; it does not invalidate the live GEC
+  report above.
+
+Next:
+
+- If Max approves the prepared single-item skip, submit it and continue normal
+  Merge/Release. Otherwise repair Nario worker-to-commit metadata through the
+  owning platform. Production and public ingress remain pending.
+
+### 2026-09-14 — service-tree ancestry explains GEC; TLB is independent
+
+- 🚧 Max approved skipping Nario, but the actual Cerberus response rejected the
+  operation: `only Meego QA (with QA sequence) or Backup Force QA Approver can
+  skip`. HTTP 200 carried business code -1; the indicator was not skipped.
+  This is a server permission restriction, not an automatic approval-review
+  rejection. Configured force approvers returned by the live report are
+  `gejingjing.0621`, `gefu`, `baishusi`, and `shawn.lou`. No one was contacted and
+  no roles or shared rules were changed.
+- 🔎 Max questioned why a personal demo was using GEC policy. Live ByteTree reads
+  in CN and I18N-TT show node `26089240` under
+  `OEC → Seller Centre → oec.seller.frontend → coplan.lark.larklish`, parent
+  `823797`. The node was created with the original CN function on September 3;
+  the original deployment entry above also records `oec.seller.frontend`.
+  CN `jmc8tl6s`, SG prod `kpb2dvsn`, and SG PPE `mmyp0srw` share this node.
+  The assistant should have checked ancestry before treating the GEC workflow
+  as intrinsic to ByteFaaS/public ingress.
+- 📖 The Bits task was additionally associated with GEC Frontend Unified Standard
+  Space `470900839426`, which supplies the Feature Release Flow and GEC checks.
+  ByteTree business placement, Bits workspace, and NetLink business line are
+  separate concepts. Changing only the Bits workspace does not establish that
+  inherited ByteCloud IAM policies disappear.
+- 🌐 Refetched primary ByteFaaS HTTP and Consul-trigger docs and NetLink Layer-7
+  access docs. The documented TLB backend needs the function PSM, an appropriate
+  FaaS cluster, Consul discovery/trigger and normal TLB registration/permissions.
+  It does not require GEC Bits-space membership. NetLink segregates ownership
+  and configuration by its own business lines and registers each PSM separately
+  in each TLB cluster. Therefore Nario exemption is a requirement of the current
+  deployment workflow, not of TLB-to-PSM routing.
+- 📚 Sources: ByteFaaS
+  [HTTP traffic management](https://cloud.bytedance.net/docs/faas/docs/63d786117df7d2021dfc68e3/63db78756773b3023794d611),
+  [Consul trigger](https://cloud.bytedance.net/docs/faas/docs/63d786117df7d2021dfc68e3/63e13a783d23a3021df0bf3c),
+  [NetLink Layer-7 access](https://cloud.bytedance.net/docs/netlink/docs/653a37a304438602f814d09a/6576fdedbb004402f6cef7b8).
+  The older `/developer/docs/...` paths returned the console HTML shell to
+  `insearch get`; `/docs/...` resolved the actual primary document content.
+
+Next:
+
+- Establish the correct business ownership/ByteTree parent and release workspace
+  for the personal demo before choosing between a normal ownership migration and
+  an approved GEC exception. No service-tree migration or alternative workspace
+  was applied. Public routing does not itself require GEC membership.
