@@ -1,6 +1,15 @@
 # Volcano Engine and BytePlus hosting — 2026-09-15
 
-## Selected approach
+## Status: superseded by Railway
+
+Max subsequently reopened the provider comparison and selected Railway for its
+simpler setup and upkeep. Follow the
+[Railway deployment plan](../railway-deployment-plan.md) and
+[Experiment 25](25-railway-fly-comparison.md). This document preserves the
+BytePlus investigation; the [BytePlus plan](../byteplus-deployment-plan.md)
+remains verbatim as historical material. No BytePlus resources were created.
+
+## Earlier selected approach
 
 **Use one small BytePlus VM in Johor with a retained Elastic IP, Nginx, Certbot,
 and systemd.** Max selected BytePlus, requested an ASAP demo that remains running,
@@ -295,9 +304,9 @@ For BytePlus Function Service, the verified delivery path is local ZIP upload
 through the console. The selected VM plan uses the existing `build.sh` and SSH
 transfer instead. The internal SCM/ByteFaaS pipeline is not required.
 
-## Next experiment and completion criteria
+## Earlier VM experiment and completion criteria (superseded)
 
-Follow the [verbatim VM deployment plan](../byteplus-deployment-plan.md): payment
+The [verbatim VM deployment plan](../byteplus-deployment-plan.md) specified payment
 verification → VM and retained IP → trusted HTTPS and renewal test → Go Backend
 under systemd → authenticated Lookup → in-place phone update → cellular test.
 Also verify process restart and machine reboot without changing the public IP.
@@ -308,9 +317,12 @@ is planned, not implemented. The phone's configured URL remains
 `https://jmc8tl6s.fn.bytedance.net` until migration succeeds.
 
 Commit preparation also found that this Mac's `local.properties` lacks a
-nonempty `larklish.backendToken`. Before building the phone for the VM, configure
-the same Backend token in that property and the VM's environment. This is
-separate from the phone's existing user access/refresh-token chain.
+nonempty `larklish.backendToken`. A subsequent read-only SSH check confirmed the
+existing token is still in devbox's
+`/data00/home/max.coplan/code/github.com/vegerot/larklish/local.properties`.
+The Mac entry was absent before formatting; the token was not deleted or
+rotated. The Railway plan reuses this token by copying only the missing property.
+This is separate from the phone's existing user access/refresh-token chain.
 
 Research, compilation and local group Lookup checks are complete. No VM, public
 IP, certificate, or other cloud resource was created. Payment setup, deployed

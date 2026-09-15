@@ -2975,3 +2975,52 @@ Commit preparation:
 - Documentation whitespace and local-link checks passed. The saved deployment
   plan was compared with its original conversation text and still matches
   exactly. The commit contains only the six documentation files.
+
+### 2026-09-15 — Railway selected; deployment plan saved verbatim
+
+- 🧭 Reopened the provider comparison at Max's request after reading the shared
+  Gemini conversation. Checked official Railway and Fly documentation against
+  the Backend. Railway is simplest overall; the earlier VM recommendation had
+  been within the BytePlus choice. Max selected Railway for the demo.
+- 🪶 Chosen initial shape: one always-running Singapore service, existing
+  in-memory cache, Railway-managed HTTPS, and source uploads from the local
+  Backend directory. Hobby starts at USD 5/month including USD 5 usage; actual
+  usage is unmeasured. Target below USD 15/month, with a USD 15 usage alert.
+- 📚 Researched the cache question: both platforms have persistent volumes,
+  and Fly suspend/resume can retain RAM without a cache file. Keeping a process
+  running is not technically required for cache preservation. Defer sleeping
+  and persistence until cost and latency measurements justify them; Railway
+  sleeping would not lower a bill already at Hobby's minimum.
+- 🔐 Investigated the missing-token concern with a read-only SSH check. The
+  existing Backend token remains in devbox's
+  `/data00/home/max.coplan/code/github.com/vegerot/larklish/local.properties`.
+  It was already absent from the Mac's copy before formatting and was not
+  deleted or rotated. The Railway plan copies only that property to the Mac.
+  The helper's `write_local` replaces all `lark.*` entries, so it must not be used
+  with only the Backend-token key. The phone's user-token chain remains intact.
+- 🛠️ Inspected deployment readiness: Railway CLI is not installed on the Mac,
+  the Pixel is attached, and the Go Backend already supports Railway's port and
+  environment-variable contract. Planned settings are project `larklish`,
+  service `backend`, environment `production`, Singapore, one replica, Serverless
+  off, 1 vCPU / 512 MiB limits, port 8787, `/v1/ping` health check and `ALWAYS`
+  restart policy. No runtime code or cloud configuration has changed.
+- 📝 Saved [railway-deployment-plan.md](railway-deployment-plan.md) verbatim.
+  Updated `plan.md` and the research indexes, and recorded the provider/cache
+  comparison in [Experiment 25](experiments/25-railway-fly-comparison.md).
+  The BytePlus deployment plan is unchanged as historical material.
+
+Next: execute the Railway plan: targeted credential sync → CLI/account/service
+setup → source deployment → generated HTTPS domain → authenticated Lookup →
+in-place phone update → cellular verification and usage measurement. No Railway
+resources have been created and no deployment or token copy has been performed.
+The earlier 67/165 replay threshold failure remains recorded; no runtime tests
+were rerun for this documentation-only update. Internal authenticated production
+remains a separate TODO.
+
+Validation: all six documentation files passed whitespace and local-link
+checks. The Railway plan matches the original conversation text exactly, and
+the BytePlus plan is byte-for-byte identical to its committed version.
+
+Commit checks: ktfmt and `uvx --system-certs ruff format tools` passed without
+source changes. ktfmt used the same temporary formatting-only token procedure
+described above; the Mac's `local.properties` was restored to its original bytes.

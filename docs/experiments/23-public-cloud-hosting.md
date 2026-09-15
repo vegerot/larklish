@@ -2,21 +2,22 @@
 
 ## Current decision
 
-Max selected **a small BytePlus VM with a retained Elastic IP and standard
-HTTPS** for the immediate demo, then continued daily use. Follow the
-[saved deployment plan](../byteplus-deployment-plan.md).
-[Experiment 24](24-volcano-byteplus.md) records the live account checks, VM quote,
-employee-credit research, and build/API experiments. Deployment remains pending.
+Max selected **Railway with one always-running service and managed HTTPS** for
+the immediate demo and ongoing daily use. Follow the
+[saved Railway deployment plan](../railway-deployment-plan.md).
+[Experiment 25](25-railway-fly-comparison.md) compares Railway, Fly and the
+earlier BytePlus VM proposal, including the cache and sleeping options.
+[Experiment 24](24-volcano-byteplus.md) retains the BytePlus account checks, VM
+quote, employee-credit research and build/API experiments. Deployment is pending.
 
 ## Initial recommendation
 
 Max chose public-cloud hosting for the immediate demo, superseding the temporary
 internal PPE/public-route plan. At this initial comparison, the provider had not
 been selected. The recommendation was Railway for the shortest deployment path
-from this checkout; DigitalOcean App
-Platform is the simplest of the named options (GCP, Volcano Engine,
-DigitalOcean, and the subsequent BytePlus comparison). This is a source-based
-comparison, not a completed deployment.
+from this checkout; DigitalOcean App Platform was the simplest of the named
+options (GCP, Volcano Engine, DigitalOcean, and the subsequent BytePlus
+comparison). This is a source-based comparison, not a completed deployment.
 
 ## What the Backend needs
 
@@ -31,7 +32,7 @@ Inspected `backend/main.go`, `server.go`, `config.go`, `go.mod`, and the build p
 - Runtime variables: `LARK_APP_ID`, `LARK_APP_SECRET`,
   `LARKLISH_BACKEND_TOKEN`, and `LARK_HOST`. The initial public host was
   `https://open.feishu.cn`; Experiment 24 verified an existing group Lookup
-  through `https://open.larksuite.com`, now selected for the BytePlus plan.
+  through `https://open.larksuite.com`, now selected for the Railway plan.
   Public hosting needs the public API host, not the IDC's intranet mirror.
 - Existing Bearer authentication protects `/lookup` and `/chats`;
   `/v1/ping` is the public health probe.
@@ -71,12 +72,15 @@ current access, exact pricing, and HTTPS certificate provisioning remain unverif
 
 At this stage, the recommendation remained Railway first for simplest
 local-source deployment, DigitalOcean App Platform second, Cloud Run next,
-with BytePlus and Volcano Engine
-requiring more setup. If Max already has BytePlus Function Service and API Gateway
-enabled, its similarity to the existing deployment makes it a reasonable choice.
+with BytePlus and Volcano Engine requiring more setup. If Max already has
+BytePlus Function Service and API Gateway enabled, its similarity to the
+existing deployment makes it a reasonable choice.
 No internal release-ticket workflow was inferred to apply to public BytePlus.
 
-## Earlier proposed Railway deployment (superseded)
+## Initial Railway deployment sketch
+
+The [current deployment plan](../railway-deployment-plan.md) expands and updates
+this initial sketch, including the existing token on devbox and phone migration.
 
 1. Create one project/service and add the four runtime variables above. Keep
    credential values out of source and terminal output.

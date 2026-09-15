@@ -264,10 +264,11 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
 - **The phone** uses the single HTTPS URL in `larklish.backendUrl`. The original
   ByteFaaS trigger requires office Wi-Fi or the SealSuite VPN. Max has now chosen
-  a small BytePlus VM for the immediate public demo, superseding the Singapore
-  PPE plus public NetLink/TLB route plan. The provider and architecture are
-  selected; deployment is pending. Follow [the deployment plan](byteplus-deployment-plan.md)
-  and [Experiment 24](experiments/24-volcano-byteplus.md). Authenticated internal
+  Railway for the immediate public demo, superseding the BytePlus VM proposal
+  and the Singapore PPE plus public NetLink/TLB route plan. The provider and
+  architecture are selected; deployment is pending. Follow
+  [the Railway deployment plan](railway-deployment-plan.md) and
+  [Experiment 25](experiments/25-railway-fly-comparison.md). Authenticated internal
   production deployment remains a separate important TODO. The localhost/ADB
   reverse fallback is removed.
 - **Backend authentication**: `Authorization: Bearer <token>` protects `/lookup`
@@ -286,26 +287,38 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
   URL → soak.
 
-### Layer 9 — BytePlus public demo 🚧 planned
+### Layer 9 — Railway public demo 🚧 planned
 
-- **Host**: one pay-as-you-go BytePlus VM in Johor, shared `ecs.e-c1m1.large`
-  (2 vCPU / 2 GiB), 20 GiB ESSD PL0 disk, and a retained Elastic IP. The console
-  configuration quote was USD 0.0193/hour, about USD 13.90 per 30 days, plus
-  traffic and taxes. Recheck the complete order before purchase.
-- **Public address**: `https://<Elastic-IP>`. Nginx terminates HTTPS and forwards
-  to the existing Go Backend on port 8787; systemd starts and supervises the
-  Backend. Certbot obtains a publicly trusted IP certificate and automatically
-  renews it, reloading Nginx after renewal. Prove issuance and renewal first.
-- **Scope**: demo ASAP, then keep running for daily use. Target below USD 15/month;
-  up to USD 35/month if necessary for the demo. Preserve the existing HTTP
-  protocol, Bearer authentication, and phone user-token chain. The selected
-  Backend API host is `https://open.larksuite.com`, verified for an existing
-  group Lookup; direct-message and cloud-to-Lark checks remain deployment gates.
-- **Sequence**: payment verification → VM/IP → trusted HTTPS and renewal test →
-  Backend → authenticated Lookup → in-place phone update → cellular verification.
-  No cloud resources have been provisioned. The exact plan is preserved in
-  [byteplus-deployment-plan.md](byteplus-deployment-plan.md); evidence and limits
-  are in [Experiment 24](experiments/24-volcano-byteplus.md).
+- **Host**: one always-running Railway service in Singapore
+  (`asia-southeast1-eqsg3a`), project `larklish`, service `backend`, environment
+  `production`. Hobby plan, one replica, Serverless disabled, initial limits
+  1 vCPU / 512 MiB, and the existing in-memory cache. Hobby has a USD 5/month
+  minimum including USD 5 usage; measure the bill against the USD 15/month target.
+- **Deployment**: `railway up backend --path-as-root --service backend` uploads
+  only the Backend directory. Railpack detects Go; the service build root is `/`.
+  Planned `backend/railway.toml` records the builder, Singapore replica,
+  `/v1/ping` health check (60 s startup timeout), and `ALWAYS` restart policy.
+  Configure sleeping and resource limits in service settings before deployment.
+- **Public address**: generate one Railway domain targeting `PORT=8787` and
+  retain it across releases. Railway manages HTTPS and certificate renewal.
+  Preserve the existing HTTP protocol and Bearer authentication. The selected
+  Lark API host remains `https://open.larksuite.com`.
+- **Credentials**: the existing Backend token is still in devbox's gitignored
+  `local.properties`; the Mac's copy lacks that entry. Copy only that property
+  to the Mac and reuse it in Railway, preserving the phone's user-token chain.
+- **Sequence**: credential sync → Railway account/service configuration → source
+  deployment → generated HTTPS domain → authenticated Lookup → in-place phone
+  update → cellular verification. CLI installation, all Railway setup and
+  deployment, and phone migration remain pending.
+- **Later optimization**: both Railway and Fly have persistent volumes, and Fly
+  suspension can preserve RAM. Continuous running is the simplest initial
+  choice, not a technical necessity for cache preservation. Defer sleeping and
+  persistence until usage and latency measurements justify them.
+- **Records**: the exact current plan is in
+  [railway-deployment-plan.md](railway-deployment-plan.md). The earlier
+  [BytePlus plan](byteplus-deployment-plan.md) remains verbatim as history;
+  [Experiment 24](experiments/24-volcano-byteplus.md) retains its research and
+  [Experiment 25](experiments/25-railway-fly-comparison.md) explains the new choice.
 
 ### Later (not experiments)
 
