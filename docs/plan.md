@@ -264,11 +264,12 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
 - **The phone** uses the single HTTPS URL in `larklish.backendUrl`. The original
   ByteFaaS trigger requires office Wi-Fi or the SealSuite VPN. Max has now chosen
-  public-cloud hosting for the immediate demo, superseding the Singapore PPE plus
-  public NetLink/TLB route plan. Provider selection and deployment are pending;
-  `experiments/23-public-cloud-hosting.md` compares the options and recommends
-  Railway. Authenticated internal production deployment remains a separate
-  important TODO. The localhost/ADB reverse fallback is removed.
+  a small BytePlus VM for the immediate public demo, superseding the Singapore
+  PPE plus public NetLink/TLB route plan. The provider and architecture are
+  selected; deployment is pending. Follow [the deployment plan](byteplus-deployment-plan.md)
+  and [Experiment 24](experiments/24-volcano-byteplus.md). Authenticated internal
+  production deployment remains a separate important TODO. The localhost/ADB
+  reverse fallback is removed.
 - **Backend authentication**: `Authorization: Bearer <token>` protects `/lookup`
   and `/chats`; `/v1/ping` stays public for the FaaS health probe. Set the same
   generated value in the Backend's `LARKLISH_BACKEND_TOKEN` environment variable
@@ -284,6 +285,27 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 - Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `unittest.sh` at the root.
   Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
   URL → soak.
+
+### Layer 9 — BytePlus public demo 🚧 planned
+
+- **Host**: one pay-as-you-go BytePlus VM in Johor, shared `ecs.e-c1m1.large`
+  (2 vCPU / 2 GiB), 20 GiB ESSD PL0 disk, and a retained Elastic IP. The console
+  configuration quote was USD 0.0193/hour, about USD 13.90 per 30 days, plus
+  traffic and taxes. Recheck the complete order before purchase.
+- **Public address**: `https://<Elastic-IP>`. Nginx terminates HTTPS and forwards
+  to the existing Go Backend on port 8787; systemd starts and supervises the
+  Backend. Certbot obtains a publicly trusted IP certificate and automatically
+  renews it, reloading Nginx after renewal. Prove issuance and renewal first.
+- **Scope**: demo ASAP, then keep running for daily use. Target below USD 15/month;
+  up to USD 35/month if necessary for the demo. Preserve the existing HTTP
+  protocol, Bearer authentication, and phone user-token chain. The selected
+  Backend API host is `https://open.larksuite.com`, verified for an existing
+  group Lookup; direct-message and cloud-to-Lark checks remain deployment gates.
+- **Sequence**: payment verification → VM/IP → trusted HTTPS and renewal test →
+  Backend → authenticated Lookup → in-place phone update → cellular verification.
+  No cloud resources have been provisioned. The exact plan is preserved in
+  [byteplus-deployment-plan.md](byteplus-deployment-plan.md); evidence and limits
+  are in [Experiment 24](experiments/24-volcano-byteplus.md).
 
 ### Later (not experiments)
 

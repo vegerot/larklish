@@ -17,9 +17,14 @@ They lived in the Experiment 05 commit only; this Layer 4 commit removed them.
 
 ## Credentials
 
-The tenant is Feishu-brand (`lark-cli config show` → `"brand": "feishu"`), so the host is
-`https://open.feishu.cn`, not `open.larksuite.com` (the phone's Lark client is the
-international build; the tenant decides the host). The app is the fat CLI app
+The tenant was configured Feishu-brand (`lark-cli config show` → `"brand": "feishu"`),
+so this experiment selected `https://open.feishu.cn`. **Correction, 2026-09-15:**
+that configuration did not prove `open.larksuite.com` incompatible. Both hosts
+accepted the existing app credentials and translated a synthetic sentence in
+[Experiment 24](24-volcano-byteplus.md). A follow-up also completed an existing
+group Lookup with the phone's user token through both hosts, returning matching
+Full text and English. Direct-message and deployed cloud checks remain pending.
+The app is the fat CLI app
 `cli_aa949bbb72e39cde`, which already holds `translation:text`. `lark-cli` stores its
 secret on Linux as AES-256-GCM at `~/.local/share/lark-cli/appsecret_<app>.enc` with the
 key in `master.key` beside it (`internal/keychain/keychain_other.go`); a 6-line

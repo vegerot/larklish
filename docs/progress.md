@@ -2875,3 +2875,103 @@ verify cellular operation with Wi-Fi and VPN off.
 
 Next: select the public-cloud provider and run the authenticated deployment and
 cellular verification experiment described in Experiment 23.
+
+### 2026-09-15 — Volcano/BytePlus deep dive, live accounts, and API-host test
+
+- 🔎 Read the previous hosting conversation and latest progress entries, then
+  researched Native Web applications, ZIP delivery, gateway types, public HTTPS,
+  outbound networking, reserved instances, and published prices. Details and
+  source links are in [Experiment 24](experiments/24-volcano-byteplus.md).
+- 🧭 Recommend **BytePlus among these two providers** for Max's overseas personal
+  account. Live Volcano Function Service is blocked by real-name verification;
+  the account page rejects overseas personal identities and points to BytePlus.
+  All three documented personal verification paths require a Chinese resident
+  ID. An overseas company route exists separately.
+- 🔐 With Max's permission, inspected both signed-in accounts read-only. BytePlus
+  Function Service and API Gateway reach their cross-service IAM authorization
+  pages; neither role was authorized. No beta-denial screen was observed, but
+  access beyond authorization is unverified. Both coupon lists are empty;
+  Volcano shows RMB 0 available balance and zero resource packages.
+- 📚 Asked `bytedcli mira` about employee benefits and provider choice. Session
+  `547331799315` initially timed out locally, but its answer completed remotely
+  and was retrieved; a follow-up incorporated the live evidence. Mira recommends
+  BytePlus and found no applicable employee/hackathon free-hosting entitlement.
+  Independently read its voucher sources: administrative permission and internal
+  product regression testing do not establish eligibility for this demo.
+- 💰 Published-rate estimate for one reserved 0.5-vCPU/1-GiB function and a
+  Serverless gateway over 30 days: BytePlus Johor USD 27.11; Volcano Johor
+  RMB 150.24. Excludes requests, traffic, logs, taxes and domain/certificate costs.
+  These are estimates, not console quotes. BytePlus pricing examples contain
+  older rates than their table; use the account quote before deployment.
+- 🧪 Cross-compiled the current Backend successfully to an 11.7 MB static
+  Linux/amd64 executable in a temporary directory. Verified Volcano CLI 0.3.1
+  help locally; its applicability to BytePlus was not established. BytePlus
+  explicitly supports a locally uploaded ZIP containing the Go executable.
+- 🧪 Max questioned whether `open.feishu.cn` is required. Both it and
+  `open.larksuite.com` returned HTTP 200/code 0 for tenant-token acquisition and
+  synthetic translation using our existing app credentials. Corrected
+  Experiment 05's overly strong hostname statement. No user refresh token was
+  rotated; no phone or Backend settings changed. User-token Lookup through the
+  international host remains untested.
+
+Next: decide on BytePlus setup, confirm account access and the public HTTPS
+certificate/domain path, then run authenticated Lookup and cellular verification.
+No cloud resources were created or deployed. No IAM role, payment, application,
+internal ticket, or message to another person was submitted. The authenticated
+internal-production TODO remains separate. All four changed documentation files
+passed whitespace and local-link checks; no runtime source files changed.
+
+### 2026-09-15 — BytePlus VM selected; deployment plan saved verbatim
+
+- 🧭 Max selected BytePlus, requested a demo ASAP that keeps running afterwards,
+  and prefers below USD 15/month, allowing USD 35/month if needed for the demo.
+  After comparing the managed function path with a small VM against the shared
+  ethos, selected one VM, a retained Elastic IP, Nginx, Certbot and systemd.
+- 💰 Read the ECS purchase form: shared `ecs.e-c1m1.large` (2 vCPU / 2 GiB),
+  20 GiB ESSD PL0, and traffic-billed Elastic IP at 1 Mbps. Configuration quote:
+  USD 0.0193/hour (USD 13.896/30 days), plus USD 0.0810/GB traffic and taxes.
+  Payment authentication is incomplete. No order was submitted; the image/key
+  selections and complete quote must be checked during implementation.
+- 🔐 Max has no domain. Researched standard HTTPS for an IP address: Let's
+  Encrypt offers publicly trusted six-day IP certificates, with Certbot 5.4+
+  webroot support. The first VM experiment will verify issuance, phone trust,
+  automated renewal and Nginx reload before loading Lark credentials. No custom
+  encryption or Android trust changes are planned.
+- 🧪 The connected Pixel had Larklish running and its listener bound. Used its
+  existing access token without refresh to replay an existing test Original
+  through a temporary local Backend, three requests per public Lark hostname.
+  Both returned `found`, matching 34-character Full text, and English. Warm
+  requests took 2.765–2.946 s; Mac process RSS was 16.7–17.0 MiB. This validates
+  the group path through `open.larksuite.com`, now selected in the VM plan;
+  direct-message, Johor-runtime and cellular checks remain pending.
+- 🧪 Planning validation: `go -C backend test -skip Replay ./...` passed. The
+  full suite reproduced the existing replay threshold failure at 67/165 with
+  unchanged runtime source. No new messages, app installation or phone settings
+  changes were needed for these experiments.
+- 📚 A focused Mira follow-up could not conclusively establish managed HTTPS
+  for ordinary FaaS routes or 100-mCPU reserved-instance availability. Preserve
+  those as uncertainties in the earlier alternative, rather than prerequisites
+  of the selected VM deployment.
+- 📝 Saved the plan verbatim in [byteplus-deployment-plan.md](byteplus-deployment-plan.md).
+  Updated `plan.md` and Experiments 05, 23 and 24 to distinguish the selected
+  approach, completed local checks, earlier alternatives and remaining work.
+
+Next: execute the saved VM plan, starting with payment verification and the
+small HTTPS/renewal experiment. No cloud resources have been created. The phone
+still uses its existing internal URL and retains its user-token chain. Internal
+authenticated production remains a separate TODO.
+
+Commit preparation:
+
+- `./gradlew ktfmtFormat` initially stopped during configuration because this
+  Mac's `local.properties` lacks `larklish.backendToken`. Reran the formatter
+  with a temporary formatting-only placeholder and restored the file's exact
+  original bytes afterwards. Formatting passed without source changes. A real
+  matching Backend token must be configured on the VM and phone before building
+  the deployment APK; no credential was generated or changed for this commit.
+- `uvx ruff format tools` initially failed certificate validation against PyPI.
+  `uvx --system-certs ruff format tools` passed using the system trust store;
+  the one Python file was unchanged.
+- Documentation whitespace and local-link checks passed. The saved deployment
+  plan was compared with its original conversation text and still matches
+  exactly. The commit contains only the six documentation files.

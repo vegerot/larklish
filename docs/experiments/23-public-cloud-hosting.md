@@ -1,10 +1,19 @@
 # Public-cloud demo hosting research — 2026-09-15
 
-## Decision and recommendation
+## Current decision
+
+Max selected **a small BytePlus VM with a retained Elastic IP and standard
+HTTPS** for the immediate demo, then continued daily use. Follow the
+[saved deployment plan](../byteplus-deployment-plan.md).
+[Experiment 24](24-volcano-byteplus.md) records the live account checks, VM quote,
+employee-credit research, and build/API experiments. Deployment remains pending.
+
+## Initial recommendation
 
 Max chose public-cloud hosting for the immediate demo, superseding the temporary
-internal PPE/public-route plan. The provider is not selected yet. Recommend
-Railway for the shortest deployment path from this checkout; DigitalOcean App
+internal PPE/public-route plan. At this initial comparison, the provider had not
+been selected. The recommendation was Railway for the shortest deployment path
+from this checkout; DigitalOcean App
 Platform is the simplest of the named options (GCP, Volcano Engine,
 DigitalOcean, and the subsequent BytePlus comparison). This is a source-based
 comparison, not a completed deployment.
@@ -20,12 +29,14 @@ Inspected `backend/main.go`, `server.go`, `config.go`, `go.mod`, and the build p
   shutdown and cold starts. Hosting cannot guarantee that a process never restarts.
 - `PORT` is supported, and the listener binds on all interfaces.
 - Runtime variables: `LARK_APP_ID`, `LARK_APP_SECRET`,
-  `LARKLISH_BACKEND_TOKEN`, and `LARK_HOST=https://open.feishu.cn`.
+  `LARKLISH_BACKEND_TOKEN`, and `LARK_HOST`. The initial public host was
+  `https://open.feishu.cn`; Experiment 24 verified an existing group Lookup
+  through `https://open.larksuite.com`, now selected for the BytePlus plan.
   Public hosting needs the public API host, not the IDC's intranet mirror.
 - Existing Bearer authentication protects `/lookup` and `/chats`;
   `/v1/ping` is the public health probe.
 
-## Comparison
+## Initial comparison
 
 | Platform | Deployment and operational work | Price / assessment |
 | --- | --- | --- |
@@ -36,9 +47,10 @@ Inspected `backend/main.go`, `server.go`, `config.go`, `go.mod`, and the build p
 | BytePlus Function Service | Native Web application runs the Go HTTP process; configure startup/port, release with min/max one, then connect an API Gateway instance/service and trigger. | Similar setup shape to Volcano Engine. Reserved instances are billed continuously; a reliable total price was not established. The trigger guide still labels gateway access beta, but its March 2025 date makes current account availability uncertain. |
 
 The ranking assumes a new usable account on each platform. Existing configured
-accounts may change which is quickest. No account entitlements were checked.
+accounts may change which is quickest. No account entitlements were checked
+during this initial comparison; Experiment 24 adds the account observations.
 
-## BytePlus follow-up
+## Initial BytePlus Function Service follow-up
 
 The suitable managed option is Function Service with the Native Web application
 runtime and API Gateway. The native runtime forwards ordinary HTTP requests to
@@ -57,13 +69,14 @@ statement, not proof that Max's account is blocked today. Some newer setup and
 billing pages did not expose their body text through the documentation reader;
 current access, exact pricing, and HTTPS certificate provisioning remain unverified.
 
-Recommendation unchanged: Railway first for simplest local-source deployment,
-DigitalOcean App Platform second, Cloud Run next, with BytePlus and Volcano Engine
+At this stage, the recommendation remained Railway first for simplest
+local-source deployment, DigitalOcean App Platform second, Cloud Run next,
+with BytePlus and Volcano Engine
 requiring more setup. If Max already has BytePlus Function Service and API Gateway
 enabled, its similarity to the existing deployment makes it a reasonable choice.
 No internal release-ticket workflow was inferred to apply to public BytePlus.
 
-## Smallest proposed Railway deployment
+## Earlier proposed Railway deployment (superseded)
 
 1. Create one project/service and add the four runtime variables above. Keep
    credential values out of source and terminal output.
