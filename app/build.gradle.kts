@@ -1,3 +1,4 @@
+import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -10,6 +11,16 @@ plugins {
 // and land
 // in BuildConfig. Embedded in the APK for now — see plan.md "Shortcuts".
 val local = Properties().apply { rootProject.file("local.properties").inputStream().use(::load) }
+val backendUrl = local.getProperty("larklish.backendUrl", "").trim().removeSuffix("/")
+val backendToken = local.getProperty("larklish.backendToken", "").trim()
+
+require(URI(backendUrl).let { it.scheme == "https" && it.host != null }) {
+    "Set larklish.backendUrl to the Backend's HTTPS URL in local.properties"
+}
+
+require(backendToken.isNotEmpty()) {
+    "Set larklish.backendToken in local.properties to match LARKLISH_BACKEND_TOKEN on the Backend"
+}
 
 android {
     namespace = "com.vegerot.larklish"
@@ -32,8 +43,9 @@ android {
         buildConfigField(
             "String",
             "LARKLISH_BACKEND_URL",
-            "\"${local["larklish.backendUrl"]}\"",
-        ) // Layer 7: http://<mac>:8787
+            "\"$backendUrl\"",
+        )
+        buildConfigField("String", "LARKLISH_BACKEND_TOKEN", "\"$backendToken\"")
     }
 
     testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in JVM tests

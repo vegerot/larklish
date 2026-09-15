@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -34,10 +35,23 @@ type Server struct {
 	translator *Translator
 }
 
-func (s *Server) routes() http.Handler {
+func (s *Server) routes(token string) http.Handler {
+	if token == "" {
+		panic("Backend token must not be empty")
+	}
+	authenticated := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+token)) != 1 {
+				w.Header().Set("WWW-Authenticate", "Bearer")
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next(w, r)
+		}
+	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /lookup", s.handleLookup)
-	mux.HandleFunc("GET /chats", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, s.fetcher.Chats()) })
+	mux.HandleFunc("POST /lookup", authenticated(s.handleLookup))
+	mux.HandleFunc("GET /chats", authenticated(func(w http.ResponseWriter, r *http.Request) { writeJSON(w, s.fetcher.Chats()) }))
 	// ByteFaaS's liveness probe; the body names the Go that built the running binary, so a
 	// deploy is visible from the outside (`tools/larklish-helper backend status`).
 	mux.HandleFunc("GET /v1/ping", func(w http.ResponseWriter, r *http.Request) {

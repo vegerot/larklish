@@ -129,16 +129,31 @@ def read_events(path: str | None = None) -> list[Event]:
 
 
 def backend_url() -> str:
-    """The Backend on ByteFaaS (Layer 8); `LARKLISH_BACKEND=http://127.0.0.1:8787` for a Backend
-    running on this machine (`go -C backend run .`)."""
-    return os.environ.get("LARKLISH_BACKEND", "https://jmc8tl6s.fn.bytedance.net")
+    """The configured Backend; LARKLISH_BACKEND can select a local Backend for experiments."""
+    return backend_setting("LARKLISH_BACKEND", "larklish.backendUrl").rstrip("/")
+
+
+def backend_setting(env: str, key: str) -> str:
+    value = os.environ.get(env, "")
+    if not value and LOCAL_PROPERTIES.exists():
+        for line in LOCAL_PROPERTIES.read_text().splitlines():
+            name, separator, setting = line.partition("=")
+            if separator and name.strip() == key:
+                value = setting.strip()
+    if not value:
+        sys.exit(f"set {env} or {key} in local.properties")
+    return value
 
 
 def read_chat_cache(path: str | None = None) -> ChatCache:
     """The Backend's chat cache (`GET /chats`), or a saved copy. Empty when nothing has been resolved yet."""
     if path:
         return json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
-    with urllib.request.urlopen(backend_url() + "/chats", timeout=5) as resp:
+    token = backend_setting("LARKLISH_BACKEND_TOKEN", "larklish.backendToken")
+    request = urllib.request.Request(
+        backend_url() + "/chats", headers={"Authorization": f"Bearer {token}"}
+    )
+    with urllib.request.urlopen(request, timeout=5) as resp:
         return json.load(resp)
 
 
@@ -1030,8 +1045,6 @@ def cmd_probe(args: argparse.Namespace) -> None:
     if not args.text and not args.debug:
         sys.exit("give a message to send, or --debug HOOK")
     require_device()
-    # On USB the phone reaches the Backend on its own port 8787 (Backend.kt tries it first).
-    adb("reverse", "tcp:8787", "tcp:8787", allow_fail=True)
     if args.install:
         print("installing…")
         run(["./gradlew", "--quiet", "installDebug"])

@@ -262,11 +262,17 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   "record not found"). Env: `LARK_HOST=https://fsopen.bytedance.net` (an
   IPv6-only instance cannot reach `open.feishu.cn`, and public egress needs a whitelist),
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
-- **The phone** reaches `https://<id>.fn.bytedance.net` on the office Wi-Fi and through the
-  SealSuite VPN; the certificate is public (GlobalSign). Off the VPN it cannot, and Max chose
-  **always-on VPN** over a TLB public domain (a Later item). `Backend.kt` keeps
-  `127.0.0.1:8787` first (the Mac over `adb reverse`), then the FaaS URL from
-  `larklish.backendUrl`.
+- **The phone** uses the single HTTPS URL in `larklish.backendUrl`. The original
+  ByteFaaS trigger requires office Wi-Fi or the SealSuite VPN. Max has now chosen
+  Singapore production plus public NetLink/TLB ingress so the phone can work off
+  VPN. The localhost/ADB reverse fallback is removed.
+- **Backend authentication**: `Authorization: Bearer <token>` protects `/lookup`
+  and `/chats`; `/v1/ping` stays public for the FaaS health probe. Set the same
+  generated value in the Backend's `LARKLISH_BACKEND_TOKEN` environment variable
+  and gitignored `local.properties` key `larklish.backendToken`, which Gradle
+  includes in the phone's BuildConfig. Backend startup and phone builds reject a
+  missing token. Android permits HTTPS only. The helper uses this same token for
+  cache reads. Configure the token on FaaS before deploying this Backend version.
 - **Updates** (first run 2026-09-03, 4 min end to end): `sl push --to main` → SCM builds `1.0.0.N`
   (31 s) → `bytedcli faas revision scm create … --scm-version 1.0.0.N` (dry run prints
   `--from-revision`/`--number`; rerun with them and `--yes`) → `faas release create …
@@ -359,13 +365,12 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
   to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
   to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
-- [ ] **A public name for the Backend (TLB).** The only sanctioned public ingress: apply at
-  <https://tlb.bytedance.net/> for a domain whose upstream is the FaaS trigger URL; a
-  security-review ticket and manager approval, 3–5 business days (Tika, 2026-09-03). Before
-  it goes public: a shared-secret header from the phone (`local.properties` → `BuildConfig`),
-  drop or protect `GET /chats`, and remove `usesCleartextTraffic`. Until then the phone
-  keeps the SealSuite VPN always-on off the office Wi-Fi. spooky-bio's outbound WebSocket
-  does not transfer: Lark is its caller; the phone is not Lark.
+- [ ] **A public name for the Backend (TLB), now in progress.** Enable the production
+  Consul trigger, register the PSM and FaaS cluster in the appropriate TLB cluster,
+  and configure public HTTPS through NetLink with the required review. This is
+  service-discovery routing, not a proxy to the private trigger hostname. Deploy
+  and verify the authentication above before exposing the route. Until public
+  access is verified on cellular, retain the phone's existing configuration.
 
 ## Shortcuts (fix before Larklish is a public app)
 

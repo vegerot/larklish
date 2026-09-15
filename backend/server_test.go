@@ -53,7 +53,9 @@ func TestALookupThroughTheServer(t *testing.T) {
 
 	body := `{"title":"Larklish 测试群","text":"Bot: 这是一条很长的消息，前四十五个...","whenMs":1787869583000,"userToken":"u-test"}`
 	rec := httptest.NewRecorder()
-	s.routes().ServeHTTP(rec, httptest.NewRequest("POST", "/lookup", strings.NewReader(body)))
+	req := httptest.NewRequest("POST", "/lookup", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer test-backend-token")
+	s.routes("test-backend-token").ServeHTTP(rec, req)
 	if rec.Code != 200 {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
@@ -80,10 +82,51 @@ func TestALookupThroughTheServer(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	s.routes().ServeHTTP(rec, httptest.NewRequest("POST", "/lookup", strings.NewReader(`{"title":"x"}`)))
+	req = httptest.NewRequest("POST", "/lookup", strings.NewReader(`{"title":"x"}`))
+	req.Header.Set("Authorization", "Bearer test-backend-token")
+	s.routes("test-backend-token").ServeHTTP(rec, req)
 	if rec.Code != 400 {
 		t.Errorf("incomplete request: status %d", rec.Code)
 	}
+}
+
+func TestBackendAuthentication(t *testing.T) {
+	s := &Server{fetcher: NewFetcher(nil)}
+	handler := s.routes("test-backend-token")
+	for _, tc := range []struct {
+		name, method, path, authorization string
+		status                            int
+	}{
+		{"public health probe", "GET", "/v1/ping", "", http.StatusOK},
+		{"Lookup without token", "POST", "/lookup", "", http.StatusUnauthorized},
+		{"Lookup with wrong token", "POST", "/lookup", "Bearer wrong", http.StatusUnauthorized},
+		{"Lookup with valid token reaches validation", "POST", "/lookup", "Bearer test-backend-token", http.StatusBadRequest},
+		{"cache without token", "GET", "/chats", "", http.StatusUnauthorized},
+		{"cache with wrong token", "GET", "/chats", "Bearer wrong", http.StatusUnauthorized},
+		{"cache with valid token", "GET", "/chats", "Bearer test-backend-token", http.StatusOK},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req.Header.Set("Authorization", tc.authorization)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, tc.status, rec.Body)
+			}
+			if rec.Code == http.StatusUnauthorized && rec.Header().Get("WWW-Authenticate") != "Bearer" {
+				t.Fatal("missing Bearer challenge")
+			}
+		})
+	}
+}
+
+func TestBackendRejectsEmptyTokenConfiguration(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("empty Backend token must prevent startup")
+		}
+	}()
+	(&Server{}).routes("")
 }
 
 func TestCandidateOfFlattensAPost(t *testing.T) {

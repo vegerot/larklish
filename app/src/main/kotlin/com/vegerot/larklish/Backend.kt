@@ -7,8 +7,8 @@ import org.json.JSONObject
 
 /**
  * The Backend's answer to one Lookup (Layer 7). `english` is null when Lark would not translate the
- * Full text. `backend` is the URL that answered (Layer 8: the Mac over USB, the Mac over Wi-Fi, or
- * the ByteFaaS trigger), so the record shows which one served each Update.
+ * Full text. `backend` is the HTTPS URL that answered, so the record shows which Backend served
+ * each Update.
  */
 data class Lookup(
     val outcome: String,
@@ -26,15 +26,6 @@ data class Lookup(
  * 200; the listener records that as `error: …`, like a failed fetch.
  */
 object Backend {
-    /**
-     * Where the Backend is: on the phone's own port when it hangs on USB (`adb reverse tcp:8787
-     * tcp:8787`, which `tools/larklish-helper probe` sets), else on the Mac's address from
-     * `local.properties` (the Mac, or the ByteFaaS trigger URL since Layer 8). Any failure on a URL
-     * moves on to the next: a refused connection, but also the reset `adb reverse` answers with
-     * when the Mac's port is closed, and a 5xx. The last URL's failure is the caller's.
-     */
-    private val urls = listOf("http://127.0.0.1:8787", BuildConfig.LARKLISH_BACKEND_URL)
-
     fun lookup(title: String, text: String, whenMs: Long, userToken: String): Lookup {
         val body =
             JSONObject()
@@ -42,15 +33,7 @@ object Backend {
                 .put("text", text)
                 .put("whenMs", whenMs)
                 .put("userToken", userToken)
-        var failure: IOException? = null
-        for (url in urls) {
-            try {
-                return post(url, body)
-            } catch (e: IOException) {
-                failure = e
-            }
-        }
-        throw failure!!
+        return post(BuildConfig.LARKLISH_BACKEND_URL, body)
     }
 
     private fun post(url: String, body: JSONObject): Lookup {
@@ -60,6 +43,7 @@ object Backend {
         conn.readTimeout =
             30_000 // a DM Lookup polls the search index for up to 12 s, then reads the chat
         conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.LARKLISH_BACKEND_TOKEN}")
         conn.doOutput = true
         conn.outputStream.use { it.write(body.toString().toByteArray()) }
         val status = conn.responseCode

@@ -2533,3 +2533,160 @@ Next:
   for the personal demo before choosing between a normal ownership migration and
   an approved GEC exception. No service-tree migration or alternative workspace
   was applied. Public routing does not itself require GEC membership.
+
+### 2026-09-15 — Nario exemption verified; Test and Merge complete
+
+- ✅ Max obtained the exemption. Live Bits Test exit checks all pass (7/7);
+  GEC records `force test out accepted by gefu`. Passed `DevGatekeeperStage`
+  through the normal stage operation. Merge completed automatically, and
+  development task `2820325` is now `finished` with every stage succeeded.
+- 📦 Release ticket `1225461564162` has completed integration and contains only
+  `coplan.lark.larklish`, I18N control plane, SCM `1.0.0.11`, commit
+  `1e1b4aec818641c032f2bd694a58c0d810dc57be`. It remains
+  `RELEASE_TICKET_STATUS_BEFORE_RELEASE`.
+- 🔧 Release stage `1225461564418` initially had no pipelines; its project query
+  returned business error `170009`. The normal `recreate-pipelines` operation
+  created main pipeline `1229154929666` and project pipeline `1229186479874`.
+  A subsequent deployment preview succeeded and targets only production function
+  `kpb2dvsn`, `faas-sg`, Singapore, MY/MY2/MY3, using the tested SCM version.
+- 🚧 Deployment has not started. Stage `pipeline-runnable` returns `canRun: true`,
+  and pipeline pre-check returns `hasPassed: true`, but `/cd/pipeline/can_run`
+  returns `canRun: false`, `pipelineNotRunnableReason: 2`. The CLI rejects the
+  live run before submitting it. Stage progress reports `checkStatus: 5`,
+  `passFlag: false`, `failReason: 3`, `checkPointId: 0`; the meaning of those
+  numeric codes has not been established. Check/recheck and status-recovery
+  operations did not resolve the discrepancy. No run override was used.
+- 🔎 The CLI's `develop publish` shortcut returned generic stage error `125536`.
+  Its additional QCSS hint is not supported by the response or the live passing
+  Test checks; do not treat it as a new Nario/QCSS failure. This task's development
+  workflow ends at Merge; release continues on the associated release ticket.
+- 🔑 This devbox's Bits CLI session works, but its I18N ByteCloud session needs
+  login. Started the normal login flow and gave Max the verification link;
+  completion remains pending. The available devbox browser also starts at SSO,
+  without the previous Mac's authenticated browser session.
+
+Next:
+
+- Complete I18N ByteCloud login and resolve the release entry/readiness state
+  using the normal release workflow, then deploy and verify Singapore production.
+  Authentication, public ingress, cellular verification, and phone cutover remain
+  pending. No phone or CN configuration changed in this continuation.
+
+### 2026-09-15 — Singapore production deployed; Lookup and translation verified
+
+- 🔑 Completed Max's fresh ByteCloud login. This function requires
+  `--site i18n-tt --vregion Singapore-Central`; plain `i18n` selected a different
+  FaaS catalog and returned 404.
+- 🔎 Decoded the readiness states from Bits' deployed frontend. The project was
+  unlocked; the normal integration lock succeeded. The remaining CLI preflight
+  used an obsolete readiness endpoint. The current page's readiness endpoint
+  explicitly allowed the run. Used the CLI's documented override for that
+  preflight, preserving the server permission/run checks and reviewed-plan hash.
+- 🚀 Started main run `1230124259842` and project run `1229972423170`. Release-window
+  check, SCM, image build, normal operator confirmation, and all-DC deployment
+  passed. `kpb2dvsn` / `faas-sg` is deployed with revision `yl6hk8n4io` (`1.0.2`),
+  SCM `1.0.0.11`. Latest FaaS cluster release `2nqy860x2ufc2fl5` is finished.
+- 🧪 Production `/v1/ping` returned HTTP 200. Replayed one existing Chinese
+  test-group message against production `/lookup`: HTTP 200, exact 77-character
+  Full text, English present, 4.515 seconds. Used the devbox CLI's own refreshed
+  user token; no new message or phone change. No phone is attached to this devbox.
+- 🚧 Final Bits job `3261393118` fails with `SCM info not found in pipeline`;
+  one scoped retry reproduced it. This is separate from Nario. The project
+  pipeline is failed and the release ticket remains `RELEASING`, although the
+  Backend is live. No failing job was skipped or force-completed.
+- 📏 Instance limits remain default 0–10 per location. The ordinary PATCH for
+  MY 1–1 / other locations 0–0 was rejected by ByteCloud policy with HTTP 403,
+  `unsupported platform`; no limit change applied. Use the supported ByteFaaS
+  console workflow. Evidence and exact identifiers are in
+  `docs/experiments/20-singapore-production.md`.
+
+Next:
+
+- Repair the final Bits check's SCM metadata and complete the release record;
+  apply the single-instance configuration through the supported console workflow.
+- Backend authentication, public ingress, cellular verification, and phone
+  cutover remain pending. CN and the phone still use their previous configuration.
+
+### 2026-09-15 — authentication built; remote console recovered; one instance configured
+
+- 🔐 Implemented Bearer-token authentication for `/lookup` and `/chats`; `/v1/ping`
+  remains public. The Backend requires `LARKLISH_BACKEND_TOKEN` or
+  `larklish.backendToken`. The Android app sends that token, requires an HTTPS
+  Backend URL, disables cleartext traffic, and removes the localhost fallback.
+  The helper authenticates cache reads and no longer sets the obsolete ADB reverse.
+  Generated the shared token in gitignored `local.properties` without printing it.
+- 🧪 Go tests and vet passed. Android's 21 unit tests, `assembleDebug`, ktfmt, and
+  Ruff formatting checks passed. Authentication changes are still uncommitted and
+  undeployed; the new APK has not been installed.
+- 📱 Max connected the Pixel, serial `08041JEC218600`. Its installed signing
+  certificate matches the new APK, so an ordinary update can preserve app data.
+- 🌐 Recovered the remote ByteFaaS console after reviewing the archived DevTools
+  forwarding setup. With Max's authorization, granted `local-network-access` and
+  `local-network` only for `https://cloud.tiktok-row.net` through DevTools.
+  These are temporary session overrides: the permission connection must stay
+  open. Reopened the unresponsive tab; the console now loads and recognizes Max.
+  The existing Mac tunnel uses local port 9223 to devbox port 9222.
+- 📏 Applied the normal console's Resource and scaling → Configure instance number
+  change. API readback confirms MY min/max 1/1, MY2/MY3/SG1 0/0. The earlier generic
+  cluster PATCH restriction did not block this dedicated resource operation.
+- 🚧 Adding the Backend token through the normal console still hit
+  `lockdown_smith_GEC_release_time_window_control` (`unsupported platform`).
+  Its policy uses the request user's time zone and working-day windows 09–12,
+  13–18, and 19–22. No time-zone change or policy bypass was applied.
+  The scoped exemption form targets `coplan.lark.larklish`, permission
+  `faas.function.update_cluster`, a fixed three-hour duration, and approver
+  Xi Zhang. It has not been submitted; waiting for Max's decision on requesting
+  the ordinary approval or waiting for a permitted window.
+- 🔎 The final Bits job still fails on missing SCM metadata. NetLink has no existing
+  route for Larklish. The CLI's generic `trigger create --type consul` returned a
+  validation error and created no trigger; use the documented Consul console
+  control instead. Public routing and its review are still pending.
+
+Next:
+
+- With the time-window issue resolved, set the Backend token, publish the tested
+  code, deploy through Bits, and verify authenticated Lookup on Singapore.
+- Finish the final Bits metadata check, Consul + public NetLink routing, and then
+  install the phone update, verify cellular access without VPN, and soak.
+
+### 2026-09-15 — continuation scheduled for the normal release window
+
+- 🕘 Max chose to wait and requested a wakeup at 09:00 Pacific. Refetched IAM's
+  raw employee record: `TimeZone` is `America/Los_Angeles`. The next window starts
+  September 15 at 09:00 PDT / 16:00 UTC.
+- ⏰ The app's scheduling tool is unavailable in this session. Registered a
+  one-time systemd user timer, `codex-larklish-20260915.timer`, which uses the
+  supported `codex queue` command to continue this same task at that time.
+  Verified the timer is active and its next elapse is `2026-09-15 16:00:00 UTC`.
+  The Codex App Server is running; the user manager has lingering enabled.
+- 📋 The continuation prompt preserves the authorized remaining work and directs
+  the next run to use the normal release window, not request an exemption.
+  Script: `~/.local/share/codex-wakeups/larklish-20260915/wakeup.py`.
+  Unit files: `~/.config/systemd/user/codex-larklish-20260915.{timer,service}`.
+  Cancel with `systemctl --user disable --now codex-larklish-20260915.timer`.
+
+Next:
+
+- At the scheduled wakeup, resume the pending Backend token configuration,
+  authenticated release, final Bits check, public routing, phone update, and soak.
+  The devbox and Codex App Server must remain running; check ADB/browser access
+  again before using them.
+
+### 2026-09-15 09:00 PDT — scheduled continuation; Backend token saved
+
+- ⏰ The scheduled message resumed this same task at the start of the normal
+  release window. The Pixel is still connected. The browser had stopped;
+  rediscovered/restarted the existing MCP browser as needed.
+- 🔐 The normal CLI cluster update succeeded without an exception. Readback
+  confirms `LARKLISH_BACKEND_TOKEN` exists on `kpb2dvsn` / `faas-sg` and exactly
+  matches the existing local secret. Instance limits remain MY 1/1, others 0/0.
+- 📦 Reviewed the already-tested authentication implementation for publication.
+  It protects Lookup and cache reads, preserves the public health probe, and
+  makes the phone use one HTTPS Backend URL. No secret is included in version
+  control. The old final Bits metadata check remains failed and requires repair.
+
+Next:
+
+- Publish the authentication change, verify its SCM artifact, and deploy through
+  the normal Bits workflow. Resolve the final metadata check and finish public
+  routing before phone cutover and cellular verification.

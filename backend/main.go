@@ -2,12 +2,13 @@
 //
 //	go -C backend run .                       # this Mac, port 8787
 //	curl -s localhost:8787/v1/ping            # liveness
-//	curl -s localhost:8787/chats              # the chat cache
+//	tools/larklish-helper chats              # the authenticated chat cache
 //
 // The Lark app id and secret come from LARK_APP_ID / LARK_APP_SECRET, else from
 // local.properties (`lark.appId`, `lark.appSecret`), the file the app builds from. The port
 // comes from _BYTEFAAS_RUNTIME_PORT (ByteFaaS Native HTTP), PORT, or 8787; the Lark host from
 // LARK_HOST (inside the IDC: https://fsopen.bytedance.net).
+// LARKLISH_BACKEND_TOKEN / larklish.backendToken authenticates the phone and helper.
 package main
 
 import (
@@ -28,8 +29,12 @@ func main() {
 	if appID == "" || appSecret == "" {
 		log.Fatalf("no Lark app id/secret: set LARK_APP_ID and LARK_APP_SECRET, or lark.appId and lark.appSecret in %s", *props)
 	}
+	backendToken := first(os.Getenv("LARKLISH_BACKEND_TOKEN"), p["larklish.backendToken"])
+	if backendToken == "" {
+		log.Fatalf("no Backend token: set LARKLISH_BACKEND_TOKEN or larklish.backendToken in %s", *props)
+	}
 	client := newLark(appID, appSecret, *host)
 	server := &Server{fetcher: NewFetcher(&liveSource{client}), translator: &Translator{client}}
 	log.Printf("Larklish Backend on :%s, Lark at %s", *port, *host)
-	log.Fatal(http.ListenAndServe(":"+*port, server.routes()))
+	log.Fatal(http.ListenAndServe(":"+*port, server.routes(backendToken)))
 }
