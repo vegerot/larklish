@@ -264,8 +264,9 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
 - **The phone** uses the single HTTPS URL in `larklish.backendUrl`. The original
   ByteFaaS trigger requires office Wi-Fi or the SealSuite VPN. Max has now chosen
-  Singapore production plus public NetLink/TLB ingress so the phone can work off
-  VPN. The localhost/ADB reverse fallback is removed.
+  Singapore PPE plus public NetLink/TLB ingress for the immediate demo so the
+  phone can work off VPN. The demo route will select `ppe_deploy_i18n_1`; production
+  deployment remains an important TODO. The localhost/ADB reverse fallback is removed.
 - **Backend authentication**: `Authorization: Bearer <token>` protects `/lookup`
   and `/chats`; `/v1/ping` stays public for the FaaS health probe. Set the same
   generated value in the Backend's `LARKLISH_BACKEND_TOKEN` environment variable
@@ -368,9 +369,14 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 - [ ] **A public name for the Backend (TLB), now in progress.** Enable the production
   Consul trigger, register the PSM and FaaS cluster in the appropriate TLB cluster,
   and configure public HTTPS through NetLink with the required review. This is
-  service-discovery routing, not a proxy to the private trigger hostname. Deploy
-  and verify the authentication above before exposing the route. Until public
-  access is verified on cellular, retain the phone's existing configuration.
+  service-discovery routing. The temporary path is
+  `https://shop.tiktokglobalshop.com/_/test/demo/larklish`. Pin it to authenticated
+  PPE `ppe_deploy_i18n_1`, preserve the Bearer header, and strip the temporary path
+  prefix before forwarding to the Backend. Until public access is verified on
+  cellular, retain the phone's existing configuration.
+- [ ] **Important: authenticated Singapore production deployment.** Finish the
+  normal Bits workflow and repair its final SCM-metadata check without skipping
+  it. Verify production authentication before later moving the demo off PPE.
 
 ## Shortcuts (fix before Larklish is a public app)
 

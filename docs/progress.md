@@ -2690,3 +2690,73 @@ Next:
 - Publish the authentication change, verify its SCM artifact, and deploy through
   the normal Bits workflow. Resolve the final metadata check and finish public
   routing before phone cutover and cellular verification.
+
+### 2026-09-15 — authenticated build published and verified in PPE
+
+- Published authentication commit `952abda5d0965ae29ad84ed6b4ced8a8ea168222` to
+  ByteDance `origin/main`. SCM `oec/seller/larklish:1.0.0.13` built successfully
+  from that commit (version ID `165403130`).
+- Created normal Feature task `2844150`, release `1229200073986`, pinned to that
+  SCM artifact and the existing Singapore PPE lane. The first PPE deployment
+  failed at startup because the lane lacked the new required Backend token.
+  Saved the existing secret to PPE through the normal cluster configuration and
+  reran the full PPE project; run `1230600871170` succeeded.
+- PPE runtime checks: public `/v1/ping` HTTP 200; `/chats` HTTP 401 without the
+  token, HTTP 200 with the matching token. Production has the token configured,
+  but still runs the previous code until this release completes.
+- Retried old release job `3261393118` at 09:15 PDT. The same SCM metadata error
+  recurred. No required check was skipped or force-completed.
+- Max chose a temporary path on an existing domain for the demo:
+  `https://shop.tiktokglobalshop.com/_/test/demo/larklish`. NetLink confirms the
+  domain exists in TTS_Global_Shop and that no Larklish path exists.
+  Servername `2955`, namespace `125`, business node `10071827`, TLB cluster
+  `tiktok_ecom_lb_alisg_v3`. Route creation and review remain pending.
+
+Next: complete the normal release checklist, repair the final metadata check,
+finish Consul and reviewed public routing, then update the phone and verify cellular.
+
+### 2026-09-15 — PPE demo route chosen; production remains important TODO
+
+- Max proposed using `x-tt-env` to reach PPE for the immediate demo and explicitly
+  retained production deployment as an important TODO. The production release
+  and its SCM-metadata failure are deferred, not complete or cancelled.
+- Verified the gateway behavior using the production function hostname:
+  `/chats` returns 200 without the environment header (old production build),
+  but 401 with `x-tt-env: ppe_deploy_i18n_1` (authenticated PPE build).
+  `x-use-ppe: 1` is not required for that gateway test. With the correct shared
+  token, a malformed PPE Lookup returns the expected 400 instead of 401.
+- Created Consul trigger `e8a78dl9` (`larklish-tlb-consul`) through the normal
+  ByteFaaS console. API readback confirms enabled, ready, and metadata synced.
+- Public-route work must pin the demo path to authenticated PPE, including for
+  clients that omit the environment header. Route registration, API publishing
+  and review remain pending; no public route was submitted yet.
+- Max completed the Bits browser login and authorized the temporary Local
+  Network Access permission for Bits and further task-required sites.
+
+Important TODO: deploy the authenticated build to Singapore production through
+normal Bits, resolve the old final SCM check without skipping it, and verify
+production authentication before later switching the demo off PPE.
+
+- Official ByteFaaS Consul documentation independently confirms PPE access needs
+  only a production Consul trigger plus the environment header:
+  https://cloud.bytedance.net/docs/faas/docs/63d786117df7d2021dfc68e3/63e13a783d23a3021df0bf3c
+
+### 2026-09-15 — public PPE route registration awaiting review
+
+- Submitted normal API service registration ticket
+  [378704](https://cloud.tiktok-row.net/netlink/v2/main/business/ticket/378704?ti_business_id=10071827),
+  underlying NetLink ticket `326460` / flow `328875`. The console requires
+  `xi.zhang` for PSM-owner review, followed by business reviewer `wangchen.iven`.
+  This registers the existing PSM and does not request a policy exemption.
+- TLB service discovery was prepared in the route form: Consul, cluster
+  `faas-sg`, SG1 gateway weight 100, other gateway locations 0. The PSM resolves
+  to gateway endpoints including IPv6. This service configuration is still a
+  local form draft; no public route or TLB service is deployed.
+- The API registration review blocks API definitions and public-route publication.
+  Phone update, cellular verification, and soak remain pending. The Pixel is
+  attached, and its app data and token chain are unchanged.
+- Full evidence, the route plan, the review link, and the important production
+  TODO are in `docs/experiments/21-public-ppe-route.md`.
+
+Next: obtain the required ticket reviews, finish the annotated API routes and
+PPE pinning, verify public access, then update the phone and soak.
