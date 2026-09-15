@@ -3077,3 +3077,26 @@ config-file path and watch path, and no `railway up` release command.
 Commit checks: `./gradlew ktfmtFormat` and `uvx --system-certs ruff format tools`
 passed without source changes. ktfmt used the temporary formatting-only token
 setting; `local.properties` was restored and verified byte-for-byte unchanged.
+
+### 2026-09-15 — Railway initial region changed to US West
+
+- 🧭 Max questioned the Singapore default and selected US West after reviewing
+  its rationale. Singapore had been carried over from internal hosting; no
+  cloud-region latency comparison justified preferring it.
+- 🛠️ Updated the deployment plan, Layer 9 and research records to use one
+  always-running US West Metal replica in California (`us-west2`). Railway's
+  official region documentation confirms this identifier.
+- 🧪 Treat US West as the straightforward default near the demo phone. Record
+  cached and uncached Lookup durations and cellular Original-to-Update timings
+  during the existing acceptance checks. Compare Singapore only if measured
+  latency warrants it; no regional performance winner has been established.
+
+Next: execute the GitHub deployment plan in US West, then verify the public
+Backend and cellular behavior. This change updates documentation only; no cloud
+region was changed and no deployment was performed.
+
+Validation: the five changed Markdown files passed whitespace, code-fence,
+local-link and region-consistency checks. `./gradlew ktfmtFormat` and
+`uvx --system-certs ruff format tools` passed without source changes. The temporary
+formatting-only token setting was removed and `local.properties` was verified
+byte-for-byte unchanged.

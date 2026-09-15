@@ -289,15 +289,19 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 
 ### Layer 9 — Railway public demo 🚧 planned
 
-- **Host**: one always-running Railway service in Singapore
-  (`asia-southeast1-eqsg3a`), project `larklish`, service `backend`, environment
+- **Host**: one always-running Railway service in US West, California
+  (`us-west2`), project `larklish`, service `backend`, environment
   `production`. Hobby plan, one replica, Serverless disabled, initial limits
   1 vCPU / 512 MiB, and the existing in-memory cache. Hobby has a USD 5/month
   minimum including USD 5 usage; measure the bill against the USD 15/month target.
+- **Region rationale**: start near the West Coast demo phone. The earlier
+  Singapore choice was inherited from internal hosting, without a regional
+  latency comparison. Record Lookup and cellular Update timings during acceptance;
+  compare Singapore only if measured latency warrants it.
 - **Deployment**: connect GitHub `vegerot/larklish`, branch `main`, and enable
   automatic deployments. Use service root `/backend`, config-file path
   `/backend/railway.toml`, and watch path `/backend/**`. Railpack detects Go.
-  Planned `backend/railway.toml` records the builder, Singapore replica,
+  Planned `backend/railway.toml` records the builder, US West replica,
   `/v1/ping` health check (60 s startup timeout), and `ALWAYS` restart policy.
   Configure variables, sleeping and resource limits before deployment.
   Releases follow local checks → Sapling commit → push to `github`'s `main` →

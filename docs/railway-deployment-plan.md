@@ -1,6 +1,6 @@
 # Deploy Larklish on Railway
 
-Updated 2026-09-15 to use GitHub deployments. The original CLI-upload plan remains in version history.
+Updated 2026-09-15 to use GitHub deployments and one US West replica. The original CLI-upload plan remains in version history.
 
 ## 1. Target and defaults
 
@@ -14,7 +14,7 @@ Run the existing Go Backend as **one always-running Railway service**, with its 
 | Deployment source | GitHub `vegerot/larklish`, branch `main` |
 | Service root / watch path | `/backend` / `/backend/**` |
 | Railway config file | `/backend/railway.toml` |
-| Region | Singapore: `asia-southeast1-eqsg3a` |
+| Region | US West Metal, California: `us-west2` |
 | Replicas | One |
 | Serverless / sleeping | Disabled |
 | Initial resource limits | 1 vCPU, 512 MiB memory |
@@ -24,6 +24,8 @@ Run the existing Go Backend as **one always-running Railway service**, with its 
 | Storage | Existing in-memory cache; no volume or database |
 
 Hobby costs **at least $5/month**, including $5 of resource usage. Aim below the established $15/month target and configure a $15 usage alert. Actual cost will be measured after deployment. [Pricing](https://docs.railway.com/pricing/plans), [regions](https://docs.railway.com/deployments/regions).
+
+**Region choice:** start near the West Coast demo phone. Singapore was carried over from the internal deployment; no cloud-region latency comparison supported that choice. US West is an initial default, not a measured performance winner. Record Lookup and cellular Update timings during the acceptance checks. Compare Singapore with the same workload only if measured latency warrants it; the relevant path includes both Phone → Backend and Backend → Lark API.
 
 **Success:** the Pixel receives a Relay and its Full-text Update over cellular, with Wi-Fi and VPN disabled. The service remains available afterwards.
 
@@ -53,7 +55,7 @@ Use `railway variable set KEY --stdin --skip-deploys` for credentials, passing v
 3. Create the project and empty service using `railway init --name larklish` and `railway add --service backend`. Reuse an existing matching project if one was already created.
 4. Add `/Users/bytedance/code/github.com/vegerot/larklish/backend/railway.toml`, containing:
    - Railpack builder.
-   - One Singapore replica through `multiRegionConfig`.
+   - One US West replica (`us-west2`) through `multiRegionConfig`.
    - Health-check path `/v1/ping`, with a 60-second startup timeout.
    - Restart policy `ALWAYS`.
 5. Set the service root to `/backend`, the Railway Config File to `/backend/railway.toml`, and the watch path to `/backend/**`. The config-file path is relative to the repository root, independently of the service root.
@@ -84,12 +86,12 @@ Record the project, service, deployment ID, source revision, region and generate
 
 Before changing the phone:
 
-- Confirm deployment success, one replica, sleeping disabled, and the expected configuration.
+- Confirm deployment success, one replica in `us-west2`, sleeping disabled, and the expected configuration.
 - Verify HTTPS normally and require `/v1/ping` to identify a Linux Backend.
 - Verify missing/wrong Bearer tokens return **401** for `/lookup` and `/chats`.
 - Verify an authenticated incomplete Lookup returns **400**, and authenticated `/chats` returns its cache.
 - Replay the existing test Original using the phone’s current access token. Require `found`, matching Full text and English.
-- Exercise an uncached Lookup, cached Lookups and three concurrent requests. Require completion within the phone’s existing 30-second timeout.
+- Exercise an uncached Lookup, cached Lookups and three concurrent requests. Record durations and require completion within the phone’s existing 30-second timeout.
 - Leave the service idle for 15 minutes, then verify availability and cache retention.
 - Restart the deployment once. Confirm the domain stays unchanged and the cache rebuilds successfully.
 
@@ -106,7 +108,7 @@ Reuse the established test baseline: ordinary Go tests passed; the full corpus r
 3. Set the generated Railway URL in the Mac’s gitignored configuration. Build and install in place, preserving app data and `user-token.json`.
 4. Send clearly labeled synthetic messages to the existing **Larklish 测试群**: a short message, a long Chinese message, and a small burst.
 5. Verify Original → prompt Relay → Full-text Update for the truncated message.
-6. Repeat on cellular with Wi-Fi and VPN off. Confirm the Recorder identifies the Railway URL.
+6. Repeat on cellular with Wi-Fi and VPN off. Confirm the Recorder identifies the Railway URL and record the time from Original to Full-text Update.
 7. Check an existing direct-message Lookup and dismissal behavior.
 
 ### Operations and records
@@ -118,4 +120,4 @@ Reuse the established test baseline: ordinary Go tests passed; the full corpus r
 - Update the project plan, progress and research records to make Railway the current choice. Preserve the verbatim BytePlus plan as historical material.
 - Run the required formatters and documentation checks before committing the scoped configuration, helper and record changes.
 
-**Assumptions:** this remains a single-user demo that continues running afterwards; Singapore is the initial region; existing internal deployments remain available independently. Scale-to-zero and cache persistence are deferred until measurements justify them.
+**Assumptions:** this remains a single-user demo that continues running afterwards; US West is the initial region; existing internal deployments remain available independently. Scale-to-zero and cache persistence are deferred until measurements justify them.

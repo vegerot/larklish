@@ -2,10 +2,10 @@
 
 ## Decision
 
-**Use Railway with one always-running service and the existing in-memory cache.**
+**Use Railway with one always-running US West service and the existing in-memory cache.**
 Max accepted this recommendation and requested the
 [Railway deployment plan](../railway-deployment-plan.md), originally saved verbatim
-and now updated to use GitHub deployments.
+and now updated to use GitHub deployments in California (`us-west2`).
 This supersedes the [BytePlus VM plan](../byteplus-deployment-plan.md), which
 remains unchanged as history. No Railway deployment has been performed.
 
@@ -69,6 +69,20 @@ has been run.
   pass the existing public-Backend and cellular acceptance checks. No Railway
   GitHub connection or deployment has been tested yet.
 
+## Region decision
+
+Start with one US West Metal replica in California (`us-west2`), near the West
+Coast demo phone. The original Singapore choice continued the internal deployment
+location; it was not supported by a comparison of cloud-region latency. The
+earlier Mac tests verified Lark API functionality and did not locate its processing.
+
+US West is the initial default, not a measured performance winner. Record cached
+and uncached Lookup durations and cellular Original-to-Update timings in the
+existing acceptance checks. Compare Singapore with the same workload only if
+measured latency warrants it, accounting for both Phone → Backend and Backend →
+Lark API. Railway supports changing regions while retaining the domain.
+[Region documentation](https://docs.railway.com/deployments/regions).
+
 ## Cache preservation and scale-to-zero
 
 Inspected `backend/fetcher.go`: the cache contains chat-name/Sender-to-chat-ID
@@ -105,7 +119,7 @@ selected later, rather than reasons to implement speculative retries now.
 - The existing Backend supports `PORT`, binds on all interfaces, reads its
   credentials from environment variables, and exposes `/v1/ping`. No application
   rewrite is expected for Railway.
-- Singapore is available as `asia-southeast1-eqsg3a`. Railway's
+- The selected US West region is `us-west2`. Railway's
   [configuration reference](https://docs.railway.com/config-as-code/reference)
   documents `multiRegionConfig`, health checks and `ALWAYS` restart policy.
   Sleeping and resource limits will be set in service settings.
