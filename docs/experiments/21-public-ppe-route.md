@@ -8,6 +8,24 @@ Singapore production deployment as an important TODO. It is not complete.
 Public base URL: `https://shop.tiktokglobalshop.com/_/test/demo/larklish`.
 The public route is not deployed; the phone still has its previous configuration.
 
+## Resume here
+
+Last verified state from the September 15 investigation:
+
+| Work | State / next action |
+| --- | --- |
+| Authenticated Backend | Published to ByteDance origin and tested in Singapore PPE |
+| Consul trigger | Ready; do not recreate it |
+| API Management registration | Ticket `378704` awaits `xi.zhang`, then `wangchen.iven` |
+| TLB service registration | Local form draft only; not deployed |
+| Public route | Not published; finish API annotations and the route review after registration |
+| Phone update and cellular soak | Pending public routing; preserve app data and the user-token chain |
+| Authenticated production deployment | **Important TODO**; Bits SCM-metadata failure remains unresolved |
+| Restriction to Max's Lark identity | Proposed additional check; not implemented or selected for immediate work |
+
+The immediate blocker is external API-registration review. Completing that review
+permits the next registration steps; it does not itself expose the HTTP endpoint.
+
 ## Verified
 
 - Authentication commit `952abda5d0965ae29ad84ed6b4ced8a8ea168222` is on ByteDance
@@ -55,6 +73,17 @@ exact PSM and namespace being registered.
 The normal route form requires API registration and interface annotations before
 publishing. There are no existing Larklish routes among the domain's 37 routes.
 
+The two warnings in Max's screenshot refer to different records:
+
+| Console warning | Required record |
+| --- | --- |
+| PSM must be published via API | The existing PSM in NetLink API Management, owned by the business line; this is ticket `378704` |
+| PSM is not registered in the TLB cluster | A TLB Backend entry describing service discovery and the FaaS cluster |
+
+The later route change maps the temporary public path to that Backend entry.
+No new Bits Space is needed. An incorrect Bits URL redirected to Space creation
+during login recovery; nothing was created there.
+
 The open route form contains a **local draft** of the TLB service configuration:
 Consul discovery, backend cluster `faas-sg`, SG1 gateway weight 100, other gateway
 locations 0, default load-balancing algorithm, no protocol conversion. A live TLB
@@ -63,14 +92,21 @@ may be lost if the browser form is closed.
 
 ## Remaining route work
 
-After registration approval, define and annotate these HTTP APIs, then publish
-their routes through NetLink's required review:
+After registration approval, define and annotate the APIs that will be public,
+then publish their routes through NetLink's required review. The Backend API
+inventory is:
 
 | External path suffix | Method | Backend path | Authentication |
 | --- | --- | --- | --- |
 | `/lookup` | POST | `/lookup` | Existing Bearer token |
 | `/chats` | GET | `/chats` | Existing Bearer token |
 | `/v1/ping` | GET | `/v1/ping` | Public health probe |
+
+The initial route proposal included all three paths. During the security
+discussion, the recommendation was narrowed to exposing only `/lookup`: the
+phone does not need `/chats`, and the FaaS health probe can keep using the direct
+function endpoint. This narrower public scope remains a proposal to confirm
+before publication; no route was changed during that discussion.
 
 - Restrict routing to the chosen temporary base path. Strip
   `/_/test/demo/larklish` before forwarding to the Backend.
@@ -81,12 +117,82 @@ their routes through NetLink's required review:
   must not become public through this route.
 - Review the resulting configuration diff, ensuring the existing 37 routes and
   DNS records are unchanged. Complete the required external review.
-- Verify the public health probe, missing/wrong/correct token behavior, and a
-  Lookup using an existing test message. Do not send a new message without Max's
-  authorization.
+- Verify missing/wrong/correct token behavior and a Lookup using an existing
+  test message. Verify that paths excluded from the public route cannot reach
+  the Backend. Do not send a new message without Max's authorization.
 - Only after public connectivity works, set the phone's Backend URL, build and
   install the APK as an update, preserve app data and its existing user-token
   chain, verify on cellular with Wi-Fi and VPN off, then soak.
+
+## Authentication discussion
+
+The implemented Bearer token is a shared secret. It permits whoever possesses
+it; it does not establish that the caller is Max. The token is embedded in the
+APK, so possession of that APK can expose the credential. Keep the generated
+value in gitignored `local.properties`; never print it or commit it.
+
+A proposed stronger account restriction is to validate the phone's existing
+Lark user token through Lark's identity API, then compare the returned stable
+user ID with Max's configured ID. This would reuse the existing login. It has
+not been implemented, and compatibility with this app's token/scopes still needs
+verification. Do not describe the current Backend as enforcing a Max-only
+identity allowlist.
+
+[TLB SSO documentation](https://cloud.bytedance.net/docs/netlink/docs/653a37a304438602f814d09a/6707f21e20353102ea1665d6)
+states that successful SSO authentication supplies `X-Bytedance-User`, but failed
+authentication does not itself block the request. The Backend would still need
+to enforce authentication and the allowed identity. No SSO configuration changed.
+
+## TLB canary investigation
+
+Max asked whether the canary header could replace release approval. The headers
+involved have different purposes:
+
+| Header | Purpose |
+| --- | --- |
+| `Authorization: Bearer <token>` | Authenticate to the Backend |
+| `x-tt-env: ppe_deploy_i18n_1` | Select the PPE Backend environment |
+| `x-tlb-canary: 1` | Select a TLB instance with the canary routing configuration |
+| `get-svc: 2` | Inspect the second TLB hop when debugging canary forwarding |
+
+[Official canary instructions](https://cloud.bytedance.net/docs/netlink/docs/653a37a304438602f814d09a/67f8e929118a1305014b4600)
+confirm that `x-tlb-canary: 1` forwards to instances where the small-traffic
+release is already in progress. It does not deploy an unsaved route draft.
+Canary instances also carry ordinary traffic, so this header does not make a
+route private or provide authentication.
+
+Read-only inspection of existing [ticket `1105927`](https://cloud.tiktok-row.net/tlb3/ticket/1105927)
+for this same domain and TLB cluster found this completed sequence:
+`review` → `canary` → `full` → `close`. Review completed July 10 at 02:33:40 UTC;
+canary started at 02:34:12 UTC. This is evidence from an existing batch dynamic
+configuration ticket, not the future Larklish route ticket. Inspect the new
+ticket's actual stages when it exists; do not claim an unverified exception.
+The separate API-registration review remains required now.
+
+The canary instructions also document incompatibility with forwarding through
+the PPE/BOE proxy selected by `x-use-ppe`, and with `x-schedule-vdc`. The direct
+FaaS gateway test needed only `x-tt-env`; verify the final TLB-to-FaaS path rather
+than assuming that every combination of environment and canary headers works.
+No canary configuration was deployed during this investigation.
+
+## Continuation constraints
+
+- Use `--site i18n-tt --vregion Singapore-Central` for the FaaS resources.
+- For production changes, recheck IAM's permitted window. The verified user
+  timezone is `America/Los_Angeles`; working-day windows are 09–12, 13–18, and
+  19–22. Max chose the ordinary window, without a policy exemption.
+- Recheck ADB access to Pixel `08041JEC218600` before phone work. Its signing
+  certificate previously matched the built APK; preserve its existing app data.
+- The remote Chrome endpoint is devbox `localhost:9222`, profile
+  `~/.cache/sa-tea-chrome-profile`; the Mac viewer forwards local port 9223 to it.
+  Rediscover page IDs. Local-network permissions granted through CDP are
+  temporary and need the permission connection to remain open. Max authorized
+  Bits and further task-required browser permissions.
+- Do not send reviewers direct messages, send test messages, or request another
+  policy exemption without explicit authorization. Normal review-ticket
+  submission is already authorized. Do not create another timer.
+- Keep unrelated untracked files and worktrees intact. Publish to ByteDance
+  `origin`, not the GitHub remote.
 
 ## Important production TODO
 

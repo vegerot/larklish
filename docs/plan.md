@@ -366,14 +366,18 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
   to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
   to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
-- [ ] **A public name for the Backend (TLB), now in progress.** Enable the production
-  Consul trigger, register the PSM and FaaS cluster in the appropriate TLB cluster,
-  and configure public HTTPS through NetLink with the required review. This is
-  service-discovery routing. The temporary path is
+- [ ] **A public name for the Backend (TLB), now blocked on registration review.**
+  The production Consul trigger is ready. API Management registration ticket
+  `378704` requires `xi.zhang`, then `wangchen.iven`. Complete that registration,
+  register the PSM and FaaS cluster in TLB, and configure public HTTPS through
+  NetLink with the required review and service-discovery routing. The temporary path is
   `https://shop.tiktokglobalshop.com/_/test/demo/larklish`. Pin it to authenticated
   PPE `ppe_deploy_i18n_1`, preserve the Bearer header, and strip the temporary path
   prefix before forwarding to the Backend. Until public access is verified on
-  cellular, retain the phone's existing configuration.
+  cellular, retain the phone's existing configuration. `x-tlb-canary: 1` can test
+  a configuration already deployed to TLB canary instances; it does not publish
+  a route or replace the pending registration approval. The exact records,
+  evidence, and next steps are in [Experiment 21](experiments/21-public-ppe-route.md).
 - [ ] **Important: authenticated Singapore production deployment.** Finish the
   normal Bits workflow and repair its final SCM-metadata check without skipping
   it. Verify production authentication before later moving the demo off PPE.
@@ -393,14 +397,17 @@ gap, not an oversight. The future backend removes most of them.
   the fix the day the seed token dies (7 days without a refresh).
 - The Preview translate and the token chain still run on the phone; only the Update path
   runs on the Backend (Layer 7).
-- Backend v0: no phone↔Backend auth; cleartext HTTP to the Mac (`usesCleartextTraffic`); the
-  app secret sits in `local.properties` on the phone (Preview translate) and on the Mac
-  (Full-text translate); the chat cache dies with the process. The Mac must be up and on the
-  office Wi-Fi for an Update to land — ByteFaaS removes that.
-- ByteFaaS (Layer 8): the app id and secret are plain env vars on the cluster (TSP is the
-  grown-up way); the trigger URL has no auth of its own — `/lookup` needs Max's user token in
-  the body, but `GET /chats` lists chat names to anyone on the intranet; the phone needs the
-  SealSuite VPN whenever it is off the office Wi-Fi (always-on VPN, no public domain).
+- Backend authentication now requires a Bearer token for `/lookup` and `/chats`;
+  the new Android build requires HTTPS. Both changes are tested, but only PPE
+  has the authenticated Backend deployed and the phone update remains pending.
+  The shared Backend token is embedded in the APK and admits any holder. A
+  server-side check allowing only Max's verified Lark identity was proposed;
+  it is not implemented or part of the settled immediate demo scope.
+- ByteFaaS (Layer 8): the app ID and secret remain plain cluster environment
+  variables, and the chat cache dies with the process. The direct trigger still
+  needs office-network/VPN access; the reviewed public route is unfinished.
+  The older production code remains unauthenticated until the production TODO
+  above is completed. Keep the demo route pinned to authenticated PPE.
 
 ## Commands
 

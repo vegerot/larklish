@@ -2779,3 +2779,62 @@ Next:
 - If pursuing iOS, first test Lark Notification → echo Preview → translate →
   Show Notification on the target iPhone, including locked operation. The
   existing deployment work above remains pending independently.
+
+### 2026-09-15 — approval, authentication, and canary questions resolved
+
+- 📋 Clarified the two registrations shown in NetLink. Ticket `378704` registers
+  the existing PSM in API Management under TTS_Global_Shop. The separate TLB
+  Backend record tells the load balancer how to discover `faas-sg`. Approving
+  the API registration does not publish the public route. No new PSM or Bits
+  Space was created; an incorrect Bits URL had redirected to Space creation.
+- 🚧 The last live ticket check still showed PSM-owner review waiting on
+  `xi.zhang`; business reviewer `wangchen.iven` follows. The immediate public-route
+  blocker is external review. The authenticated PPE Backend and Consul are ready;
+  public routing, phone installation, cellular verification, and soak are pending.
+- 🔐 Explained that the implemented Bearer token authenticates possession of a
+  secret, not Max's identity. Proposed validating the phone's existing Lark user
+  token and allowing only Max's verified user ID. That additional check is not
+  implemented or selected for immediate work. Also recommended publishing only
+  the phone's `/lookup` API; public exposure of cache/health endpoints is still
+  to be settled. TLB SSO does not reject unauthenticated requests by itself.
+- 🔎 Verified the correct canary header, `x-tlb-canary: 1`, in official NetLink
+  documentation. It selects a TLB canary configuration already deployed through
+  a ticket. It neither authenticates the caller nor deploys an unsaved route.
+  Canary instances also carry ordinary traffic.
+- 📖 Inspected existing same-domain/cluster TLB ticket `1105927` read-only. Its
+  completed stages were review → canary → full → close. This supports expecting
+  review before canary in the observed workflow; the future Larklish route
+  ticket's exact stages must still be checked. Canary testing does not resolve
+  the separate pending API registration. No release or review was bypassed.
+- 📝 Updated `docs/plan.md` and Experiment 21 with the current state, evidence
+  links, registration distinction, security proposals, and continuation details.
+  Replaced stale shortcut descriptions that presented missing authentication
+  and cleartext HTTP as properties of the new code.
+- 🧭 Reported the blocker directly when Max asked whether work was stuck. Further
+  alternative-workflow research should have a concrete question it can resolve;
+  it should not obscure the required review or imply that the demo is complete.
+
+Remaining TODOs, in order:
+
+1. Get ticket `378704` reviewed by `xi.zhang`, then `wangchen.iven`, and complete
+   the normal API registration flow.
+2. Finish the API definitions/annotations, TLB Backend registration, and the
+   reviewed temporary HTTPS route to authenticated PPE. Settle the public API
+   scope, preserve authentication, strip the path prefix, and verify PPE pinning.
+3. Verify authenticated Lookup through the public route using an existing test
+   message. Update the Pixel without clearing app data or replacing its token
+   chain, test with Wi-Fi and VPN off, and soak.
+4. **Important TODO: authenticated Singapore production deployment.** Finish
+   Bits task `2844150` / release `1229200073986`; repair the separate old final
+   SCM-metadata failure in job `3261393118` without skipping or force-completing
+   it. The previously approved Nario exemption is a different check.
+5. Decide whether to add the proposed Max-only Lark identity check. Do not report
+   it as already implemented.
+
+Preserve the generated secret in gitignored `local.properties`, completed
+instance limits and Consul configuration, and unrelated files/worktrees. The
+one-time wakeup already ran; no new timer or direct reviewer message was sent.
+
+Validation for this documentation update: local Markdown links and
+`git diff --check` passed; the required ktfmt and Ruff formatters passed without
+changing source files. No runtime code, deployment, or phone configuration changed.
