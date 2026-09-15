@@ -249,8 +249,8 @@ Layer 7's Backend runs on this Mac, so an Update lands only while the Mac is up 
 same network. ByteFaaS removes that. Planned 2026-09-03 from Tika, Aime, `spooky-bio` (Max's
 one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are rows above.
 
-- **Pipeline**: Codebase (`code.byted.org/max.coplan/larklish`, the new `origin`; GitHub is
-  the remote `github`, an artifact) → SCM (`oec/seller/larklish`: runs `build.sh` at the repo
+- **Pipeline**: Codebase (`code.byted.org/max.coplan/larklish`, the default remote;
+  GitHub is the remote `github`, selected for Railway in Layer 9) → SCM (`oec/seller/larklish`: runs `build.sh` at the repo
   root in its Go image, tars `output/`, builds on every push to `main` — the trigger branch is set in the SCM console; `bytedcli scm repo create --git-trigger` only flips the switch) → ByteFaaS (PSM
   `coplan.lark.larklish` under `oec.seller.frontend`, runtime `native/v1` HTTP, cluster
   `faas-cn-north`, created from the SCM version, `run_cmd /opt/bytefaas/run.sh`).
@@ -294,11 +294,15 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `production`. Hobby plan, one replica, Serverless disabled, initial limits
   1 vCPU / 512 MiB, and the existing in-memory cache. Hobby has a USD 5/month
   minimum including USD 5 usage; measure the bill against the USD 15/month target.
-- **Deployment**: `railway up backend --path-as-root --service backend` uploads
-  only the Backend directory. Railpack detects Go; the service build root is `/`.
+- **Deployment**: connect GitHub `vegerot/larklish`, branch `main`, and enable
+  automatic deployments. Use service root `/backend`, config-file path
+  `/backend/railway.toml`, and watch path `/backend/**`. Railpack detects Go.
   Planned `backend/railway.toml` records the builder, Singapore replica,
   `/v1/ping` health check (60 s startup timeout), and `ALWAYS` restart policy.
-  Configure sleeping and resource limits in service settings before deployment.
+  Configure variables, sleeping and resource limits before deployment.
+  Releases follow local checks → Sapling commit → push to `github`'s `main` →
+  Railway deployment. No separate GitHub Actions deployment workflow is needed.
+  Use CLI/MCP for configuration and operations, and verify each deployed commit.
 - **Public address**: generate one Railway domain targeting `PORT=8787` and
   retain it across releases. Railway manages HTTPS and certificate renewal.
   Preserve the existing HTTP protocol and Bearer authentication. The selected
@@ -306,8 +310,9 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 - **Credentials**: the existing Backend token is still in devbox's gitignored
   `local.properties`; the Mac's copy lacks that entry. Copy only that property
   to the Mac and reuse it in Railway, preserving the phone's user-token chain.
-- **Sequence**: credential sync → Railway account/service configuration → source
-  deployment → generated HTTPS domain → authenticated Lookup → in-place phone
+- **Sequence**: credential sync → Railway account/service configuration → push
+  the configuration to GitHub → connect the repository and deploy → generated
+  HTTPS domain → authenticated Lookup → in-place phone
   update → cellular verification. CLI installation, all Railway setup and
   deployment, and phone migration remain pending.
 - **Later optimization**: both Railway and Fly have persistent volumes, and Fly

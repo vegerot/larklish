@@ -3040,3 +3040,40 @@ described above; the Mac's `local.properties` was restored to its original bytes
 Next: before making the repository public, remove `debug.keystore`, rewrite its
 history, and complete the privacy/confidentiality review. The Railway deployment
 work remains otherwise unchanged.
+
+### 2026-09-15 — Railway plan updated to deploy from GitHub
+
+- 🧭 Max selected GitHub deployments after comparing them with local CLI
+  uploads. The normal release is now local checks → Sapling commit → push to
+  GitHub `main` → Railway automatic deployment. This ties releases to pushed
+  commits and removes the separate upload step.
+- 🔎 Verified the `github` remote is `vegerot/larklish`, whose default branch is
+  `main`; the default remote still points to Codebase. Reviewed Railway's
+  official GitHub deployment and monorepo documentation. No GitHub Actions
+  deployment workflow is needed, and none currently exists in this working copy.
+- 🛠️ Planned service root `/backend`, config-file path
+  `/backend/railway.toml`, and watch path `/backend/**`. Configure credentials
+  and service settings before the first deployment, then verify its source
+  commit and Go build root. CLI/MCP remain useful for configuration and operations.
+- 📝 Updated `railway-deployment-plan.md`, Layer 9 in `plan.md`, and Experiments
+  23 and 25. The original verbatim Railway plan remains in version history;
+  the BytePlus plan is unchanged. Existing runtime, token, cache, phone and
+  acceptance-check decisions remain in place.
+- The earlier audit remains a separate record: no tracked live Lark credentials
+  were found, but it flagged `debug.keystore` and documentation review. GitHub
+  currently reports the repository as public. This plan update does not change
+  visibility or perform repository cleanup.
+
+Next: execute the updated Railway plan: targeted credential sync → account and
+service setup → push the configuration to GitHub → connect and deploy → public
+Backend checks → phone migration and cellular verification. No Railway resources,
+GitHub integration, deployment, credential changes or source push were performed
+for this plan update.
+
+Validation: all five changed Markdown files passed whitespace, code-fence and
+local-link checks. The current deployment plan contains the GitHub source,
+config-file path and watch path, and no `railway up` release command.
+
+Commit checks: `./gradlew ktfmtFormat` and `uvx --system-certs ruff format tools`
+passed without source changes. ktfmt used the temporary formatting-only token
+setting; `local.properties` was restored and verified byte-for-byte unchanged.

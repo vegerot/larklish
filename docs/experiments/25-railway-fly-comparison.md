@@ -4,7 +4,8 @@
 
 **Use Railway with one always-running service and the existing in-memory cache.**
 Max accepted this recommendation and requested the
-[Railway deployment plan](../railway-deployment-plan.md), now saved verbatim.
+[Railway deployment plan](../railway-deployment-plan.md), originally saved verbatim
+and now updated to use GitHub deployments.
 This supersedes the [BytePlus VM plan](../byteplus-deployment-plan.md), which
 remains unchanged as history. No Railway deployment has been performed.
 
@@ -21,16 +22,19 @@ Reopening the provider comparison made Railway the simplest overall option.
 
 | Option | Setup and ongoing work for Larklish |
 | --- | --- |
-| Railway | Upload the Backend directory, configure variables and one replica, and generate a domain. Go compilation, HTTPS and certificate renewal are managed. |
+| Railway | Connect GitHub with `/backend` as the service root, configure variables and one replica, and generate a domain. Go compilation, HTTPS and certificate renewal are managed. |
 | Fly | Launch from Go source, review the generated Dockerfile and `fly.toml`, choose Machine size/count and stop behavior. Provides a stable `fly.dev` HTTPS address. |
 | BytePlus VM | Compile and transfer the executable, configure the VM/IP/security group, systemd, Nginx and Certbot, and maintain OS updates and certificate renewal. |
 
-Railway's [CLI uploads local source](https://docs.railway.com/cli/up), so our
-internal source remote does not require a new repository integration.
+The initial proposal used Railway's [CLI source upload](https://docs.railway.com/cli/up)
+to avoid a source-repository integration. The existing GitHub remote makes
+[native GitHub deployments](https://docs.railway.com/deployments/github-autodeploys)
+the simpler ongoing workflow: each release comes from a pushed commit and needs
+no separate local upload.
 [Railpack detects Go](https://railpack.com/languages/golang/) from `go.mod` and
 builds the executable. [Public networking](https://docs.railway.com/networking/public-networking)
 provides a generated domain and automatic certificates. Domain generation is a
-separate step: `railway up` does not expose the service publicly by itself.
+separate setup step.
 
 Fly does not require a handwritten Dockerfile: its
 [Go workflow](https://fly.io/docs/languages-and-frameworks/golang/) generates
@@ -45,6 +49,25 @@ Larklish bill. Fly charges for its selected Machine resources and traffic.
 Experiment 24 retains the observed BytePlus VM quote of about USD 13.90/month
 before traffic and taxes. No comparative cloud latency or billing experiment
 has been run.
+
+## GitHub deployment decision
+
+- Verified `sl paths`: `github` points to `vegerot/larklish`; the default remote
+  points to Codebase. GitHub reports the repository's default branch as `main`.
+- Set service root `/backend`, config-file path `/backend/railway.toml`, and
+  watch path `/backend/**`. Railway resolves the config-file path independently
+  of the service root. [Monorepo settings](https://docs.railway.com/deployments/monorepo).
+- Use Railway's GitHub App and automatic deployments from `main`. Run local
+  checks before committing and pushing. There is no GitHub Actions workflow in
+  this working copy; no deployment workflow is needed for the native integration.
+  Railway's optional **Wait for CI** requires a push-triggered GitHub Actions
+  workflow. [GitHub deployment controls](https://docs.railway.com/deployments/github-autodeploys).
+- CLI uploads operate on local files, which can include uncommitted changes.
+  GitHub deployments make the source commit explicit and remove the repeated
+  upload step. CLI/MCP remain useful for configuration and operations.
+- The first deployment must verify the pushed commit and Go build root, then
+  pass the existing public-Backend and cellular acceptance checks. No Railway
+  GitHub connection or deployment has been tested yet.
 
 ## Cache preservation and scale-to-zero
 
@@ -102,7 +125,8 @@ selected later, rather than reasons to implement speculative retries now.
 - The helper's `backend status` still queries internal SCM/ByteFaaS. Removing
   those hardcoded queries is part of implementation, not this documentation task.
 
-Next: follow the saved Railway plan, beginning with the existing token, CLI and
-Hobby setup. Then deploy, verify authenticated Lookup, update the phone in place,
+Next: follow the updated Railway plan, beginning with the existing token, CLI and
+Hobby setup. Push the configuration to GitHub, connect the repository and deploy,
+verify authenticated Lookup, update the phone in place,
 and verify cellular operation. Keep the existing internal deployments and the
 separate authenticated internal-production TODO.

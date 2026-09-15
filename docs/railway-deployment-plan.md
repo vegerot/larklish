@@ -1,5 +1,7 @@
 # Deploy Larklish on Railway
 
+Updated 2026-09-15 to use GitHub deployments. The original CLI-upload plan remains in version history.
+
 ## 1. Target and defaults
 
 Run the existing Go Backend as **one always-running Railway service**, with its current in-memory cache and a Railway-provided HTTPS domain.
@@ -9,6 +11,9 @@ Run the existing Go Backend as **one always-running Railway service**, with its 
 | Account | Max’s personal Railway workspace, Hobby plan |
 | Project / service | `larklish` / `backend` |
 | Environment | `production` |
+| Deployment source | GitHub `vegerot/larklish`, branch `main` |
+| Service root / watch path | `/backend` / `/backend/**` |
+| Railway config file | `/backend/railway.toml` |
 | Region | Singapore: `asia-southeast1-eqsg3a` |
 | Replicas | One |
 | Serverless / sleeping | Disabled |
@@ -43,7 +48,7 @@ Use `railway variable set KEY --stdin --skip-deploys` for credentials, passing v
 
 ### Railway setup
 
-1. Install the official Railway CLI; it is currently absent on the Mac.
+1. Install the official Railway CLI for configuration, logs and operations; it is currently absent on the Mac.
 2. Sign in and complete Hobby billing setup.
 3. Create the project and empty service using `railway init --name larklish` and `railway add --service backend`. Reuse an existing matching project if one was already created.
 4. Add `/Users/bytedance/code/github.com/vegerot/larklish/backend/railway.toml`, containing:
@@ -51,22 +56,27 @@ Use `railway variable set KEY --stdin --skip-deploys` for credentials, passing v
    - One Singapore replica through `multiRegionConfig`.
    - Health-check path `/v1/ping`, with a 60-second startup timeout.
    - Restart policy `ALWAYS`.
-5. Set Serverless **off** and the resource limits in service settings before the first deployment.
+5. Set the service root to `/backend`, the Railway Config File to `/backend/railway.toml`, and the watch path to `/backend/**`. The config-file path is relative to the repository root, independently of the service root.
+6. Set Serverless **off**, the resource limits and the credentials above before the first deployment.
+7. Connect Max's Railway account to GitHub and grant the Railway GitHub App access to `vegerot/larklish`. Attach the repository to the service during the deployment step below, after the configuration commit is on GitHub.
 
-Railpack detects the existing `go.mod` and builds the Go executable. Keep its automatic build/start commands. The upload will make the Backend directory the service’s root, so the service build root is `/`. [Go support](https://railpack.com/languages/golang/), [configuration reference](https://docs.railway.com/config-as-code/reference).
+Railpack detects `go.mod` in the `/backend` service root and builds the Go executable. Keep its automatic build/start commands. Railway's native GitHub integration handles deployment; no GitHub Actions deployment workflow or custom packaging pipeline is needed. [Go support](https://railpack.com/languages/golang/), [configuration reference](https://docs.railway.com/config-as-code/reference), [monorepo settings](https://docs.railway.com/deployments/monorepo), [GitHub connection](https://docs.railway.com/services#deploying-from-a-github-repo).
 
 ## 3. Deploy and verify the public Backend
 
 ### Deployment
 
-From the repository root:
+1. Run the applicable local checks and commit the deployment configuration with Sapling.
+2. Push the tested commit to the `github` remote's `main` branch. The default remote points to Codebase; a push there does not release the Railway Backend.
+3. Connect the Railway service source to `vegerot/larklish`, branch `main`, and enable automatic deployments. Confirm the root directory, config-file path, watch path and variables before applying the staged configuration and deploying the latest commit.
+4. Wait for Railway's build and deployment to succeed. Verify that the deployment's source commit matches the commit pushed to GitHub and that Railpack built the Go Backend from `/backend`.
+5. Generate the public domain:
 
 ```sh
-railway up backend --path-as-root --service backend
 railway domain --service backend --port 8787
 ```
 
-Upload only the Backend directory. Generate the domain once, then retain it across releases. Railway provisions and renews its HTTPS certificate. [Deployment CLI](https://docs.railway.com/cli/up), [domain CLI](https://docs.railway.com/cli/domain).
+Generate the domain once, then retain it across releases. Railway provisions and renews its HTTPS certificate. [GitHub deployments](https://docs.railway.com/deployments/github-autodeploys), [domain CLI](https://docs.railway.com/cli/domain).
 
 Record the project, service, deployment ID, source revision, region and generated URL.
 
@@ -102,7 +112,8 @@ Reuse the established test baseline: ordinary Go tests passed; the full corpus r
 ### Operations and records
 
 - Simplify `backend status` in [the helper](/Users/bytedance/code/github.com/vegerot/larklish/tools/larklish_helper.py) to report the configured Backend’s health, authentication and cache count. Remove its hardcoded SCM/ByteFaaS queries.
-- Subsequent releases use the same `railway up` command. Verify health and authenticated Lookup after each release; use Railway’s previous deployment for immediate rollback.
+- Subsequent releases follow **local checks → Sapling commit → push to GitHub `main` → Railway automatic deployment**. Watch paths restrict source-triggered releases to Backend changes; Android and documentation changes do not trigger a Backend deployment. Verify the deployed source commit, health and authenticated Lookup after each release; use Railway’s previous deployment for immediate rollback.
+- Use the Railway CLI or MCP tools for configuration, logs, metrics and restarts. GitHub remains the normal source for releases. There is currently no GitHub Actions workflow; enable Railway's **Wait for CI** only if a suitable push-triggered workflow is added later.
 - Inspect Railway’s logs, memory, CPU and usage estimate after the initial tests. Record the first complete billing measurement before considering sleep or persistent caching.
 - Update the project plan, progress and research records to make Railway the current choice. Preserve the verbatim BytePlus plan as historical material.
 - Run the required formatters and documentation checks before committing the scoped configuration, helper and record changes.

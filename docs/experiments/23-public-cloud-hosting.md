@@ -3,12 +3,15 @@
 ## Current decision
 
 Max selected **Railway with one always-running service and managed HTTPS** for
-the immediate demo and ongoing daily use. Follow the
+the immediate demo and ongoing daily use. Deploy from GitHub `vegerot/larklish`
+on `main`, with service root `/backend` and Backend-only watch paths. Follow the
 [saved Railway deployment plan](../railway-deployment-plan.md).
 [Experiment 25](25-railway-fly-comparison.md) compares Railway, Fly and the
 earlier BytePlus VM proposal, including the cache and sleeping options.
 [Experiment 24](24-volcano-byteplus.md) retains the BytePlus account checks, VM
 quote, employee-credit research and build/API experiments. Deployment is pending.
+The local-upload sketch below records the initial proposal; the current plan
+uses Railway's native GitHub deployment integration.
 
 ## Initial recommendation
 
