@@ -2760,3 +2760,22 @@ production authentication before later switching the demo off PPE.
 
 Next: obtain the required ticket reviews, finish the annotated API routes and
 PPE pinning, verify public access, then update the phone and soak.
+
+### 2026-09-15 — iOS 27 notification automation feasibility
+
+- 🔎 Reviewed Apple's WWDC26 Shortcuts session, release notes, notification and
+  translation APIs, and hands-on beta reports. iOS 27 can trigger on a selected
+  app's notification and pass Title/Subtitle/Body into an action; working input
+  is reported from developer beta 5 after earlier beta failures. This makes
+  Preview translation into a second English notification credible. Apple's
+  documented own-app notification APIs do not let Larklish replace Lark's Original
+  or inherit its tap/withdrawal behavior. Evidence, uncertainties, Backend reuse,
+  and the smallest phone experiment are in
+  `docs/experiments/22-ios-shortcuts-feasibility.md`. No iOS device test or
+  implementation was performed.
+
+Next:
+
+- If pursuing iOS, first test Lark Notification → echo Preview → translate →
+  Show Notification on the target iPhone, including locked operation. The
+  existing deployment work above remains pending independently.
