@@ -3024,3 +3024,19 @@ the BytePlus plan is byte-for-byte identical to its committed version.
 Commit checks: ktfmt and `uvx --system-certs ruff format tools` passed without
 source changes. ktfmt used the same temporary formatting-only token procedure
 described above; the Mac's `local.properties` was restored to its original bytes.
+
+### 2026-09-15 — public-release secret audit
+
+- 🔎 Audited the working copy and 141 locally available commits for credentials,
+  private keys, tokens, and common secret formats. No live Lark credential,
+  access token, refresh token, or `local.properties` was tracked. The live
+  `local.properties`, replay corpus, and generated APK remain ignored.
+- ⚠️ `debug.keystore` is tracked and contains an Android debug private signing
+  key. It is not a production signing identity, but must be removed and its
+  history rewritten before a public release. Also review the checked-in
+  experiments and `.claude/memory` for internal operational details and
+  notification-derived material.
+
+Next: before making the repository public, remove `debug.keystore`, rewrite its
+history, and complete the privacy/confidentiality review. The Railway deployment
+work remains otherwise unchanged.
