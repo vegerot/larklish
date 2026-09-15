@@ -291,18 +291,20 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 
 - **Host**: one always-running Railway service in US West, California
   (`us-west2`), project `larklish`, service `backend`, environment
-  `production`. Hobby plan, one replica, Serverless disabled, initial limits
-  1 vCPU / 512 MiB, and the existing in-memory cache. Hobby has a USD 5/month
-  minimum including USD 5 usage; measure the bill against the USD 15/month target.
+  `production`. Begin on the verified Trial, with one replica, Serverless
+  disabled, Trial's fixed 2 vCPU / 1 GB maximum, and the existing in-memory
+  cache. Measure usage against the USD 5 trial credit before choosing paid
+  service; the paid-service target remains below USD 15/month.
 - **Region rationale**: start near the West Coast demo phone. The earlier
   Singapore choice was inherited from internal hosting, without a regional
   latency comparison. Record Lookup and cellular Update timings during acceptance;
   compare Singapore only if measured latency warrants it.
 - **Deployment**: connect GitHub `vegerot/larklish`, branch `main`, and enable
-  automatic deployments. Use service root `/backend`, config-file path
-  `/backend/railway.toml`, and watch path `/backend/**`. Railpack detects Go.
-  Planned `backend/railway.toml` records the builder, US West replica,
-  `/v1/ping` health check (60 s startup timeout), and `ALWAYS` restart policy.
+  automatic deployments. Use service root `/backend` and watch path
+  `/backend/**`. Railpack detects Go. Native service settings define the builder,
+  US West replica and `/v1/ping` health check (60 s startup timeout). Trial uses
+  `ON_FAILURE` with up to 10 retries. New services cannot use `railway.toml`;
+  the live API rejected the earlier plan's config-file setting.
   Configure variables, sleeping and resource limits before deployment.
   Releases follow local checks → Sapling commit → push to `github`'s `main` →
   Railway deployment. No separate GitHub Actions deployment workflow is needed.
@@ -311,14 +313,14 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   retain it across releases. Railway manages HTTPS and certificate renewal.
   Preserve the existing HTTP protocol and Bearer authentication. The selected
   Lark API host remains `https://open.larksuite.com`.
-- **Credentials**: the existing Backend token is still in devbox's gitignored
-  `local.properties`; the Mac's copy lacks that entry. Copy only that property
-  to the Mac and reuse it in Railway, preserving the phone's user-token chain.
+- **Credentials**: the existing Backend token was copied from devbox into the
+  Mac's ignored `local.properties`, preserving every other property, and the
+  same token is configured in Railway. The phone's user-token chain is preserved.
 - **Sequence**: credential sync → Railway account/service configuration → push
   the configuration to GitHub → connect the repository and deploy → generated
   HTTPS domain → authenticated Lookup → in-place phone
-  update → cellular verification. CLI installation, all Railway setup and
-  deployment, and phone migration remain pending.
+  update → cellular verification. CLI authentication, project/service creation
+  and variables are complete; deployment and phone verification are in progress.
 - **Later optimization**: both Railway and Fly have persistent volumes, and Fly
   suspension can preserve RAM. Continuous running is the simplest initial
   choice, not a technical necessity for cache preservation. Defer sleeping and
@@ -328,6 +330,8 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   [BytePlus plan](byteplus-deployment-plan.md) remains verbatim as history;
   [Experiment 24](experiments/24-volcano-byteplus.md) retains its research and
   [Experiment 25](experiments/25-railway-fly-comparison.md) explains the new choice.
+  [Experiment 26](experiments/26-railway-deployment.md) records implementation
+  steps, live platform constraints and verification results.
 
 ### Later (not experiments)
 

@@ -8,22 +8,22 @@ Run the existing Go Backend as **one always-running Railway service**, with its 
 
 | Setting | Choice |
 |---|---|
-| Account | Max’s personal Railway workspace, Hobby plan |
+| Account | Max’s personal Railway workspace, verified Trial initially |
 | Project / service | `larklish` / `backend` |
 | Environment | `production` |
 | Deployment source | GitHub `vegerot/larklish`, branch `main` |
 | Service root / watch path | `/backend` / `/backend/**` |
-| Railway config file | `/backend/railway.toml` |
+| Deployment configuration | Native Railway service settings, recorded in Experiment 26 |
 | Region | US West Metal, California: `us-west2` |
 | Replicas | One |
 | Serverless / sleeping | Disabled |
-| Initial resource limits | 1 vCPU, 512 MiB memory |
+| Initial resource limits | Trial's fixed maximum: 2 vCPU, 1 GB memory |
 | Internal port | `8787` |
 | Health check | `GET /v1/ping` |
-| Restart policy | `ALWAYS` |
+| Restart policy | `ON_FAILURE`, up to 10 retries (Trial) |
 | Storage | Existing in-memory cache; no volume or database |
 
-Hobby costs **at least $5/month**, including $5 of resource usage. Aim below the established $15/month target and configure a $15 usage alert. Actual cost will be measured after deployment. [Pricing](https://docs.railway.com/pricing/plans), [regions](https://docs.railway.com/deployments/regions).
+Start on the verified Trial at Max's request: up to 30 days or $5 of usage, with full network access. Measure actual usage before deciding on paid service. Hobby costs **at least $5/month**, including $5 of resource usage; the established paid-service target remains below $15/month. Railway rejected the $15 usage alert because it requires an active subscription, so defer that alert until a paid plan is chosen. [Trial](https://docs.railway.com/pricing/free-trial), [pricing](https://docs.railway.com/pricing/plans), [regions](https://docs.railway.com/deployments/regions).
 
 **Region choice:** start near the West Coast demo phone. Singapore was carried over from the internal deployment; no cloud-region latency comparison supported that choice. US West is an initial default, not a measured performance winner. Record Lookup and cellular Update timings during the acceptance checks. Compare Singapore with the same workload only if measured latency warrants it; the relevant path includes both Phone → Backend and Backend → Lark API.
 
@@ -50,16 +50,16 @@ Use `railway variable set KEY --stdin --skip-deploys` for credentials, passing v
 
 ### Railway setup
 
-1. Install the official Railway CLI for configuration, logs and operations; it is currently absent on the Mac.
-2. Sign in and complete Hobby billing setup.
+1. Use the official Railway CLI for configuration, logs and operations. It is installed at `~/.railway/bin/railway`; add that directory to PATH where needed.
+2. Use the existing authenticated personal workspace and verified Trial. Billing setup is deferred until needed for continued operation.
 3. Create the project and empty service using `railway init --name larklish` and `railway add --service backend`. Reuse an existing matching project if one was already created.
-4. Add `/Users/bytedance/code/github.com/vegerot/larklish/backend/railway.toml`, containing:
+4. Configure the native Railway service settings through the CLI/API:
    - Railpack builder.
    - One US West replica (`us-west2`) through `multiRegionConfig`.
    - Health-check path `/v1/ping`, with a 60-second startup timeout.
-   - Restart policy `ALWAYS`.
-5. Set the service root to `/backend`, the Railway Config File to `/backend/railway.toml`, and the watch path to `/backend/**`. The config-file path is relative to the repository root, independently of the service root.
-6. Set Serverless **off**, the resource limits and the credentials above before the first deployment.
+   - Restart policy `ON_FAILURE`, with 10 retries under Trial.
+5. Set the service root to `/backend` and the watch path to `/backend/**`. Leave the Railway Config File unset: the live platform rejects `railway.toml` for new services as of 2026-08-28. Record the native settings and their readback in [Experiment 26](experiments/26-railway-deployment.md).
+6. Set Serverless **off** and configure the credentials above before deployment. Trial fixes the maximum resources at 2 vCPU / 1 GB; measure actual consumption. If a paid plan is later selected, apply the originally planned 1 vCPU / 512 MiB limits and `ALWAYS` restart policy.
 7. Connect Max's Railway account to GitHub and grant the Railway GitHub App access to `vegerot/larklish`. Attach the repository to the service during the deployment step below, after the configuration commit is on GitHub.
 
 Railpack detects `go.mod` in the `/backend` service root and builds the Go executable. Keep its automatic build/start commands. Railway's native GitHub integration handles deployment; no GitHub Actions deployment workflow or custom packaging pipeline is needed. [Go support](https://railpack.com/languages/golang/), [configuration reference](https://docs.railway.com/config-as-code/reference), [monorepo settings](https://docs.railway.com/deployments/monorepo), [GitHub connection](https://docs.railway.com/services#deploying-from-a-github-repo).
@@ -70,7 +70,7 @@ Railpack detects `go.mod` in the `/backend` service root and builds the Go execu
 
 1. Run the applicable local checks and commit the deployment configuration with Sapling.
 2. Push the tested commit to the `github` remote's `main` branch. The default remote points to Codebase; a push there does not release the Railway Backend.
-3. Connect the Railway service source to `vegerot/larklish`, branch `main`, and enable automatic deployments. Confirm the root directory, config-file path, watch path and variables before applying the staged configuration and deploying the latest commit.
+3. Connect the Railway service source to `vegerot/larklish`, branch `main`, and enable automatic deployments. Confirm the root directory, watch path and variables before applying the staged configuration and deploying the latest commit.
 4. Wait for Railway's build and deployment to succeed. Verify that the deployment's source commit matches the commit pushed to GitHub and that Railpack built the Go Backend from `/backend`.
 5. Generate the public domain:
 

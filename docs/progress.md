@@ -3100,3 +3100,12 @@ local-link and region-consistency checks. `./gradlew ktfmtFormat` and
 `uvx --system-certs ruff format tools` passed without source changes. The temporary
 formatting-only token setting was removed and `local.properties` was verified
 byte-for-byte unchanged.
+
+### 2026-09-15 — Railway implementation started
+
+Max authorized implementation of the US West/GitHub plan and requested a record
+of every step. [Experiment 26](experiments/26-railway-deployment.md) is the live
+execution log, including commands, results and plan changes. Shell commands now
+run in Max's existing integrated-terminal tmux pane (`0:0.0`). Railway CLI
+5.57.2 is installed and authenticated to the personal workspace; the Pixel is
+connected. Deployment and phone verification are in progress.

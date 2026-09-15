@@ -9,6 +9,12 @@ and now updated to use GitHub deployments in California (`us-west2`).
 This supersedes the [BytePlus VM plan](../byteplus-deployment-plan.md), which
 remains unchanged as history. No Railway deployment has been performed.
 
+Implementation is now recorded in [Experiment 26](26-railway-deployment.md).
+Max chose verified Trial initially. The live platform rejects `railway.toml`
+for new services, so the updated plan uses native service settings; Trial fixes
+the resource maxima and limits restarts to `ON_FAILURE` with 10 retries. The
+config-file and Hobby details below record the earlier proposal.
+
 The requirements remain: demo ASAP, keep it available afterwards, stable public
 HTTPS reachable from the Pixel on cellular without VPN, and a target below
 USD 15/month. Up to USD 35/month was allowed if necessary for the demo.

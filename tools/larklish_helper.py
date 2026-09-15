@@ -14,7 +14,7 @@
     tools/larklish-helper phone status                  # adb pre-flight: app, listener, idle, Wi-Fi, reverse
     tools/larklish-helper phone log -n 20               # the app's logcat, keys shortened (--clear resets)
     tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
-    tools/larklish-helper backend status                # ping, newest SCM build, what ByteFaaS runs
+    tools/larklish-helper backend status                # configured Backend health, authentication, cache
     tools/larklish-helper replay fetch                  # pull the corpus the Go replay test scores
     tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish, side by side
     tools/larklish-helper token --write                 # credentials from lark-cli's store
@@ -45,7 +45,6 @@ import os
 import pathlib
 import re
 import shlex
-import shutil
 import subprocess
 import sys
 import time
@@ -237,31 +236,8 @@ def phone_status() -> dict[str, str]:
     }
 
 
-SCM_REPO = "oec/seller/larklish"
-FAAS_SERVICE, FAAS_REGION, FAAS_CLUSTER = "jmc8tl6s", "cn-north", "faas-cn-north"
-
-
-def bytedcli(*args: str) -> Any:
-    """One `bytedcli --json …` call, its `data`."""
-    if not shutil.which("bytedcli"):
-        sys.exit("bytedcli is not installed (npm install -g @bytedance-dev/bytedcli)")
-    out = subprocess.run(
-        ["bytedcli", "--json", *args], capture_output=True, text=True, check=False
-    )
-    try:
-        reply = json.loads(out.stdout)
-    except json.JSONDecodeError:
-        sys.exit(
-            f"bytedcli {' '.join(args)}: {(out.stderr or out.stdout).strip()[:300]}"
-        )
-    if reply.get("error"):
-        sys.exit(f"bytedcli {' '.join(args)}: {reply['error'].get('message')}")
-    return reply["data"]
-
-
 def backend_status() -> dict[str, str]:
-    """What is live (Layer 8): the trigger URL's answer, the newest SCM version, and the code the
-    ByteFaaS cluster runs — with a note when a newer build is not deployed."""
+    """The configured Backend's health, Bearer authentication and chat-cache size."""
     started = time.monotonic()
     try:
         with urllib.request.urlopen(backend_url() + "/v1/ping", timeout=20) as resp:
@@ -270,51 +246,14 @@ def backend_status() -> dict[str, str]:
             )
     except OSError as e:
         ping = f"FAILED: {e}"
-    newest = bytedcli(
-        "scm",
-        "repo",
-        "version",
-        "list",
-        SCM_REPO,
-        "--branch",
-        "main",
-        "--page-size",
-        "1",
-    )["versions"][0]
-    faas = bytedcli(
-        "faas",
-        "cluster",
-        "get",
-        "--service-id",
-        FAAS_SERVICE,
-        "--region",
-        FAAS_REGION,
-        "--cluster",
-        FAAS_CLUSTER,
-    )
-    cluster, release = faas["cluster"], faas.get("latestRelease") or {}
-    replicas = ", ".join(
-        f"{zone} {lim['min']}–{lim['max']}"
-        for zone, lim in cluster["replicaLimit"].items()
-        if lim["max"]
-    )
-    deployed = faas["service"]["source"]  # <scm repo>:<version>
-    status = {
-        "backend": f"{backend_url()}  {ping}",
-        "scm": f"{SCM_REPO} {newest['version']}  {newest['status']}  ({newest['origin']}, "
-        f"{newest['base_commit_hash'][:7]}, {newest['finish_date'] or 'running'})  "
-        f"{newest['desc'].splitlines()[0][:70]}",
-        "bytefaas": f"{FAAS_SERVICE}/{FAAS_CLUSTER}  {cluster['status']}  revision "
-        f"{cluster['codeRevisionNumber']} = {deployed}  timeout {cluster['requestTimeoutSeconds']} s"
-        f"  replicas {replicas or 'none'}",
-        "release": f"{release.get('id', '-')} {release.get('status', '-')} {release.get('updatedAt', '')}",
-    }
-    if newest["status"] == "build_ok" and deployed != f"{SCM_REPO}:{newest['version']}":
-        status["note"] = (
-            f"newer build not deployed: {newest['version']} — "
-            f"bytedcli faas revision scm create --service-id {FAAS_SERVICE} "
-            f"--scm-repo {SCM_REPO} --scm-version {newest['version']}, then faas release create"
-        )
+    status = {"backend": backend_url(), "health": ping}
+    try:
+        cache = read_chat_cache()
+    except OSError as e:
+        status["auth"] = f"FAILED: {e}"
+    else:
+        status["auth"] = "accepted by /chats"
+        status["cache"] = f"{len(cache)} chat mappings"
     return status
 
 
@@ -1180,7 +1119,7 @@ def cmd_phone(args: argparse.Namespace) -> None:
             print(f"screenshot: {args.file}")
 
 
-# ── backend: what is live on ByteFaaS (Layer 8) ──────────────────────────────
+# ── backend: configured health, authentication and cache ───────────────────
 def cmd_backend(args: argparse.Namespace) -> None:
     for k, v in backend_status().items():
         print(f"{k:9} {v}")
@@ -1443,9 +1382,11 @@ def main() -> None:
     )
     f.set_defaults(fn=cmd_phone)
 
-    bk = group.add_parser("backend", help="what is live on ByteFaaS")
+    bk = group.add_parser(
+        "backend", help="configured Backend health and authentication"
+    )
     bk.add_subparsers(dest="act", required=True).add_parser(
-        "status", help="ping, the newest SCM build, the cluster's revision and replicas"
+        "status", help="health probe, Bearer authentication and chat-cache count"
     )
     bk.set_defaults(fn=cmd_backend)
 
