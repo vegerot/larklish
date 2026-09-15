@@ -264,9 +264,11 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
 - **The phone** uses the single HTTPS URL in `larklish.backendUrl`. The original
   ByteFaaS trigger requires office Wi-Fi or the SealSuite VPN. Max has now chosen
-  Singapore PPE plus public NetLink/TLB ingress for the immediate demo so the
-  phone can work off VPN. The demo route will select `ppe_deploy_i18n_1`; production
-  deployment remains an important TODO. The localhost/ADB reverse fallback is removed.
+  public-cloud hosting for the immediate demo, superseding the Singapore PPE plus
+  public NetLink/TLB route plan. Provider selection and deployment are pending;
+  `experiments/23-public-cloud-hosting.md` compares the options and recommends
+  Railway. Authenticated internal production deployment remains a separate
+  important TODO. The localhost/ADB reverse fallback is removed.
 - **Backend authentication**: `Authorization: Bearer <token>` protects `/lookup`
   and `/chats`; `/v1/ping` stays public for the FaaS health probe. Set the same
   generated value in the Backend's `LARKLISH_BACKEND_TOKEN` environment variable

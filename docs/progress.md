@@ -2838,3 +2838,40 @@ one-time wakeup already ran; no new timer or direct reviewer message was sent.
 Validation for this documentation update: local Markdown links and
 `git diff --check` passed; the required ktfmt and Ruff formatters passed without
 changing source files. No runtime code, deployment, or phone configuration changed.
+
+### 2026-09-15 — demo pivots to public-cloud hosting
+
+- 🧭 Max chose public-cloud hosting for the immediate demo. This supersedes the
+  PPE/public-route work as the demo's next step; existing internal resources and
+  tickets were not changed. Authenticated internal production remains a separate TODO.
+- 🔎 Inspected the Go Backend and researched official Railway, DigitalOcean App
+  Platform, GCP Cloud Run, and Volcano Engine veFaaS documentation. Recommend
+  Railway for direct local-source deployment and managed HTTPS; DigitalOcean App
+  Platform is the simplest of the three named providers. Preserve one running
+  instance and use `LARK_HOST=https://open.feishu.cn` on public hosting.
+- 📝 Recorded requirements, comparison, prices, proposed deployment experiment,
+  sources, and unverified items in `experiments/23-public-cloud-hosting.md`.
+  Provider selection, cloud deployment, and phone verification remain pending.
+  Documentation whitespace and local-link checks passed; no runtime tests were
+  needed for this research-only change.
+
+Next: select the public-cloud provider, deploy and verify an authenticated Lookup
+using an existing message, then update the phone without clearing app data and
+verify cellular operation with Wi-Fi and VPN off.
+
+### 2026-09-15 — BytePlus added to public-cloud comparison
+
+- 🔎 Verified BytePlus Function Service's Native HTTP runtime, reserved-instance
+  controls, and API Gateway trigger requirements. It fits the Backend, with a
+  startup-port setting, but adds gateway setup compared with Railway or
+  DigitalOcean App Platform. Railway remains the recommendation for simplicity.
+- 📝 Extended Experiment 23 with sources and uncertainty: the gateway beta/access
+  notice and Johor region list are dated March 2025; current account availability,
+  exact total pricing, and HTTPS certificate setup were not verified. No cloud
+  or phone state changed. Documentation whitespace and local-link checks passed.
+- 📦 Prepared the three documentation files for Max's requested commit and push
+  to ByteDance `origin/main`. The required ktfmt and Ruff formatters passed
+  without source changes. Unrelated untracked files are excluded.
+
+Next: select the public-cloud provider and run the authenticated deployment and
+cellular verification experiment described in Experiment 23.
