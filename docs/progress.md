@@ -3285,3 +3285,87 @@ No infrastructure, phone configuration, commit or push was changed for this hand
 Follow-up: Max authorized commit and push to GitHub for the helper changes and
 this handoff. All 26 helper tests, Ruff format/check and ktfmt passed. Devbox
 should obtain the published commit before starting Experiment 28.
+
+### 2026-09-16 — internal API defined; first public-route ticket awaits review
+
+- 🔎 Rechecked the devbox and live infrastructure. GitHub handoff commit
+  `ddfdd93` is present and the working copy started clean. API Service Management
+  confirms `coplan.lark.larklish` is registered. Production Consul trigger
+  `e8a78dl9` is enabled, ready and metadata-synced; PPE `mmyp0srw` remains on
+  authenticated SCM `1.0.0.13` and production `kpb2dvsn` on older `1.0.0.11`.
+- 🛠️ Defined and annotated only `POST /_/test/demo/larklish/lookup`: API service
+  `127961`, API `1912054`, App filing type, owner `max.coplan`. `/chats` and
+  `/v1/ping` remain excluded. The prefixed API path is required because API-release
+  mode publishes the definition's path directly.
+- 📋 Submitted normal NetLink ticket `378806`, TLB ticket `1260366`, underlying
+  ticket/flow `326501` / `340141`. Its diff adds one exact-match location and a
+  Consul TLB Backend for `coplan.lark.larklish` / `faas-sg`, SG1 100 and other
+  locations 0. It changes no DNS or existing route and has auto-deploy disabled.
+- 🔐 The first ticket intentionally has no rewrite or environment directive.
+  Both production and PPE gateways return 404 for the prefixed path, so approval
+  cannot expose the older unauthenticated production Backend. A second reviewed
+  Classic-mode change will rewrite to `/lookup` and force
+  `x-tt-env: ppe_deploy_i18n_1` before functional verification.
+- 🧭 The newly observed workflow is review → canary → canary DQ → full → full DQ
+  → close. Review contains business review by `wangchen.iven`, then resources
+  ownership review. Max's Approve button is disabled during the current business
+  review, so this is an external approval gate despite his TLB access. No reviewer
+  was changed or messaged, and no check was bypassed.
+
+Next: get normal business and resources-ownership review on ticket `378806`,
+complete ticket `1260366` without skipping DQ, verify the prefixed route remains
+404, then submit the separate rewrite/PPE-header ticket. Railway and the phone
+remain unchanged; production Bits work stays deferred until public PPE succeeds.
+
+### 2026-09-16 — first internal route deployed; rewrite awaits release window
+
+- ✅ Completed NetLink ticket `378806` / TLB ticket `1260366` through review,
+  four-pod canary, canary quality inspection, required 0% → 10% → 30% → 100%
+  observation stages, full quality inspection and closure. All 530 full-release
+  pods succeeded; no stage was skipped or force-completed.
+- 🔎 `x-tlb-canary: 1` selected the new route after canary succeeded. After the
+  full release, ordinary and canary requests both reach
+  `coplan.lark.larklish` and return the expected plain 404. The exact public
+  route is live but remains inert because it still lacks the `/lookup` rewrite.
+- 🕙 At 22:38 PDT on Tuesday, Access Management disabled route Modify and
+  `Create Policy` → `Classic mode` with a generic `unsupported platform`
+  exception message. The linked IAM details prove this is NetLink's production
+  release-window policy, not missing TLB access: `ti_platform.config.operate`
+  is generic config CRUD, controlled when `request.env == "prod"`. Working-day
+  publishing is allowed 09–12, 13–18 and 19–22 in the user's time zone. No
+  exception was requested; retry in the next normal window. API-release mode
+  still cannot configure the required PATH rewrite and forced PPE header.
+- 📱 The Pixel 4a is connected over ADB. The app host was already configurable
+  through ignored `larklish.backendUrl`; the devbox value now names the internal
+  prefix. A temporary `larklish.backendTlbCanary` switch was built during rollout
+  and then deleted, with its source code, after 100% as requested. The final
+  non-canary build passes ktfmt, Android unit tests and `assembleDebug`.
+- 🛑 Did not install the internal-host APK because its endpoint is a known 404.
+  Railway and the phone remain unchanged. Full evidence and the exact next
+  choices are in [Experiment 28](experiments/28-internal-hosting-handoff.md).
+
+Next: in the next normal working-day release window, submit the narrow
+rewrite/PPE-header Classic-mode ticket and repeat its complete rollout before
+installing or running authentication/Lookup acceptance tests.
+
+### 2026-09-16 — exact release-window continuation scheduled
+
+- ⏰ Verified the prior September 15 wakeup mechanism from systemd state and its
+  journal: a persistent user timer fired at exactly 16:00 UTC, and its one-shot
+  service successfully queued a message into the existing Codex task. The
+  receipt file prevented duplicate delivery. The long Atuin SSH loop was a
+  separate interactive command, not the task-resumption mechanism.
+- 🗓️ Installed and verified `codex-larklish-20260916.timer` for September 16 at
+  16:00 UTC / 09:00 PDT with one-second accuracy. Its wakeup script targets this
+  same task, verifies the running Codex App Server (`0.154.0`), and records a
+  one-time delivery receipt. `systemctl --user` reports the timer active and
+  waiting.
+- 🪶 A goal remains useful for retaining the full deployment objective and its
+  completion audit, but goal-only waiting immediately resumed repeatedly. The
+  raw shell sleep was stopped and the goal was temporarily blocked on the
+  external release window; the scheduled message will resume it without polling
+  churn. Timer and wakeup files are local operational state, not repository
+  artifacts.
+
+Next: let the one-shot continuation fire at the release-window boundary, then
+complete the Classic rewrite/PPE-header ticket and its full verified rollout.
