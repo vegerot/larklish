@@ -3468,3 +3468,62 @@ public PPE endpoint passes acceptance.
 Next: commit the tested alias/app change and updated records, fast-forward only
 ByteDance `origin/main`, wait for its SCM artifact, then create the PPE-only
 Bits task and verify the public alias before installing on the Pixel.
+
+### 2026-09-16 — public PPE and installed app pass Lookup acceptance
+
+- 📦 Committed alias/app change `93d5b3a` and pushed only ByteDance
+  `origin/main`; GitHub `main` remains `7840e57`, leaving Railway unchanged.
+  SCM `oec/seller/larklish:1.0.0.19` built that exact commit successfully.
+- 🚀 Created Bits task `2850411` from the earlier task, pinned SCM `1.0.0.19`,
+  PPE on and BOE off. Self-test passed; PPE `mmyp0srw` / `faas-sg` now runs
+  revision `1.0.7` (`c45ojbhrt6`). Bits automatically associated release
+  `1229776511490`, but no production release was run.
+- 🔐 Direct and public prefixed paths returned 401 for missing/wrong Backend
+  Bearer, 400 for correct Bearer with incomplete Lookup, and 404 without PPE
+  selection or for excluded prefixed paths. A recorded Original returned HTTP
+  200 `found` (`post`), English present, Full-text hash prefix
+  `5237fe9efec3`, in 2.364 s. Secrets and text were not printed.
+- 📱 Refreshed the phone's normal user-token chain before acceptance. Installed
+  the PPE APK in place with the same signing certificate; the saved token file
+  was preserved byte-for-byte, Recorder's 2,733 prior events remained, and the
+  listener rebound. The installed app's own Lookup hook returned `found` over
+  both Wi-Fi and cellular with VPN off. Wi-Fi was restored. A normal bot-group
+  probe yielded no Original/Relay: Lark opened `NoPermissionActivity`; full
+  Relay-to-Update timing remains unverified.
+- ✅ New task's Develop-stage GEC five manual items were each marked Not
+  involved with recorded reasons grounded in the SG-only demo and Max's
+  no-DECC/no-TTP confirmation. GEC showed 9 passed, 2 non-blocking warnings,
+  0 pending, 0 skipped. The normal Complete development action advanced to
+  Test; its pipeline/GEC are running. Old production task `2844150` still has
+  the non-skippable Nario failure, and production still runs SCM `1.0.0.11`.
+
+Next: inspect the new task's Test pipeline and GEC result. Do not skip or force
+the Nario check; resolve it through the normal QA/GEC process before promoting
+the alias-bearing Backend to production and removing the phone's PPE setting.
+
+### 2026-09-16 — synthetic Originals relay on Wi-Fi and cellular
+
+- 📱 A retry after reopening Lark delivered a test-group Original and English
+  Relay on Wi-Fi. A deliberately long second Original also relayed in English
+  over cellular, VPN off. Both were correctly `skipped not-truncated` because
+  Lark supplied the full bot Preview; neither needed a Backend Update. Wi-Fi
+  was restored. The earlier no-Relay result was transient, but full
+  Relay-to-Update timing remains unmeasured for this host.
+- ⏳ Bits task `2850411` Test pipeline succeeded; Test-stage GEC was still
+  running at the last check. No production action has been taken.
+
+Next: read the Test-stage GEC result and resolve any blocking check through
+its normal QA/GEC process. Do not skip or force it.
+
+### 2026-09-16 — new release reaches the same Nario metadata gate
+
+- ⛔ Bits task `2850411` Test pipeline passed, but Test-stage GEC blocked on
+  Nario Scenario Coverage Rate. QCSS report `2331436` cannot map worker
+  `01M2NTFGB059K1PYWF06XFCCMZ@1@7` to a PSM and commit, matching the older
+  task's platform failure. The two Test-stage manual items (DECC marking and
+  TLB configuration) were each recorded as Not involved with separate reasons;
+  pending manual count is zero. One normal Nario-only retry is running. No
+  check was skipped or forced, and no alias-bearing production release ran.
+
+Next: wait for that single retry to finish. If it repeats the metadata error,
+obtain a normal QA/GEC resolution before attempting Merge or production.

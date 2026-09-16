@@ -448,3 +448,79 @@ new documentation-plan commit. The Backend changes in that gap were audited:
 routine logging moved to stdout and the candidate timestamp field was renamed
 without changing Lookup behavior. No source push or SCM/PPE release has yet
 occurred.
+
+### Public PPE acceptance and Pixel trial
+
+Committed the tested alias/app change as `93d5b3af3306dd7f414c5ba08ed7ab4a8df8641d`
+and fast-forwarded **ByteDance** `origin/main` only. GitHub `main` remained at
+`7840e57e810316d8af164a60ab35eb94cda41234`, so Railway did not
+auto-redeploy. SCM Git trigger built that exact commit successfully as
+`oec/seller/larklish:1.0.0.19` (version ID `165680146`).
+
+Bits development task `2850411`, titled “Larklish public Lookup alias PPE,”
+was created from task `2844150` with the new SCM version pinned, PPE enabled,
+and BOE disabled. Bits automatically associated release ticket `1229776511490`;
+no production release action was taken. Its ordinary self-test pipeline
+succeeded, deploying PPE function `mmyp0srw` revision `c45ojbhrt6` (`1.0.7`)
+from SCM `1.0.0.19` to `faas-sg`.
+
+For the direct gateway **and** public exact route, `POST` with
+`x-tt-env: ppe_deploy_i18n_1` returned 401 with missing or wrong Backend Bearer
+tokens and 400 with the correct token and intentionally incomplete payload.
+The public path without the PPE header, or with a mistyped lane, returned 404.
+Prefixed `/chats` and `/v1/ping` also returned 404. A recorded Original from
+`2026-09-16T16:50:05.866750Z` with the phone's valid user token returned
+HTTP 200, `found` (`post`), English available, 167 Full-text characters,
+SHA-256 prefix `5237fe9efec3`, in **2.364 seconds**. Neither token nor text
+was printed.
+
+The phone's user access token was near expiry, so its existing `refresh`
+debug hook refreshed the normal saved chain before acceptance. Before install,
+the saved-token file's SHA-256 was
+`cfc4f4b143a3820c21af44aa1011547be0212fb44147bb4e7e8fac01a6523d11`;
+the Recorder had 2,733 events and the listener was bound. The new APK's signing
+certificate SHA-256 matched the documented Railway debug build:
+`cd5b25f8a55c9250d8502b702b02a3618174852e401f9bb6014a61fc13c7eaa4`.
+`larklish-helper phone install` succeeded in place and verified that the saved
+token was preserved byte-for-byte, all 2,733 events remained, and the listener
+rebound. The installed app's own Lookup hook returned `found` through the public
+ByteDance host on both Wi-Fi and cellular, with VPN off. Wi-Fi was restored.
+
+A normal test-group probe did **not** produce a matching Relay: Lark had been
+stopped, and after launch it opened `NoPermissionActivity`. The listener was
+bound and the app-side Lookup hook worked, so this is an observed
+Original-delivery blocker, not evidence of a Backend failure. Full
+Relay-to-Update timing on the new host remains unverified. No Railway rollback
+was needed.
+
+The new task's Test pipeline succeeded. Test-stage GEC blocked on **Nario
+Scenario Coverage Rate**: QCSS report `2331436` says worker
+`01M2NTFGB059K1PYWF06XFCCMZ@1@7` cannot be mapped to a PSM and commit ID,
+the same platform-metadata error as the older task. Its two Test-stage manual
+items were each marked **Not involved** with separate remarks: this demo needs
+no DECC marking, and this Backend code release changes no TLB configuration.
+The manual pending count reached zero. One normal retry of only the Nario item
+was started; it was still running at the last check. Skip and Force Test Out
+were not used. The alias-bearing production release remains gated.
+
+The new Bits task's Develop-stage GEC report had five manual items. Each was
+recorded individually as **Not involved** with a reason: this is one Singapore
+demo with no multi-region deployment requirement, DECC marking, TCC switch,
+ROW↔TTP sharing, or RDS schema change. GEC then showed 9 passed, 2 non-blocking
+test-plan warnings, 0 pending, 0 skipped. Its normal **Complete development**
+action advanced task `2850411` to Test, where the normal pipeline and GEC are
+running. The older production task `2844150` still has the non-skippable Nario
+worker-to-commit failure, and production function `kpb2dvsn` still runs SCM
+`1.0.0.11` revision `1.0.2`. No production cutover occurred.
+
+### Later Original-delivery retry
+
+After reopening Lark, a second synthetic test-group message **did** produce an
+Original and English Relay on Wi-Fi with VPN off. Recorder marked it
+`skipped not-truncated`: Lark supplied the complete Preview, so no Backend
+Update was necessary. A third, deliberately long test-group message also
+produced an English Relay over cellular with VPN off and the same correct
+`not-truncated` result. Its length did not make Lark truncate this bot
+notification. Wi-Fi was restored after the cellular probe. Thus the earlier
+no-Relay probe was transient; notification interception works on both networks,
+but these bot messages still do not measure full Relay-to-Update timing.
