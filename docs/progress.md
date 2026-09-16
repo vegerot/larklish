@@ -3663,3 +3663,33 @@ production release policy or the need to verify a real Lookup after code changes
 Next: use the split in `plan.md` for the next Backend change. Verify the exact
 SCM artifact, target function, release result, and behavior each time; keep
 production promotion and phone cutover separate.
+
+### 2026-09-16 — timing Backend deployed to Railway and I18N-TT PPE
+
+- 📤 Pushed committed source `7b7e1f977c97d3781bfadf3c29045c00edbca9d0`
+  to GitHub and Codebase `main`; no uncommitted files were part of either push.
+  Railway and SCM began building the same source while the PPE release was
+  prepared. A separate local Railway-skill commit landed afterward and was
+  not part of either deployment.
+- 🚄 Railway deployment `07f34d0c-f152-4135-9ac5-4d0344a82e9f` reached
+  `SUCCESS` in `larklish/backend` production. `/v1/ping` returned HTTP 200,
+  authenticated `/chats` succeeded, and a recorded Lookup returned HTTP 200
+  `found` (`post`) with English available.
+- 🚀 SCM `oec/seller/larklish:1.0.0.21` compiled from that exact commit.
+  Created I18N-TT PPE code revision `1.0.10` / `m6kz3tghrw` from the reviewed
+  SCM payload, then released only `mmyp0srw` / `faas-sg` through ticket
+  `fkp3gg6705t8y8ry`. Build, Canary, and Region all succeeded; function
+  readback reports the new source and revision. Control-plane `/v1/ping`
+  returned the Go 1.26.4 response.
+- 🔎 The same recorded Lookup returned HTTP 200 `found` from both Railway and
+  direct PPE, with matching Full-text hash prefix `0f3020c809ab`. Railway
+  logs contain the new per-call `lookup timing` record. A request-scoped PPE
+  invocation returned timing spans and captured a matching timing log. The
+  general PPE log query returned no entries, so use request-scoped logs if
+  needed for immediate diagnosis.
+- 🔒 Singapore production and the phone's selected Backend were not changed.
+  No Bits production release or phone cutover was attempted.
+
+Next: soak the two Backends with real cut-Preview Lookups and compare their
+timing records. Keep the phone's Backend choice and production promotion as
+separate decisions.
