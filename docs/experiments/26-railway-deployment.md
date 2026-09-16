@@ -13,6 +13,25 @@ results, failures and changes to the plan as execution proceeds.
 - Managed HTTPS; existing in-memory cache and existing authentication token.
 - Verify the public Backend, then the Pixel on cellular without Wi-Fi or VPN.
 
+## Live service
+
+| Item | Verified value |
+| --- | --- |
+| Public Backend | `https://backend-production-a712b.up.railway.app` |
+| Project | `3e575a03-cce3-4c69-bf27-a5362c558c31` |
+| Service | `8c497dbc-3a74-449c-b514-bce866ba1d9d` |
+| Production environment | `20f0c4ca-4be7-48bc-8d7d-e5fde104ff52` |
+| Deployment | `46f79f2e-3b74-4e90-816b-5356a9e8e793` |
+| Deployed source commit | `cea339e848d460d48cd82bf7945a4875be09bec3` |
+| Release trigger | GitHub `main`, watch path `/backend/**` |
+| Build root and builder | `/backend`, Railpack |
+| Region and replicas | `us-west2`, one replica |
+| Runtime and API host | Go 1.25.14, Linux/amd64; `https://open.larksuite.com` |
+| Sleep and restart | Serverless off; `ON_FAILURE`, 10 retries (Trial) |
+| Health check | `/v1/ping`, 60-second startup timeout |
+
+[Open the Railway service](https://railway.com/project/3e575a03-cce3-4c69-bf27-a5362c558c31/service/8c497dbc-3a74-449c-b514-bce866ba1d9d?environmentId=20f0c4ca-4be7-48bc-8d7d-e5fde104ff52).
+
 ## Steps
 
 ### 1. 22:35–22:37 — inspect the starting state
@@ -185,7 +204,202 @@ results, failures and changes to the plan as execution proceeds.
   combined validation stopped at the invalid APK before checking Markdown;
   documentation checks are being rerun independently.
 
+### 11. 23:00–23:05 — publish and deploy the GitHub source
+
+- Committed the helper and execution records as `cea339e848d460d48cd82bf7945a4875be09bec3`.
+  Go tests, both required formatters, Python compilation and documentation
+  checks passed. Pushed the stack to `github/main`; GitHub returned that same SHA.
+- The interactive GitHub CLI opened the terminal's pager; exited it to allow
+  the remaining commands to finish. At Max's request, switched subsequent
+  commands back to direct terminal execution. The tmux pane is idle.
+- Saved a rollback APK on the phone at
+  `/data/local/tmp/larklish-before-railway.apk`. Its SHA-256 matches the installed
+  APK: `81d103698953b6d68c646500d155e73045790bb3eb6658ed9345577a5429e198`.
+  Recorded the previous Backend URL and user-token fingerprint under ignored
+  `output/railway-demo-20260915/phone-baseline.json`. The token read succeeded on
+  retry. A host `adb pull -Z` still failed, so only the verified on-phone APK is
+  considered a valid rollback copy so far.
+- Refreshed Railway after the GitHub App flow and verified `vegerot/larklish`
+  appeared. Selected it, reviewed exactly two staged changes (repo and `main`
+  branch), and clicked Deploy Changes with an explanatory deployment message.
+  A `gh api user/installations` inspection returned HTTP 403 because that endpoint
+  requires a GitHub-App-authorized token; it was not used for authorization.
+- Deployment `46f79f2e-3b74-4e90-816b-5356a9e8e793` built from GitHub commit
+  `cea339e848d460d48cd82bf7945a4875be09bec3` and reached `SUCCESS`.
+- Generated `https://backend-production-a712b.up.railway.app` with target port
+  8787. HTTPS `/v1/ping` returned `pong go1.25.14 linux/amd64`.
+- Inspected the Lark messaging skill and shared authentication rules for the
+  later synthetic tests. The plan already authorizes messages to the existing
+  test group; no message has been sent yet.
+- Inspected ADB server status: Android Platform Tools 37.0.1, native USB backend.
+  A memory lookup found an older *agent-network* connection issue, not an ADB
+  diagnosis; it was not applied to this USB issue.
+- The first local-corpus parse used `splitlines()` and hit embedded Unicode
+  line separators inside JSON text. The helper documents this; use `split("\n")`
+  for JSONL instead. No corpus file was modified.
+
+### 12. 23:05–23:14 — public API, Lookup and restart acceptance
+
+- HTTPS health returned 200. Missing and incorrect Bearer tokens returned 401
+  for both `/chats` and `/lookup`; authenticated incomplete Lookup returned 400.
+  Authenticated `/chats` returned 200 with an initially empty cache. These
+  checks took 0.25–0.43 seconds each.
+- Ran the rewritten `backend status` helper with the Railway URL and both the
+  correct token and an intentionally wrong token. It reported health/cache
+  success and the expected 401 failure respectively, without internal tooling.
+- The previously researched September 9 Original was not in the older local
+  corpus. Replayed the latest stored synthetic test-group Original instead:
+  `found`, 58 Full-text characters, English present, content hash
+  `4faf5efc8ad7`. Uncached: 5.568 s; cached: 3.516 and 3.538 s. Three concurrent
+  calls also passed in 3.355, 3.379 and 3.858 s.
+- Saved sanitized results in ignored `backend-acceptance.json` and
+  `lookup-acceptance.json` under the deployment output directory.
+- Console readback now explicitly says **Auto deploys when pushed to GitHub**.
+  The transient unavailable label cleared after GitHub authorization settled.
+- Restarted the Railway Backend. Its startup log records 23:10:47 UTC, the
+  domain stayed unchanged, and its cache became empty. The CLI itself kept
+  waiting silently after the restart; after confirming the result independently,
+  interrupted only that local CLI process (PID 23083), which exited 130.
+- Replayed the synthetic Original after restart: the cache rebuilt and Lookup
+  plus translation passed in 5.253 s.
+- Started the idle check at **23:14:16 UTC**, with one cache entry. No further
+  application requests will be sent until **23:29:16 UTC**. The ignored
+  `idle-baseline.json` records the exact timestamps and cache for comparison.
+
+### 13. 23:09–23:18 — repair USB access and prepare the phone update
+
+- ADB's server log showed native USB read failures and transport disconnects
+  during the failed APK transfers. Checked the local Android ADB source for
+  `ADB_LIBUSB`, restarted ADB with `ADB_LIBUSB=1`, and verified the selected
+  backend. A large copy still disconnected, so requested a cable/port reconnect.
+- Max reconnected the cable or changed ports. The next uncompressed pull
+  succeeded: **95,779,980 bytes in 2.242 s**. Verified its SHA-256 against the
+  on-phone copy and validated ZIP integrity. No permanent shell setting was
+  added; the currently running ADB server uses libusb.
+- Changed only `larklish.backendUrl` in ignored local configuration to the
+  Railway URL, preserving the existing Backend token and all other properties.
+- `./gradlew assembleDebug testDebugUnitTest` passed: **21 tests, zero failures
+  or errors**. The new APK's certificate SHA-256 matches the installed APK:
+  `cd5b25f8a55c9250d8502b702b02a3618174852e401f9bb6014a61fc13c7eaa4`.
+- Phone preflight: app running, notification listener bound, SIM loaded,
+  mobile data enabled, Wi-Fi enabled, no configured always-on VPN. The phone
+  access token expires at 2026-09-16 00:17:41 UTC; it has not been refreshed by
+  this work. Installation is held until the Backend idle check completes.
+- Read Recorder/UserToken source: updates record the answering Backend URL;
+  an in-place upgrade loads the existing token file before considering the
+  build's seed. The phone contains 2,585 Recorder events. Existing DM case
+  selection needs a title/key match because Recorder updates do not store a
+  chat ID; an initial chat-ID filter returned no cases.
+- Railway's first 15-minute metrics showed current memory **10.83 MB**, peak
+  **13.59 MB**, and average CPU **0.000251 vCPU**. These are short-window
+  observations, not a full billing measurement.
+
+### 14. 23:20–23:28 — prepare notification verification during the idle interval
+
+- Read the Lookup classifier: DM Originals use title `Lark`, with the Sender
+  in the Preview. Found 62 exact DM Originals in the existing corpus and saved
+  one privately for the post-idle read-only test. No new DM will be sent.
+- Verified the phone's active default transport is Wi-Fi, Lark is installed
+  and not force-stopped, and the notification listener remains bound.
+- Read the Lark chat schema and queried only the existing test group as the bot;
+  its name is confirmed as **Larklish 测试群**. Prepared explicitly labeled
+  synthetic short, long, cellular and three-message burst cases in ignored
+  `phone-tests.json`.
+- Prepared an ignored one-off acceptance runner using the repository helper
+  for bot sends, ADB and Recorder reads. It records sanitized outcomes, the
+  answering Backend URL, Wi-Fi/VPN flags and Relay-to-Update timing, and restores
+  forced idle after each long-message test. No synthetic message has been sent yet.
+- Workspace usage reported about USD 0.00004 for the current early billing
+  window; this includes the unrelated existing project. It is not a measured
+  full-month cost for Larklish.
+- Kept the new APK uninstalled throughout the idle interval so phone traffic
+  continued using the previous Backend. At 23:28:35 UTC, 861 seconds had elapsed;
+  the acceptance harness had sent no new application requests during that time.
+
+### 15. 23:29–23:38 — retain cache, install in place, diagnose first phone test
+
+- At 23:29:55 UTC, the idle check passed after **937.831 seconds**. HTTPS health
+  passed and the same cache mapping was retained; the two checks took 0.679 s.
+- Installed the new APK with `adb install -r`. The phone's user-token file was
+  byte-for-byte identical immediately before and after installation. Launched
+  Larklish and confirmed the listener was bound and the helper used Railway.
+- Sent the labeled short Wi-Fi test through the existing bot. No Relay appeared
+  in 45 seconds. Read Recorder, logcat and active notifications: **zero new
+  Recorder events and no matching Lark Original**. This was upstream of Larklish.
+- Logcat showed Lark's `WschannelForegroundService` had crashed at 23:11:40 UTC
+  with `ForegroundServiceDidNotStopInTimeException` for its `dataSync` service.
+  Reopened Lark normally. Android documents that bringing the app foreground
+  resets this service timer: [foreground-service timeouts](https://developer.android.com/develop/background-work/services/fgs/timeout).
+  No Android timeout policy was changed. A transient startup screenshot was
+  inspected and removed; unrelated screen contents are not included in this log.
+- The first archived DM corpus case returned `no-chat` in 23.905 s. Selected a
+  previously successful plain-text DM from Recorder instead, using its recorded
+  time as the Lookup timestamp: **found, text, 5.092 s**. Both sanitized results
+  are retained; Lookup matching rules and the corpus were not changed.
+- Prepared a distinct short-message retry after reopening Lark, preserving the
+  original failed test report.
+
+### 16. 23:39–23:43 — real notifications pass on Wi-Fi and cellular
+
+- After reopening Lark, the distinct short retry produced an English Relay.
+  Preview was complete; `not-truncated` correctly skipped Backend Lookup.
+  Recorder network flags: Wi-Fi true, VPN false.
+- Forced deep idle and verified `IDLE`, then sent the labeled long Wi-Fi case.
+  Lark posted a truncated Preview; Larklish posted the English Relay and Updated
+  it from Railway. Full text matched the sent text exactly, with no Chinese in
+  the translated Relay. **Relay → Update: 3.894 seconds**. Restored normal idle.
+- Saved the phone's Wi-Fi/mobile-data settings, disabled Wi-Fi, and waited for
+  the actual default transport to become **CELLULAR**. Wi-Fi setting was 0 and
+  mobile data was 1; no VPN transport was active.
+- Repeated the long test in deep idle over cellular. Recorder confirms
+  `wifiConnected: false`, `vpn: false`, and the Railway Backend URL. Full text
+  matched the sent text exactly and the Relay was English. **Relay → Update:
+  4.739 seconds**. Restored normal idle after the test.
+- Saved the test summaries as `phone-wifi-short-retry.json`,
+  `phone-wifi-long.json` and `phone-cellular-long.json` under ignored output.
+  Timings above are Recorder Relay-to-Update intervals; they do not include
+  the earlier Lark delivery and Preview translation time.
+- Max noted that screenshot thumbnails still showed Lark's launch logo. The
+  first capture was the splash screen; a later capture showed the open app.
+  Both used one filename, so subsequent captures will use unique filenames.
+
+### 17. 23:45–23:58 — burst, dismissal and final device state
+
+- Sent the three labeled burst messages over cellular. All three produced
+  English Relays with complete Previews; all correctly recorded
+  `not-truncated`, with Wi-Fi/VPN false.
+- Inspected Android's notification command help and active notification keys.
+  Located the final synthetic Lark notification in the shade and verified its
+  visible text before swiping. Its Original and corresponding Relay were both
+  removed. Recorder reason was **12 (`group_summary_canceled`)**, so this
+  verifies notification-group dismissal propagation.
+- Sent one final labeled long demo notification over cellular after dismissal.
+  It produced a full English Update from Railway in **4.531 seconds** after
+  the Relay. Full text matched the synthetic message exactly. Left that demo
+  notification available for inspection.
+- Restored the original Wi-Fi setting and normal device-idle behavior. Later
+  readback confirmed Wi-Fi enabled and connected, default transport **WIFI**,
+  deep idle **ACTIVE**, both apps running and the listener bound. There is no
+  ADB reverse mapping. The phone token file still matches its pre-install bytes.
+- Queried project-specific usage: Larklish had consumed about **USD 0.000401**
+  so far (CPU 0.000049, memory 0.000336, egress 0.000016). This is an initial
+  observation, not a full-month bill. No paid subscription or alert was activated.
+- Updated the current plan, progress and research records with the live service,
+  verified results, Trial constraints and rollback/operation notes.
+- Re-ran ktfmt and Ruff: both passed without source changes. Noticed separate
+  uncommitted Go edits renaming `Candidate.CreateTime` to `CreateTimeMs` in six
+  Backend files. Those edits are outside this deployment change and are being
+  preserved separately; the deployed and tested Backend remains the commit above.
+
 ## Current status
 
-Execution in progress. The Railway project exists; source deployment and phone
-migration have not been performed yet.
+Implementation and acceptance are complete. The Backend remains running on
+verified Trial, and the updated Pixel uses it. Public authentication, group/DM
+Lookup, translation, concurrency, restart, idle retention, Wi-Fi/cellular
+notifications, burst handling and group dismissal have been checked. The first
+missing Original and the archived DM miss are retained above rather than hidden.
+
+Follow-up: observe normal use and Trial credit consumption before choosing paid
+service or changing sleep/cache behavior. The existing internal-production TODO
+is independent. Private rollback files and test data remain in the ignored
+deployment output directory; no credential values are recorded here.

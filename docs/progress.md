@@ -3109,3 +3109,41 @@ execution log, including commands, results and plan changes. Shell commands now
 run in Max's existing integrated-terminal tmux pane (`0:0.0`). Railway CLI
 5.57.2 is installed and authenticated to the personal workspace; the Pixel is
 connected. Deployment and phone verification are in progress.
+
+### 2026-09-15 — Railway demo live; cellular acceptance passes
+
+- 🚀 Deployed GitHub `main` commit `cea339e848d4` through Railway's native
+  integration. Public Backend: `https://backend-production-a712b.up.railway.app`.
+  One US West replica, Serverless off, existing in-memory cache, `/v1/ping`
+  health check and unchanged Bearer-protected JSON protocol.
+- 🧪 Public auth/error checks, real Lookup and translation, three concurrent
+  requests, restart recovery and **15 minutes 38 seconds** of idle cache retention
+  passed. A previously successful recorded DM Lookup passed in **5.092 s**;
+  a different archived case returned `no-chat`, retained in the test record.
+- 📱 Built and installed the signed APK in place. **21 Android unit tests
+  passed**. The signing certificate matches the prior APK, and the phone's
+  user-token file remained byte-for-byte unchanged through installation and tests.
+  The existing Backend token was copied from devbox and reused, not rotated.
+- ✅ Actual long-message Updates came from Railway with complete text and
+  English output: **3.894 s** after the Relay on Wi-Fi, **4.739 s** on cellular,
+  and **4.531 s** for the final cellular demo. Recorder confirms Wi-Fi/VPN off
+  for both cellular long-message tests. Three burst messages each produced an
+  English Relay. Dismissing the test notification group removed its Relay.
+- 🪶 Stayed on the verified Trial at Max's request. Live platform checks changed
+  the original plan: new services reject `railway.toml`; use native settings.
+  Trial fixes the maximum at 2 vCPU / 1 GB and supports `ON_FAILURE` with 10
+  retries. The $15 alert requires a paid subscription and remains deferred.
+- 🔧 Large USB transfers disconnected until Max reconnected the cable/port;
+  the running ADB server also now uses libusb. Verified a complete rollback APK
+  on both Mac and phone. The first phone test had no Original because Lark's
+  own background connection service had crashed; reopening Lark restored
+  delivery. No Larklish matching rules or Android timeout policies were changed.
+- 📚 [Experiment 26](experiments/26-railway-deployment.md) records every execution
+  step, failures, live IDs, measurements and plan changes. Private rollback
+  files and test inputs/reports remain under ignored `output/railway-demo-20260915/`.
+  Wi-Fi and normal device-idle behavior were restored; a translated demo
+  notification is left on the phone.
+
+Next: normal use and measured Trial consumption. Keep the separate authenticated
+internal-production TODO; no internal deployment was changed. A full billing
+period has not elapsed, so no full-month cost is claimed.

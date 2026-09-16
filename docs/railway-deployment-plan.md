@@ -2,6 +2,8 @@
 
 Updated 2026-09-15 to use GitHub deployments and one US West replica. The original CLI-upload plan remains in version history.
 
+**Implemented and verified 2026-09-15.** The Backend is live, and the Pixel received full English Updates over cellular with Wi-Fi and VPN off. [Execution log and results](experiments/26-railway-deployment.md).
+
 ## 1. Target and defaults
 
 Run the existing Go Backend as **one always-running Railway service**, with its current in-memory cache and a Railway-provided HTTPS domain.
@@ -22,6 +24,10 @@ Run the existing Go Backend as **one always-running Railway service**, with its 
 | Health check | `GET /v1/ping` |
 | Restart policy | `ON_FAILURE`, up to 10 retries (Trial) |
 | Storage | Existing in-memory cache; no volume or database |
+| Public URL | `https://backend-production-a712b.up.railway.app` |
+| Project ID | `3e575a03-cce3-4c69-bf27-a5362c558c31` |
+| Service ID | `8c497dbc-3a74-449c-b514-bce866ba1d9d` |
+| Environment ID | `20f0c4ca-4be7-48bc-8d7d-e5fde104ff52` |
 
 Start on the verified Trial at Max's request: up to 30 days or $5 of usage, with full network access. Measure actual usage before deciding on paid service. Hobby costs **at least $5/month**, including $5 of resource usage; the established paid-service target remains below $15/month. Railway rejected the $15 usage alert because it requires an active subscription, so defer that alert until a paid plan is chosen. [Trial](https://docs.railway.com/pricing/free-trial), [pricing](https://docs.railway.com/pricing/plans), [regions](https://docs.railway.com/deployments/regions).
 
@@ -121,3 +127,14 @@ Reuse the established test baseline: ordinary Go tests passed; the full corpus r
 - Run the required formatters and documentation checks before committing the scoped configuration, helper and record changes.
 
 **Assumptions:** this remains a single-user demo that continues running afterwards; US West is the initial region; existing internal deployments remain available independently. Scale-to-zero and cache persistence are deferred until measurements justify them.
+
+## 5. Operating the deployed demo
+
+- Check the configured Backend with `python3 tools/larklish-helper backend status`.
+- Release Backend changes by testing, committing and pushing to `github/main`; Railway watches `/backend/**`. Root documentation and Android-only commits do not trigger a Backend release.
+- Inspect the [Railway service](https://railway.com/project/3e575a03-cce3-4c69-bf27-a5362c558c31/service/8c497dbc-3a74-449c-b514-bce866ba1d9d?environmentId=20f0c4ca-4be7-48bc-8d7d-e5fde104ff52) for deployment status, logs, settings and metrics.
+- The first successful deployment is `46f79f2e-3b74-4e90-816b-5356a9e8e793`, from source commit `cea339e848d460d48cd82bf7945a4875be09bec3`. Subsequent documentation commits can be newer than the running source because of the watch path.
+- The ignored `output/railway-demo-20260915/` directory holds sanitized test reports, the previous APK, its certificate and the previous local configuration. A verified rollback APK also remains at `/data/local/tmp/larklish-before-railway.apk` on the phone. An in-place APK rollback preserves app data; restore only the helper's Backend URL from `phone-baseline.json` if rolling back.
+- The phone's original Wi-Fi setting was restored after cellular testing. Its existing access/refresh-token file survived the upgrade and all tests unchanged; the existing Backend token was reused.
+- If Lark stops posting Originals, check Lark itself first: its background connection service hit Android's `dataSync` timeout during this run. Opening Lark normally restored test delivery. No Android timeout policy was changed.
+- Continue on Trial for now. Check actual usage before its credit or time limit, and choose paid service only if needed. The $15 spending alert and the original custom limits remain deferred until an active subscription exists.

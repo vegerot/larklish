@@ -287,7 +287,7 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
   URL → soak.
 
-### Layer 9 — Railway public demo 🚧 planned
+### Layer 9 — Railway public demo ✅ live
 
 - **Host**: one always-running Railway service in US West, California
   (`us-west2`), project `larklish`, service `backend`, environment
@@ -310,7 +310,8 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   Railway deployment. No separate GitHub Actions deployment workflow is needed.
   Use CLI/MCP for configuration and operations, and verify each deployed commit.
 - **Public address**: generate one Railway domain targeting `PORT=8787` and
-  retain it across releases. Railway manages HTTPS and certificate renewal.
+  retain it across releases. The live URL is
+  `https://backend-production-a712b.up.railway.app`. Railway manages HTTPS and certificate renewal.
   Preserve the existing HTTP protocol and Bearer authentication. The selected
   Lark API host remains `https://open.larksuite.com`.
 - **Credentials**: the existing Backend token was copied from devbox into the
@@ -319,8 +320,10 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
 - **Sequence**: credential sync → Railway account/service configuration → push
   the configuration to GitHub → connect the repository and deploy → generated
   HTTPS domain → authenticated Lookup → in-place phone
-  update → cellular verification. CLI authentication, project/service creation
-  and variables are complete; deployment and phone verification are in progress.
+  update → cellular verification. This sequence is complete. The Pixel receives
+  full English Updates from Railway on Wi-Fi and on cellular with Wi-Fi/VPN off.
+  Restart, 15-minute cache retention, three concurrent Lookups, a three-message
+  notification burst and notification-group dismissal also passed.
 - **Later optimization**: both Railway and Fly have persistent volumes, and Fly
   suspension can preserve RAM. Continuous running is the simplest initial
   choice, not a technical necessity for cache preservation. Defer sleeping and

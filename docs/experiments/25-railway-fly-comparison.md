@@ -7,7 +7,8 @@ Max accepted this recommendation and requested the
 [Railway deployment plan](../railway-deployment-plan.md), originally saved verbatim
 and now updated to use GitHub deployments in California (`us-west2`).
 This supersedes the [BytePlus VM plan](../byteplus-deployment-plan.md), which
-remains unchanged as history. No Railway deployment has been performed.
+remains unchanged as history. The Railway Backend is now deployed and full
+English Updates have been verified on the Pixel over Wi-Fi and cellular.
 
 Implementation is now recorded in [Experiment 26](26-railway-deployment.md).
 Max chose verified Trial initially. The live platform rejects `railway.toml`
@@ -112,8 +113,9 @@ in memory and are rebuilt after process restart.
 
 Continuous running is therefore **not technically necessary just to preserve
 the cache**. It remains the selected initial behavior because it needs no new
-persistence or wake-up handling, and sleeping cannot reduce a Hobby bill already
-at its USD 5 minimum. Revisit after measuring usage and Update latency.
+persistence or wake-up handling. Sleeping cannot reduce a Hobby bill already
+at its USD 5 minimum; on the selected Trial it could conserve credit. Revisit
+after measuring usage and Update latency.
 
 The phone posts the Relay before calling the Backend for an Update. A Backend
 wake-up would delay that Update; the current phone code does not retry a failed
@@ -145,8 +147,8 @@ selected later, rather than reasons to implement speculative retries now.
 - The helper's `backend status` still queries internal SCM/ByteFaaS. Removing
   those hardcoded queries is part of implementation, not this documentation task.
 
-Next: follow the updated Railway plan, beginning with the existing token, CLI and
-Hobby setup. Push the configuration to GitHub, connect the repository and deploy,
-verify authenticated Lookup, update the phone in place,
-and verify cellular operation. Keep the existing internal deployments and the
-separate authenticated internal-production TODO.
+Deployment, authenticated Lookup, the in-place phone update and cellular
+verification are complete; see [Experiment 26](26-railway-deployment.md) for
+measured results and live platform constraints. Next: observe normal use and
+Trial consumption before changing hosting behavior. Existing internal deployments
+and the separate authenticated internal-production TODO remain independent.

@@ -10,7 +10,10 @@ Backend-only watch paths. Follow the
 [Experiment 25](25-railway-fly-comparison.md) compares Railway, Fly and the
 earlier BytePlus VM proposal, including the cache and sleeping options.
 [Experiment 24](24-volcano-byteplus.md) retains the BytePlus account checks, VM
-quote, employee-credit research and build/API experiments. Deployment is pending.
+quote, employee-credit research and build/API experiments.
+[Experiment 26](26-railway-deployment.md) records the completed Railway deployment
+and cellular verification, including the switch to verified Trial and native
+service settings required by the live platform.
 The local-upload and Singapore sketch below records the initial proposal; the
 current plan uses Railway's native GitHub deployment integration and US West.
 
