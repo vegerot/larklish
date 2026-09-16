@@ -291,6 +291,13 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `--from-revision`/`--number`; rerun with them and `--yes`) → `faas release create …
   --code-revision <revision id>` (37 s, Build → Canary → Region) → `tools/larklish-helper
   backend status` (the ping names the Go that built the binary) → `probe --idle`.
+- **I18N-TT release practice (2026-09-16)**: use direct ByteFaaS releases for quick PPE
+  iteration on `mmyp0srw` / `ppe_deploy_i18n_1`. Select the exact successful,
+  Singapore-synchronized SCM version, release only the PPE cluster, then verify its
+  revision, health, and the relevant public Lookup behavior. Keep Singapore production
+  `kpb2dvsn` on the normal Bits Test/Merge/Release path; the direct production
+  ByteFaaS release is blocked by policy. Direct PPE console and pinned-revision
+  `bytedcli` releases both succeeded for SCM `1.0.0.20` (see `progress.md`).
 - Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `unittest.sh` at the root.
   Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
   URL → soak.
@@ -427,7 +434,7 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
   to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
   to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
-- [ ] **Deploy on ByteDance PPE, then production.** Follow the
+- [ ] **Promote the tested ByteDance Backend from PPE to production through Bits.** Follow the
   [ByteDance PPE-to-production plan](bytedance-ppe-to-production-plan.md).
   [Experiment 28](experiments/28-internal-hosting-handoff.md) records the
   earlier route work and blockers; its rewrite/PPE-pinning instructions are

@@ -3626,3 +3626,40 @@ normal release process.
 
 Next: continue normal Backend release work separately; changing the phone's
 Backend target remains an explicit choice.
+
+### 2026-09-16 — direct I18N-TT PPE release of SCM `1.0.0.20`
+
+- 📦 Verified SCM `oec/seller/larklish:1.0.0.20` built successfully from
+  `dd8a0d7aee3b4beb606264ecefc727659caf5bd4` and was synchronized to
+  Singapore. Saved that exact SCM version in the editable code configuration
+  of PPE function `mmyp0srw` (`ppe_deploy_i18n_1`); the release diff showed
+  the SCM change and no other changed cluster setting.
+- 🚀 Submitted a direct ByteFaaS PPE release, without Bits. Ticket
+  `e8hir3n9lyoqdvke` succeeded through Build, Canary, Region, and All DCs;
+  revision `1.0.9` / `cd9wj0vs9u` is sourced from SCM `1.0.0.20`.
+- 🧪 Verified the deployed PPE function reports revision `1.0.9` and a
+  control-plane `GET /v1/ping` returns `pong go1.26.4 linux/amd64`. The public
+  prefixed Lookup path with `x-tt-env: ppe_deploy_i18n_1` returned HTTP 401
+  without a Backend Bearer token, consistent with the authenticated PPE route;
+  this was not a full Lookup test.
+- 🧰 At Max's request, created a second PPE-only release through `bytedcli`,
+  explicitly pinned to revision `cd9wj0vs9u`. Ticket `71vgvvzko3ebttod`
+  succeeded; it redeployed the same SCM `1.0.0.20` code, and the PPE ping
+  passed again. Singapore production function `kpb2dvsn` still runs revision
+  `1.0.2`; no production release or phone Backend change was made.
+
+Next: resolve the normal production Bits/GEC gate before production cutover.
+PPE can be released directly for this service, but this does not remove the
+production release policy or the need to verify a real Lookup after code changes.
+
+### 2026-09-16 — release workflow decision
+
+- 🧭 Max chose direct ByteFaaS releases for quick I18N-TT PPE iteration and
+  the normal Bits workflow for slower production releases. The two successful
+  PPE tickets above prove the direct path for this service; a separate direct
+  production attempt returned HTTP 403 under the OEC FaaS release policy.
+  No further release or phone change was made for this decision.
+
+Next: use the split in `plan.md` for the next Backend change. Verify the exact
+SCM artifact, target function, release result, and behavior each time; keep
+production promotion and phone cutover separate.

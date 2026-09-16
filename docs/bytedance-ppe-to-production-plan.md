@@ -6,6 +6,17 @@ Use the public route that is already live. It forwards `/_/test/demo/larklish/lo
 
 Railway stays running as a rollback option; we will record its source commit and rebuild that commit if we need to rollback. Once the **alias-bearing Backend code** is released to production and verified, disable the PPE header in the app, rebuild and install it, and verify a production Lookup on the Pixel.
 
+## Release workflow going forward (2026-09-16)
+
+The PPE steps below record the original alias rollout, which used Bits. For later
+Backend changes, use ByteFaaS directly to release the exact successful,
+Singapore-synchronized SCM artifact to PPE function `mmyp0srw` in
+`ppe_deploy_i18n_1`, then verify the deployed revision and behavior. Both a
+direct console release and a `bytedcli` release pinned to an existing revision
+succeeded for SCM `1.0.0.20`; creating a new revision through `bytedcli` was not
+tested. Production function `kpb2dvsn` remains on the normal Bits workflow and
+its GEC/QA gates. Do not use the direct PPE path as a production release.
+
 ## Changes
 
 - Cancel pending rewrite/PPE-header ticket `379619` while it is still in review; verify the completed first route remains at version `1260366`. If the ticket has advanced, inspect its effects before proceeding.
