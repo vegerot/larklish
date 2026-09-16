@@ -104,7 +104,7 @@ func TestReplayCorpus(t *testing.T) {
 	for i, o := range src.originals {
 		pick := f.FullTextOf(t.Context(), o.Title, ParsePreview(o.Text), o.WhenMs)
 		if pick.Found != nil {
-			lines = append(lines, fmt.Sprintf("%d\tfound\t%s\t%d", i, pick.ChatID, pick.Found.CreateTime))
+			lines = append(lines, fmt.Sprintf("%d\tfound\t%s\t%d", i, pick.ChatID, pick.Found.CreateTimeMs))
 			counts["found"]++
 		} else {
 			lines = append(lines, fmt.Sprintf("%d\t%s\t\t", i, pick.Reason))

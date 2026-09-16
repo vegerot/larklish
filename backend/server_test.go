@@ -134,7 +134,7 @@ func TestCandidateOfFlattensAPost(t *testing.T) {
 	kind, created, deleted := "post", "1787869580000", false
 	m := &larkim.Message{MsgType: &kind, CreateTime: &created, Deleted: &deleted, Body: &larkim.MessageBody{Content: &content}}
 	got := candidateOf(m)
-	if want := "周报\n完成 链接\n@Max\n[image]\n[Delighted]"; got.Text != want || got.CreateTime != 1787869580000 {
+	if want := "周报\n完成 链接\n@Max\n[image]\n[Delighted]"; got.Text != want || got.CreateTimeMs != 1787869580000 {
 		t.Errorf("got %+v, want text %q", got, want)
 	}
 }

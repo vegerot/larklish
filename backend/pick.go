@@ -22,11 +22,11 @@ const matchChars = 12
 
 // Candidate is one message from the `messages` list, reduced to what pickMessage needs. Mentions resolved.
 type Candidate struct {
-	ID         string
-	MsgType    string
-	CreateTime int64 // epoch ms
-	Deleted    bool
-	Text       string // `text` and flattened `post` messages; "" for every other type
+	ID           string
+	MsgType      string
+	CreateTimeMs int64 // epoch ms
+	Deleted      bool
+	Text         string // `text` and flattened `post` messages; "" for every other type
 }
 
 // Pick is one answer: the candidate found in ChatID, or the reason there is none —
@@ -69,7 +69,7 @@ func pickMessage(items []Candidate, stem string, whenMs int64) Pick {
 	var window []*Candidate
 	for i := range items {
 		c := &items[i]
-		if !c.Deleted && c.CreateTime >= whenMs-before && c.CreateTime <= whenMs+afterMs {
+		if !c.Deleted && c.CreateTimeMs >= whenMs-before && c.CreateTimeMs <= whenMs+afterMs {
 			window = append(window, c)
 		}
 	}

@@ -117,7 +117,7 @@ func (f *Fetcher) pickIn(ctx context.Context, chatID, title string, p Preview, w
 	}
 	ages := make([]string, len(items))
 	for i, c := range items {
-		ages[i] = fmt.Sprintf("%s %ds ago", c.MsgType, (whenMs-c.CreateTime)/1000)
+		ages[i] = fmt.Sprintf("%s %ds ago", c.MsgType, (whenMs-c.CreateTimeMs)/1000)
 	}
 	f.Log("[%s] %s candidates: %s", title, chatID, strings.Join(ages, ", "))
 	pick := pickMessage(items, p.Stem(), whenMs)
@@ -167,7 +167,7 @@ func without(list []string, s string) []string {
 
 func (p Pick) String() string {
 	if p.Found != nil {
-		return fmt.Sprintf("Found(%s %d)", p.Found.MsgType, p.Found.CreateTime)
+		return fmt.Sprintf("Found(%s %d)", p.Found.MsgType, p.Found.CreateTimeMs)
 	}
 	return "Skipped(" + p.Reason + ")"
 }

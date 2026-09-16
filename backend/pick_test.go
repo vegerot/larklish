@@ -5,11 +5,11 @@ import "testing"
 const at = 1_787_869_583_000 // an Original's `when`
 
 func text(id string, ms int64, s string) Candidate {
-	return Candidate{ID: id, MsgType: "text", CreateTime: ms, Text: s}
+	return Candidate{ID: id, MsgType: "text", CreateTimeMs: ms, Text: s}
 }
 
 func post(id string, ms int64, s string) Candidate {
-	return Candidate{ID: id, MsgType: "post", CreateTime: ms, Text: s}
+	return Candidate{ID: id, MsgType: "post", CreateTimeMs: ms, Text: s}
 }
 
 // The picker gets the newest messages of the chat and must find the one behind the Original.
@@ -63,9 +63,9 @@ func TestPickMessage(t *testing.T) {
 				text("mine", at-2_000, "@Oncall Assistant MPA流水线发布卡住，重试之后失败"),
 			}, "@Oncall Assistant MPA流水线发布卡住，重试之后失败", 1, ""},
 		{"recalled messages are skipped",
-			[]Candidate{{ID: "r", MsgType: "text", CreateTime: at - 1_000, Deleted: true}, text("ok", at-2_000, "还在")}, "", 1, ""},
+			[]Candidate{{ID: "r", MsgType: "text", CreateTimeMs: at - 1_000, Deleted: true}, text("ok", at-2_000, "还在")}, "", 1, ""},
 		{"a textless message in the window reports its type",
-			[]Candidate{{ID: "i", MsgType: "image", CreateTime: at - 1_000}}, "标题", -1, "type:image"},
+			[]Candidate{{ID: "i", MsgType: "image", CreateTimeMs: at - 1_000}}, "标题", -1, "type:image"},
 		{"a flattened post matches the Preview that dropped its newlines (Experiment 08)",
 			[]Candidate{post("p", at-1_000, "[image]\nCool performance by Sofia Alise in the courtyard!! Swing by!!!!")},
 			"[image]Cool performance by Sofia Alise in the courtyard!!", 0, ""},

@@ -135,7 +135,7 @@ func candidateOf(m *larkim.Message) Candidate {
 		text = postText(parsePost(content))
 	}
 	created, _ := strconv.ParseInt(str(m.CreateTime), 10, 64)
-	return Candidate{ID: str(m.MessageId), MsgType: kind, CreateTime: created, Deleted: deleted, Text: resolveMentions(text, mentions)}
+	return Candidate{ID: str(m.MessageId), MsgType: kind, CreateTimeMs: created, Deleted: deleted, Text: resolveMentions(text, mentions)}
 }
 
 // parsePost maps Lark's JSON shape of a `post` — `{"title": "", "content": [[{tag, text, …}]]}` —
