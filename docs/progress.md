@@ -3147,3 +3147,12 @@ connected. Deployment and phone verification are in progress.
 Next: normal use and measured Trial consumption. Keep the separate authenticated
 internal-production TODO; no internal deployment was changed. A full billing
 period has not elapsed, so no full-month cost is claimed.
+
+### 2026-09-15 — Refactor test suite
+
+- ✅ Android unit tests passed with `./gradlew testDebugUnitTest`.
+- ⚠️ `go test ./...` reached the full Backend suite, but the existing replay
+  threshold remains below target: 67 of 165 Originals resolved. The failure is
+  unchanged by the backend field-rename refactor.
+
+Validation: no new test failures were introduced by the refactor.
