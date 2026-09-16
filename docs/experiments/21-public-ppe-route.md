@@ -1,5 +1,10 @@
 # Temporary public PPE route — 2026-09-15
 
+> Continuation update: ticket `378704` is now verified finished. Railway is the
+> active demo Backend, and Max authorized internal hosting as a separate
+> experiment. The historical state and phone-cutover plan below are superseded
+> by [Experiment 28](28-internal-hosting-handoff.md).
+
 ## Decision
 
 Use Singapore PPE for the immediate demo. Max explicitly retained authenticated

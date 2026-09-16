@@ -3220,6 +3220,9 @@ ranking out of the helper until their workflows repeat independently.
 - 🌐 Added `backend lookup --repeat`; report HTTP status, translation availability,
   timing and text fingerprint. Lookup and status failures exit nonzero. No
   response body containing credentials is echoed and no token is refreshed.
+- 🪶 Probe and Lookup reports now have one output path: JSON on stdout. Shell
+  redirection saves a report; `--json` remains a boolean format switch elsewhere,
+  `--file` remains saved input, and replay's `--out` remains its corpus directory.
 - 🧪 Twenty-five offline tests pass, including real CLI requests against a local
   HTTP server. Ruff format/check and whitespace checks pass. The live 2,614-event
   snapshot reproduces Experiment 19's 177 Relays, 43 cut Previews, 13 Updates,
@@ -3237,3 +3240,48 @@ ready for review; provider deployment and Recorder schema changes remain separat
 Commit checks: `./gradlew ktfmtFormat` and Ruff format/check passed without
 source changes; all 25 helper tests and whitespace checks passed. GitHub `main`
 was refreshed and remains the rebased base `abc4e5a`.
+
+### 2026-09-16 — helper output convention simplified
+
+- 🔎 Traced the command history: `--json` means JSON on stdout, `--file` means
+  saved input, and replay's `--out` names the corpus directory it creates.
+  Probe and Backend Lookup already output JSON, so their report-file option was
+  removed; redirect stdout to save those reports.
+- 🧪 Added a pure Python unit test proving a thread probe selects the reply's
+  unique marker when root and reply events coexist. The existing command test
+  still verifies the reply is what `probe --thread` observes.
+- 📊 A deduplicated audit of tool calls embedded across every session compaction
+  found no other helper workflow ready to add. Provider operations, commit checks,
+  USB recovery, notification ranking and network toggling either have their own
+  tool or occurred as one incident rather than a repeated independent workflow.
+
+Validation: all 26 Python helper tests pass. Ruff format/check, ktfmt and the
+Markdown whitespace/code-fence checks pass; probe and Lookup help show no report
+file option.
+
+### 2026-09-15 — NetLink registration complete; internal experiment handed to devbox
+
+- ✅ Live browser inspection confirmed ticket `378704` finished successfully:
+  review, API-service creation and closure are complete. This registers
+  `coplan.lark.larklish`; it does not publish the public route.
+- 🧭 Max authorized internal hosting as a separate exploration and says he can
+  approve NetLink changes to TLB configuration. Railway remains the active demo
+  Backend; no migration or phone cutover is selected.
+- 📋 No other external approval blocker is currently known. The route workflow
+  still needs inspection; the recorded Bits production blocker is the separate
+  SCM-metadata failure. Nario was already approved. Use normal deployment hours
+  to avoid a time-window exemption.
+- 📚 Wrote [Experiment 28](experiments/28-internal-hosting-handoff.md) with the
+  goal, verified approval evidence, older resource state to recheck, ordered
+  execution steps, acceptance criteria, production milestone and handoff limits.
+  Updated the plan and marked Experiment 21's former registration blocker and
+  phone-cutover plan as superseded. Preserved pending helper changes.
+
+Next: transfer this working copy, including the uncommitted handoff, to devbox.
+Follow Experiment 28 to inspect the newly unblocked API/TLB workflow, prepare
+the smallest authenticated public route and discover its actual approval gates.
+No infrastructure, phone configuration, commit or push was changed for this handoff.
+
+Follow-up: Max authorized commit and push to GitHub for the helper changes and
+this handoff. All 26 helper tests, Ruff format/check and ktfmt passed. Devbox
+should obtain the published commit before starting Experiment 28.

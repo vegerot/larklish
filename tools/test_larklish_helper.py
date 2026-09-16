@@ -209,6 +209,23 @@ class ProbeTests(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertFalse(report["fullTextMatches"])
 
+    def test_reply_marker_selects_the_thread_reply(self):
+        root_marker = "[probe:root0001]"
+        reply_marker = "[probe:reply001]"
+        reply_text = reply_marker + " 回复：中文消息"
+        rows = [
+            dict(relay(key="root"), text="Sender: " + root_marker + " 中文消息"),
+            dict(update(key="root"), fullText=root_marker + " 中文消息"),
+            dict(relay(key="reply"), text="Sender: " + reply_text),
+            dict(update(key="reply"), fullText=reply_text),
+        ]
+
+        report = h.probe_observation(rows, reply_marker, reply_text, "updated")
+
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["key"], "reply")
+        self.assertTrue(report["fullTextMatches"])
+
     def test_complete_preview_passes_relay_but_not_update(self):
         rows = [
             dict(self.rows()[0], truncated=False),
@@ -271,43 +288,35 @@ class ProbeTests(unittest.TestCase):
             h.probe_observation(complete, self.marker, self.text, "auto")["ok"]
         )
 
-    def test_thread_observes_reply_marker_and_saves_only_summary(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path = pathlib.Path(folder) / "report.json"
-            args = argparse.Namespace(
-                text="private synthetic text",
-                debug=None,
-                expect="auto",
-                output_json=str(path),
-                thread=True,
-                idle=False,
-                timeout=45,
-            )
-            output = io.StringIO()
-            with (
-                patch.object(h, "require_device"),
-                patch.object(h, "read_events", return_value=[]),
-                patch.object(
-                    h, "send_test_message", side_effect=["root", "reply"]
-                ) as send,
-                patch.object(
-                    h,
-                    "wait_for_probe",
-                    return_value={"ok": True, "outcome": "updated (text)"},
-                ) as wait,
-                patch.object(h.time, "sleep"),
-                contextlib.redirect_stdout(output),
-            ):
-                h.cmd_probe(args)
-            first, second = send.call_args_list
-            self.assertNotEqual(first.args[0].split()[0], second.args[0].split()[0])
-            self.assertEqual(second.kwargs, {"reply_to": "root"})
-            self.assertEqual(wait.call_args.args[1], second.args[0].split()[0])
-            self.assertEqual(
-                json.loads(path.read_text()), json.loads(output.getvalue())
-            )
-            self.assertEqual(json.loads(output.getvalue())["messageId"], "reply")
-            self.assertNotIn("private synthetic text", output.getvalue())
+    def test_thread_observes_reply_marker_and_prints_only_summary(self):
+        args = argparse.Namespace(
+            text="private synthetic text",
+            debug=None,
+            expect="auto",
+            thread=True,
+            idle=False,
+            timeout=45,
+        )
+        output = io.StringIO()
+        with (
+            patch.object(h, "require_device"),
+            patch.object(h, "read_events", return_value=[]),
+            patch.object(h, "send_test_message", side_effect=["root", "reply"]) as send,
+            patch.object(
+                h,
+                "wait_for_probe",
+                return_value={"ok": True, "outcome": "updated (text)"},
+            ) as wait,
+            patch.object(h.time, "sleep"),
+            contextlib.redirect_stdout(output),
+        ):
+            h.cmd_probe(args)
+        first, second = send.call_args_list
+        self.assertNotEqual(first.args[0].split()[0], second.args[0].split()[0])
+        self.assertEqual(second.kwargs, {"reply_to": "root"})
+        self.assertEqual(wait.call_args.args[1], second.args[0].split()[0])
+        self.assertEqual(json.loads(output.getvalue())["messageId"], "reply")
+        self.assertNotIn("private synthetic text", output.getvalue())
 
     def test_deadline_is_failure(self):
         with (
@@ -323,7 +332,6 @@ class ProbeTests(unittest.TestCase):
             text="中文",
             debug=None,
             expect="updated",
-            output_json=None,
             thread=False,
             idle=True,
             timeout=12,
@@ -350,7 +358,6 @@ class ProbeTests(unittest.TestCase):
             text="中文",
             debug=None,
             expect="updated",
-            output_json=None,
             thread=False,
             idle=False,
             timeout=12,

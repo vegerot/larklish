@@ -419,18 +419,16 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
   to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
   to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
-- [ ] **A public name for the Backend (TLB), now blocked on registration review.**
-  The production Consul trigger is ready. API Management registration ticket
-  `378704` requires `xi.zhang`, then `wangchen.iven`. Complete that registration,
-  register the PSM and FaaS cluster in TLB, and configure public HTTPS through
-  NetLink with the required review and service-discovery routing. The temporary path is
-  `https://shop.tiktokglobalshop.com/_/test/demo/larklish`. Pin it to authenticated
-  PPE `ppe_deploy_i18n_1`, preserve the Bearer header, and strip the temporary path
-  prefix before forwarding to the Backend. Until public access is verified on
-  cellular, retain the phone's existing configuration. `x-tlb-canary: 1` can test
-  a configuration already deployed to TLB canary instances; it does not publish
-  a route or replace the pending registration approval. The exact records,
-  evidence, and next steps are in [Experiment 21](experiments/21-public-ppe-route.md).
+- [ ] **Explore internal public HTTPS independently of Railway.** Register the
+  Backend in TLB, define the public API and complete the normal route workflow.
+  Railway remains the active demo Backend; this experiment does not select a
+  migration or change the phone's configuration. Start with authenticated PPE,
+  preserving the Bearer header and verifying route rewriting and PPE pinning.
+  Use an existing recorded Original for acceptance. Record actual approval gates,
+  operational effort and Lookup timings before deciding whether internal hosting
+  offers a useful benefit. Current state and devbox continuation steps are in
+  [Experiment 28](experiments/28-internal-hosting-handoff.md); earlier route
+  evidence is in [Experiment 21](experiments/21-public-ppe-route.md).
 - [ ] **Important: authenticated Singapore production deployment.** Finish the
   normal Bits workflow and repair its final SCM-metadata check without skipping
   it. Verify production authentication before later moving the demo off PPE.

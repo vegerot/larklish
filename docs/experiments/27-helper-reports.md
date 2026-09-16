@@ -43,10 +43,10 @@ attach to a newer Relay; the report states that limitation instead of guessing.
 
 ```sh
 tools/larklish-helper probe --idle --expect updated --timeout 60 \
-  --json output/probe.json '明确标记的长测试消息……'
+  '明确标记的长测试消息……' > output/probe.json
 tools/larklish-helper backend lookup \
   --file output/helper-verification/lookup-case.jsonl \
-  --index -1 --repeat 2 --json output/lookup.json
+  --index -1 --repeat 2 > output/lookup.json
 tools/larklish-helper phone status --details --json
 ```
 
@@ -62,9 +62,9 @@ The timeout is a deadline. A terminal skip ends the wait immediately and fails
 an Update expectation. Failure reports include phone diagnostics; no matching
 Relay does not establish that Lark posted no Original. Forced idle is restored
 on failure too. Probes no longer clear logcat; use `phone log --clear` explicitly.
-Debug hooks still print logs and cannot combine with a probe expectation,
-thread mode or JSON output. Non-debug probes print JSON to stdout; `--json FILE`
-also saves it, including failures, without message contents.
+Debug hooks still print logs and cannot combine with a probe expectation or
+thread mode. Non-debug probes print JSON to stdout, including failures and no
+message contents; use normal shell redirection to save it.
 
 `backend lookup` keeps the upstream events-JSONL input and Relay index. It uses
 the recorded time, reads the current access token from `LARKLISH_USER_TOKEN` or
@@ -104,3 +104,16 @@ upstream `phone install` command remains available.
   New probe behavior is covered by offline tests; live checks used existing data.
 
 Private snapshots and results are under ignored `output/helper-verification/`.
+
+## Follow-up — one stdout contract
+
+Repository history uses `--json` as a boolean switch from human output to JSON.
+`--file` selects saved input, while replay's `--out` names the multi-file corpus
+directory it creates. Probe and Backend Lookup already emit only JSON, so their
+short-lived `--json FILE` options were removed: normal shell redirection saves
+their reports without a second output mechanism.
+
+The real Python unit suite now includes a pure thread-correlation test: given
+root and reply Relays with distinct markers, `probe_observation` selects and
+validates the reply. The command-level thread test separately checks that the
+reply receives its own marker and is the message observed by the probe.

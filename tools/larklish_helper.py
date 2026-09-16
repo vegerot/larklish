@@ -1331,9 +1331,9 @@ def wait_for_probe(
 def cmd_probe(args: argparse.Namespace) -> None:
     if not args.text and not args.debug:
         sys.exit("give a message to send, or --debug HOOK")
-    if args.debug and (args.expect != "auto" or args.output_json or args.thread):
+    if args.debug and (args.expect != "auto" or args.thread):
         sys.exit(
-            "--debug prints hook logs; it cannot be combined with --expect, --json or --thread"
+            "--debug prints hook logs; it cannot be combined with --expect or --thread"
         )
     require_device()
     start = len(read_events()) if not args.debug else 0
@@ -1370,8 +1370,6 @@ def cmd_probe(args: argparse.Namespace) -> None:
             adb("shell", "dumpsys", "deviceidle", "unforce")
     output = json.dumps(report, ensure_ascii=False, indent=2)
     print(output)
-    if args.output_json:
-        pathlib.Path(args.output_json).write_text(output + "\n", encoding="utf-8")
     if not report["ok"]:
         raise SystemExit(1)
 
@@ -1546,12 +1544,6 @@ def cmd_backend(args: argparse.Namespace) -> None:
             "runs": results,
         }
         print(json.dumps(report, ensure_ascii=False, indent=2))
-        if args.output_json:
-            pathlib.Path(args.output_json).write_text(
-                json.dumps(report, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            print(f"report: {args.output_json}", file=sys.stderr)
         if not report["ok"]:
             raise SystemExit(1)
 
@@ -1718,7 +1710,7 @@ def main() -> None:
     b = group.add_parser(
         "probe",
         help="post one message and show its Recorder outcome",
-        description="Prefix the test message with a unique [probe:…] marker, then observe its Recorder outcome. --thread checks the reply, not the root. JSON goes to stdout; --json also saves it.",
+        description="Prefix the test message with a unique [probe:…] marker, then observe its Recorder outcome. --thread checks the reply, not the root. The JSON report goes to stdout.",
     )
     b.add_argument(
         "text", nargs="?", help="the message to post (Chinese exercises the Translator)"
@@ -1750,9 +1742,6 @@ def main() -> None:
         type=float,
         default=45,
         help="seconds to wait for the Relay outcome (default 45)",
-    )
-    b.add_argument(
-        "--json", dest="output_json", help="also write a sanitized JSON report"
     )
     b.set_defaults(fn=cmd_probe)
 
@@ -1869,9 +1858,6 @@ def main() -> None:
         type=float,
         default=30,
         help="request timeout in seconds (default 30)",
-    )
-    lookup.add_argument(
-        "--json", dest="output_json", help="also write a sanitized JSON report"
     )
     bk.set_defaults(fn=cmd_backend)
 
