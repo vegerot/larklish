@@ -22,6 +22,12 @@
             </intent-filter>
         </activity>
 
+        <!-- adb shell holds WRITE_SECURE_SETTINGS; ordinary apps cannot redirect Lookups. -->
+        <receiver
+            android:name=".BackendUrlReceiver"
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS" />
+
         <!-- The system binds this service after the user (or `cmd notification allow_listener`)
              grants notification access. -->
         <service

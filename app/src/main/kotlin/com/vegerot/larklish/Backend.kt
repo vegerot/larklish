@@ -1,5 +1,6 @@
 package com.vegerot.larklish
 
+import android.content.Context
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -28,6 +29,7 @@ data class Lookup(
  */
 object Backend {
     fun lookup(
+        context: Context,
         title: String,
         text: String,
         whenMs: Long,
@@ -42,7 +44,7 @@ object Backend {
                 .put("whenMs", whenMs)
                 .put("userToken", userToken)
                 .put("flowId", flowId)
-        return post(BuildConfig.LARKLISH_BACKEND_URL, body, timing)
+        return post(BackendSettings(context).url, body, timing)
     }
 
     private fun post(url: String, body: JSONObject, timing: FlowTiming?): Lookup {

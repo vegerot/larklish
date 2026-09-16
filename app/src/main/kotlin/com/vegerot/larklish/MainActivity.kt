@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val recorder = Recorder(File(filesDir, "events.jsonl"))
+        val backendSettings = BackendSettings(this)
         // Debug hooks (Layer 5): `am start --es debug user|refresh` logs whose token the app holds;
         // `--es debug fetch --es title <group> [--es text "<Sender>: <message>"]` asks the Backend
         // for the Full text.
@@ -63,7 +64,12 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             MaterialTheme {
-                Screen(translator, recorder, initialText = intent.getStringExtra("text").orEmpty())
+                Screen(
+                    translator,
+                    recorder,
+                    backendSettings,
+                    initialText = intent.getStringExtra("text").orEmpty(),
+                )
             }
         }
     }
@@ -75,6 +81,7 @@ private suspend fun MainActivity.debugHook(what: String, title: String, text: St
             // Layer 7: the Lookup runs on the Backend; this asks it the way the listener does.
             val answer =
                 Backend.lookup(
+                    this,
                     title,
                     text.ifEmpty { "..." },
                     System.currentTimeMillis(),
@@ -96,10 +103,17 @@ private suspend fun MainActivity.debugHook(what: String, title: String, text: St
     .onFailure { Log.w(TAG, "debug $what failed: $it") }
 
 @Composable
-private fun Screen(translator: Translator, recorder: Recorder, initialText: String) {
+private fun Screen(
+    translator: Translator,
+    recorder: Recorder,
+    backendSettings: BackendSettings,
+    initialText: String,
+) {
     var input by remember { mutableStateOf(initialText) }
     var output by remember { mutableStateOf("") }
     var events by remember { mutableStateOf(recorder.readAll()) }
+    var backendUrl by remember { mutableStateOf(backendSettings.url) }
+    var backendMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     fun translate() = scope.launch {
@@ -114,6 +128,30 @@ private fun Screen(translator: Translator, recorder: Recorder, initialText: Stri
         modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        Text("Backend", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = backendUrl,
+            onValueChange = {
+                backendUrl = it
+                backendMessage = null
+            },
+            label = { Text("Backend URL") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = {
+                backendMessage =
+                    if (backendSettings.save(backendUrl)) {
+                        backendUrl = backendSettings.url
+                        "Saved"
+                    } else "Enter an HTTPS URL without a query or fragment"
+            }
+        ) {
+            Text("Save Backend URL")
+        }
+        backendMessage?.let { Text(it) }
+
         OutlinedTextField(
             value = input,
             onValueChange = { input = it },

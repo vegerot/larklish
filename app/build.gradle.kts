@@ -1,4 +1,3 @@
-import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -11,13 +10,8 @@ plugins {
 // and land
 // in BuildConfig. Embedded in the APK for now — see plan.md "Shortcuts".
 val local = Properties().apply { rootProject.file("local.properties").inputStream().use(::load) }
-val backendUrl = local.getProperty("larklish.backendUrl", "").trim().removeSuffix("/")
 val backendToken = local.getProperty("larklish.backendToken", "").trim()
 val backendTtEnv = local.getProperty("larklish.backendTtEnv", "").trim()
-
-require(URI(backendUrl).let { it.scheme == "https" && it.host != null }) {
-    "Set larklish.backendUrl to the Backend's HTTPS URL in local.properties"
-}
 
 require(backendToken.isNotEmpty()) {
     "Set larklish.backendToken in local.properties to match LARKLISH_BACKEND_TOKEN on the Backend"
@@ -41,11 +35,6 @@ android {
             "LARK_USER_REFRESH_TOKEN",
             "\"${local["lark.userRefreshToken"]}\"",
         ) // Layer 5 seed
-        buildConfigField(
-            "String",
-            "LARKLISH_BACKEND_URL",
-            "\"$backendUrl\"",
-        )
         buildConfigField("String", "LARKLISH_BACKEND_TOKEN", "\"$backendToken\"")
         buildConfigField("String", "LARKLISH_BACKEND_TT_ENV", "\"$backendTtEnv\"")
     }

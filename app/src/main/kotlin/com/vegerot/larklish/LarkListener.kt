@@ -179,6 +179,7 @@ class LarkListener : NotificationListenerService() {
             val answer =
                 withContext(Dispatchers.IO) {
                     Backend.lookup(
+                        this@LarkListener,
                         title,
                         text,
                         sbn.postTime,

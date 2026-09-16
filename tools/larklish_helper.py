@@ -174,8 +174,10 @@ def phone_user_token() -> str:
 
 
 def backend_url() -> str:
-    """The configured Backend; LARKLISH_BACKEND can select a local Backend for experiments."""
-    return backend_setting("LARKLISH_BACKEND", "larklish.backendUrl").rstrip("/")
+    """Default Backend; LARKLISH_BACKEND selects a different one for experiments."""
+    return os.environ.get(
+        "LARKLISH_BACKEND", "https://backend-production-a712b.up.railway.app"
+    ).rstrip("/")
 
 
 def backend_setting(env: str, key: str) -> str:

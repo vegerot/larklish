@@ -3569,6 +3569,22 @@ verify the normal close/cancel effects on the shared PPE lane.
 Next: finish tests and formatting, run a phone timing probe if the connected
 Pixel stays available, and review the flow breakdown and working copy.
 
+### 2026-09-16 — editable Backend URL
+
+- 🛠️ Replaced the build-time `larklish.backendUrl` setting with a device-local
+  Backend URL. The former local value is the built-in default. The Larklish
+  screen saves an HTTPS URL, and a shell-permission-protected broadcast sets it
+  over adb; Lookups read the current value when they start. Removed the ignored
+  `local.properties` entry. The helper defaults to the same URL and accepts
+  `LARKLISH_BACKEND` for other targets.
+- 🧪 URL validation unit tests, Android formatting and debug APK build passed.
+  The phone was not reinstalled because the working copy also has unfinished
+  flow-timing changes; adb broadcast delivery awaits on-device verification.
+
+Next: after the flow-timing work is ready to deploy, install the APK and check
+the in-app save and adb broadcast on the Pixel. Preserve its current Backend
+choice until the separate production cutover is approved.
+
 ### 2026-09-16 — flow timing verified on the Pixel
 
 - ✅ Backend tests except the pre-existing replay threshold, `go vet`, Android
@@ -3594,3 +3610,19 @@ Pixel stays available, and review the flow breakdown and working copy.
 Next: when an actually cut Preview is available, verify a full Relay-to-Update
 timing row against a Backend running this build. Deploy only through the
 normal release process.
+
+### 2026-09-16 — editable Backend URL verified on the Pixel
+
+- 📱 Installed the debug APK in place after the flow-timing work was committed
+  separately. The shell-only broadcast accepted the default HTTPS URL with a
+  trailing slash, reported the normalized value, and rejected an HTTP URL
+  without changing the saved value.
+- ✅ The Larklish screen displayed the Backend URL, saved a trailing-slash edit,
+  showed `Saved`, and persisted the normalized value. A debug Lookup returned
+  `no-chat` from that Backend, proving the live request used the setting.
+  Removed the test-created preference file afterward; the phone again uses the
+  built-in default without an override. The notification listener remained
+  bound.
+
+Next: continue normal Backend release work separately; changing the phone's
+Backend target remains an explicit choice.

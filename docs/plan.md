@@ -265,8 +265,13 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   "record not found"). Env: `LARK_HOST=https://fsopen.bytedance.net` (an
   IPv6-only instance cannot reach `open.feishu.cn`, and public egress needs a whitelist),
   `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
-- **The phone** uses the single HTTPS URL in `larklish.backendUrl`. The original
-  ByteFaaS trigger requires office Wi-Fi or the SealSuite VPN. Max has now chosen
+- **The phone** uses a device-local HTTPS Backend URL (default:
+  `https://backend-production-a712b.up.railway.app`). Edit it on the Larklish
+  screen and tap Save Backend URL, or set it over adb without rebuilding:
+  `adb shell am broadcast -n com.vegerot.larklish/.BackendUrlReceiver --es backend_url 'https://example.com'`.
+  The broadcast is restricted to the adb shell permission; the result reports
+  the saved URL. The original ByteFaaS trigger requires office Wi-Fi or the
+  SealSuite VPN. Max has now chosen
   Railway for the immediate public demo, superseding the BytePlus VM proposal
   and the Singapore PPE plus public NetLink/TLB route plan. The provider and
   architecture are selected; deployment is pending. Follow
