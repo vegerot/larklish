@@ -51,6 +51,7 @@ func (s *Server) routes(token string) http.Handler {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /lookup", authenticated(s.handleLookup))
+	mux.HandleFunc("POST /_/test/demo/larklish/lookup", authenticated(s.handleLookup))
 	mux.HandleFunc("GET /chats", authenticated(func(w http.ResponseWriter, r *http.Request) { writeJSON(w, s.fetcher.Chats()) }))
 	// ByteFaaS's liveness probe; the body names the Go that built the running binary, so a
 	// deploy is visible from the outside (`tools/larklish-helper backend status`).

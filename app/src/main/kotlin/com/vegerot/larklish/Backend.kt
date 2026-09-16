@@ -44,6 +44,9 @@ object Backend {
             30_000 // a DM Lookup polls the search index for up to 12 s, then reads the chat
         conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
         conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.LARKLISH_BACKEND_TOKEN}")
+        if (BuildConfig.LARKLISH_BACKEND_TT_ENV.isNotEmpty()) {
+            conn.setRequestProperty("x-tt-env", BuildConfig.LARKLISH_BACKEND_TT_ENV)
+        }
         conn.doOutput = true
         conn.outputStream.use { it.write(body.toString().toByteArray()) }
         val status = conn.responseCode

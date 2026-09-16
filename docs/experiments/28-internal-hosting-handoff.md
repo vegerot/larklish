@@ -417,3 +417,34 @@ Install the rebuilt APK in place and verify a Railway Lookup. Do not rewrite
 the active branch's history just to roll back the phone. This source checkpoint
 does not contain ignored `local.properties` or the local signing key, which must
 still be available for the rebuild.
+
+### Backend-alias plan started — September 16
+
+The [PPE-to-production plan](../bytedance-ppe-to-production-plan.md) supersedes
+the rewrite/PPE-header ticket approach documented above. NetLink business ticket
+`379619` was still in business review with the TLB stage waiting. Its Cancel
+action succeeded; after a browser reload the ticket read `canceled`, with all
+stages canceled. Read-only NetLink `get-path-config` then confirmed that the
+already-deployed exact route is still version `1260366`, targets
+`coplan.lark.larklish` in `faas-sg`, and has no plaintext directive. A public
+`POST` without PPE selection still reached that PSM and returned the expected
+plain 404 before the new Backend code was deployed.
+
+The Go Backend now registers only the prefixed `POST` Lookup alias in addition
+to its existing path; it uses the same Bearer-protected handler. Tests cover
+missing, wrong and correct Backend Bearer tokens, non-POST access, and excluded
+prefixed `/chats` and `/v1/ping`. The Android source now sends `x-tt-env` from
+optional `larklish.backendTtEnv` and no longer contains the temporary TLB
+canary switch. The ignored local build setting selects `ppe_deploy_i18n_1`;
+the public host and shared token are unchanged. The phone still has the working
+Railway installation; no APK was installed during this step.
+
+Go tests, `go vet`, Backend build, Android unit tests, `ktfmtCheck`, APK build,
+and 26 Python helper tests passed. `TestReplayCorpus` skipped because this
+checkout has no `replay-corpus` directory, not because of a new failure. The
+ByteDance `origin/main` branch was fetched and is an ancestor of local `main`;
+its 13-commit gap consists of the previously planned 12 commits plus the
+new documentation-plan commit. The Backend changes in that gap were audited:
+routine logging moved to stdout and the candidate timestamp field was renamed
+without changing Lookup behavior. No source push or SCM/PPE release has yet
+occurred.

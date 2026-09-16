@@ -53,7 +53,7 @@ func TestALookupThroughTheServer(t *testing.T) {
 
 	body := `{"title":"Larklish 测试群","text":"Bot: 这是一条很长的消息，前四十五个...","whenMs":1787869583000,"userToken":"u-test"}`
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/lookup", strings.NewReader(body))
+	req := httptest.NewRequest("POST", "/_/test/demo/larklish/lookup", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer test-backend-token")
 	s.routes("test-backend-token").ServeHTTP(rec, req)
 	if rec.Code != 200 {
@@ -101,6 +101,12 @@ func TestBackendAuthentication(t *testing.T) {
 		{"Lookup without token", "POST", "/lookup", "", http.StatusUnauthorized},
 		{"Lookup with wrong token", "POST", "/lookup", "Bearer wrong", http.StatusUnauthorized},
 		{"Lookup with valid token reaches validation", "POST", "/lookup", "Bearer test-backend-token", http.StatusBadRequest},
+		{"prefixed Lookup without token", "POST", "/_/test/demo/larklish/lookup", "", http.StatusUnauthorized},
+		{"prefixed Lookup with wrong token", "POST", "/_/test/demo/larklish/lookup", "Bearer wrong", http.StatusUnauthorized},
+		{"prefixed Lookup with valid token reaches validation", "POST", "/_/test/demo/larklish/lookup", "Bearer test-backend-token", http.StatusBadRequest},
+		{"prefixed cache stays hidden", "GET", "/_/test/demo/larklish/chats", "Bearer test-backend-token", http.StatusNotFound},
+		{"prefixed health probe stays hidden", "GET", "/_/test/demo/larklish/v1/ping", "", http.StatusNotFound},
+		{"prefixed Lookup rejects GET", "GET", "/_/test/demo/larklish/lookup", "Bearer test-backend-token", http.StatusMethodNotAllowed},
 		{"cache without token", "GET", "/chats", "", http.StatusUnauthorized},
 		{"cache with wrong token", "GET", "/chats", "Bearer wrong", http.StatusUnauthorized},
 		{"cache with valid token", "GET", "/chats", "Bearer test-backend-token", http.StatusOK},

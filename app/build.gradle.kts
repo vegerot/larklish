@@ -13,6 +13,7 @@ plugins {
 val local = Properties().apply { rootProject.file("local.properties").inputStream().use(::load) }
 val backendUrl = local.getProperty("larklish.backendUrl", "").trim().removeSuffix("/")
 val backendToken = local.getProperty("larklish.backendToken", "").trim()
+val backendTtEnv = local.getProperty("larklish.backendTtEnv", "").trim()
 
 require(URI(backendUrl).let { it.scheme == "https" && it.host != null }) {
     "Set larklish.backendUrl to the Backend's HTTPS URL in local.properties"
@@ -46,6 +47,7 @@ android {
             "\"$backendUrl\"",
         )
         buildConfigField("String", "LARKLISH_BACKEND_TOKEN", "\"$backendToken\"")
+        buildConfigField("String", "LARKLISH_BACKEND_TT_ENV", "\"$backendTtEnv\"")
     }
 
     testOptions.unitTests.isReturnDefaultValues = true // android.util.Log in JVM tests

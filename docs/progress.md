@@ -3444,3 +3444,27 @@ release through Bits. Verify production auth before changing the public route.
 Next: execute the documented plan, beginning with a live check of ticket
 `379619` and preserving the currently working Railway installation until the
 public PPE endpoint passes acceptance.
+
+### 2026-09-16 — cancel superseded ticket and implement Backend alias
+
+- ✅ Canceled NetLink ticket `379619` while it was still in business review;
+  the TLB stage had not begun. Reloaded readback shows all stages canceled.
+  NetLink `get-path-config` confirms the first exact route remains at version
+  `1260366`, forwards to `coplan.lark.larklish` / `faas-sg`, and has no PPE
+  directive. A public POST without PPE selection still reaches that PSM and
+  returns the expected 404 before the new Backend is deployed.
+- 🧩 Added the exact prefixed Go `POST` alias to the existing authenticated
+  Lookup handler. Tests cover both auth failure modes, valid-token validation,
+  method restriction, and excluded prefixed paths. Replaced temporary app
+  `x-tlb-canary` code/property with optional `larklish.backendTtEnv`; the
+  ignored local value selects `ppe_deploy_i18n_1`. The Railway installation on
+  the Pixel remains untouched.
+- 🧪 Go tests, `go vet`, Backend build, Android unit tests, ktfmt, APK build and
+  26 helper tests passed. The replay-corpus test skipped because the corpus is
+  absent in this checkout. Fetched and audited ByteDance `origin/main`: it is
+  13 linear commits behind local `main` (the planned 12 plus the plan-doc commit).
+  No SCM source push or PPE release has occurred yet.
+
+Next: commit the tested alias/app change and updated records, fast-forward only
+ByteDance `origin/main`, wait for its SCM artifact, then create the PPE-only
+Bits task and verify the public alias before installing on the Pixel.
