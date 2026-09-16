@@ -305,3 +305,115 @@ local operational state outside the repository.
 4. Only after the public PPE endpoint works, install the internal-host build and
    run missing/wrong/correct Bearer plus recorded-Original acceptance checks.
 5. Keep the production Bits milestone deferred until public PPE succeeds.
+
+### Second route ticket submitted — September 16 release window
+
+The scheduled continuation fired at 16:00:00 UTC. At 09:00 PDT the Classic
+route's Modify control was available. The existing exact route was edited; no
+second public path was created. The route editor's HEADER MODIFY component could
+not load: its `feature_detail/17` request timed out while managed Chrome reported
+Local Network Access denied for `cloud.tiktok-row.net`. A read-only authenticated
+API check returned that feature successfully, so this was a browser permission/
+network-path problem, not an observed NetLink policy denial. No browser was
+manually launched and no policy exception was requested.
+
+The supported route-level Nginx directive editor was used for the same header
+overwrite: `more_set_input_headers "x-tt-env: ppe_deploy_i18n_1";`. The rewrite
+editor was set to PATH `SET /lookup` with next action `break`. Before submitting,
+the route's draft view showed both settings on only
+`=/_/test/demo/larklish/lookup`. The console did not offer a generated full diff
+before its `Create Ticket` action; that limitation was observed rather than
+claiming a pre-submission diff review.
+
+Created normal reviewed NetLink business ticket
+[379619](https://cloud.tiktok-row.net/netlink/v2/main/business/ticket/379619?ti_business_id=10071827),
+underlying NetLink ticket `326868`, TLB ticket `1261561`, TLB flow `340414`.
+The generated TLB diff was read before any deployment action. It contains only:
+
+1. A `rewrite_rules` entry for the exact route: `PATH_SET` to `/lookup`, `break`.
+2. That route's `plaintext_directives` change from empty to the one
+   `more_set_input_headers` directive above; no other location or service changes.
+3. The expected servername version bump from `1260366` to `1261561`.
+
+There are no DNS, PSM/cluster, Authorization or sibling-route changes in the
+generated diff. The workflow is again review → canary →
+canary DQ → full → full DQ → close. Business review is pending with
+`wangchen.iven`; Max's Approve action is disabled. No reviewer was changed or
+messaged. The ordinary public path still returned the expected plain 404 before
+review. A temporary canary-configured Android build passed ktfmt, unit tests and
+`assembleDebug`; the `larklish.backendTlbCanary` property and request-header
+code must be removed again after this ticket reaches 100%. ADB showed no
+connected device at the start of this continuation, so the phone remains on the
+working Railway build.
+
+Read-only direct PPE preflight (before the second ticket's review completed):
+`POST /lookup` with `x-tt-env: ppe_deploy_i18n_1` returned 401 for missing and
+wrong Bearer tokens; the configured token passed authentication and returned
+400 for an intentionally empty Lookup payload. This confirms authenticated PPE
+is still running, but does not yet prove the public TLB route, header overwrite,
+or a real Lookup. `tools/larklish-helper backend lookup --help` shows saved
+Original input through `--file`, but it also needs a current phone user token;
+the Pixel was disconnected at this point.
+
+### Authenticated production requested — September 16
+
+Max explicitly asked to deploy the authenticated Backend to Singapore production
+now, superseding this experiment's earlier deferral of the production milestone.
+The normal Bits workflow was inspected before acting. Production function
+`kpb2dvsn` / `faas-sg` still runs revision `yl6hk8n4io` (`1.0.2`) from older SCM
+`1.0.0.11`; authenticated PPE function `mmyp0srw` runs revision `qpu3xqeitk`
+(`1.0.5`) from SCM `1.0.0.13`. Production retains MY instance limit 1/1 and
+other IDCs 0/0. No production code change has yet been made.
+
+Bits development task `2844150` and associated release ticket `1229200073986`
+are the existing authenticated-code workflow. Its self-test pipeline had passed,
+but the Develop-stage GEC quality gate awaited five manual declarations. Max
+confirmed that DECC marking and ROW↔TTP data sharing do not apply to this demo.
+The Backend code has no TCC or RDS integration and this deployment targets only
+Singapore. The five items were each recorded as **Not involved** with a separate
+reason; `Pass All`, skip and force controls were not used. GEC then reported
+`passFlag: true` with two non-blocking automated warnings for no matching test
+plan. Bits enabled its normal **Complete development** action, which advanced the
+task to Test and started the ordinary testing pipeline. That pipeline succeeded.
+
+Test-stage GEC then blocked Merge on **Nario Scenario Coverage Rate**. QCSS report
+`2331366` says it cannot resolve the worker ID to a PSM and commit ID. A normal
+retry of only Nario reproduced the error. A normal full GEC recheck after the
+pipeline and the two Test-stage manual declarations were complete generated a
+new worker ID (`01M2NMGXDKP3KVT1XF54KYPHKQ@1@7`) and failed with the same
+error. Both Test-stage manual items (DECC and TLB configuration) were recorded
+as Not involved with the demo/data-scope evidence; pending manual count is zero.
+The remaining blocked item is Nario's platform metadata lookup, not a failing
+Lookup test. This is the same class of issue previously handled by a separately
+approved GEC disposition for older development task `2820325`; that old approval
+has not carried over to the new task. No check was skipped or force-completed.
+Release ticket `1229200073986` still has zero change items and production still
+runs the old code. The prior release ticket `1225461564162` separately retains
+its final `SCM info not found in pipeline` failure. No general Single Release
+workflow is listed in this Bits workspace, so a template shortcut was not used.
+
+If authenticated production eventually deploys and its missing/wrong/correct
+Bearer behavior is verified, the public route no longer needs to force PPE for
+authentication. It will still need the `/lookup` path rewrite. Pending NetLink
+ticket `379619` currently includes the PPE overwrite and remains in business
+review; production deployment alone will **not** change that ticket. After
+production is proven, inspect/cancel or supersede its PPE directive through a
+new reviewed change before treating the public route as production-backed.
+
+### Phone rollback checkpoint
+
+Max prefers rebuilding the Railway Android app from source over saving an APK
+before the internal-host trial. The recorded, verified Railway deployment source
+commit is `cea339e848d460d48cd82bf7945a4875be09bec3` (Experiment 26). The
+tracked `app/` tree is identical at committed checkpoint
+`7840e57e810316d8af164a60ab35eb94cda41234`; subsequent temporary canary
+edits are uncommitted and are not part of either checkpoint.
+
+If the phone needs to return to Railway, build the checkpoint in a separate
+worktree, set the ignored `larklish.backendUrl` to
+`https://backend-production-a712b.up.railway.app`, keep the existing Backend
+token and other private build inputs, and omit the temporary canary/PPE headers.
+Install the rebuilt APK in place and verify a Railway Lookup. Do not rewrite
+the active branch's history just to roll back the phone. This source checkpoint
+does not contain ignored `local.properties` or the local signing key, which must
+still be available for the rebuild.

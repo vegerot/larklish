@@ -3369,3 +3369,78 @@ installing or running authentication/Lookup acceptance tests.
 
 Next: let the one-shot continuation fire at the release-window boundary, then
 complete the Classic rewrite/PPE-header ticket and its full verified rollout.
+
+### 2026-09-16 — second internal-route ticket awaits business review
+
+- ⏰ The one-shot timer fired at 16:00:00 UTC. Classic route Modify was available
+  at 09:00 PDT without an exception.
+- 📋 Submitted reviewed business ticket `379619` (NetLink `326868`, TLB `1261561`)
+  for the existing exact Lookup route. Its generated diff adds PATH `SET /lookup`
+  with `break`, overwrites `x-tt-env` to authenticated PPE with one route-level
+  Nginx directive, and bumps the servername version. It changes no DNS, Backend
+  target, Authorization, or sibling route. The ticket remains at review and no
+  deployment has occurred.
+- ⚠️ The HEADER MODIFY editor failed to load because managed Chrome reported
+  Local Network Access denied; the normal Nginx directive editor succeeded. The
+  console did not expose its generated full diff before `Create Ticket`; the
+  narrow draft was inspected first, and the full ticket diff was inspected before
+  deployment. No manually launched Chrome, policy exception, reviewer change or
+  skipped check was used.
+- 📱 Reintroduced only the temporary canary property/header code for this rollout.
+  `ktfmtFormat`, Android unit tests and `assembleDebug` pass. ADB currently lists
+  no connected phone, so the working Railway installation is untouched.
+
+Next: wait for `wangchen.iven`'s normal business review on ticket `379619`, then
+complete every TLB stage. Remove the temporary canary property/code at 100%,
+validate public authentication and a recorded Lookup, and install only after the
+internal endpoint is proven.
+
+### 2026-09-16 — authenticated production requested; Bits Test gate blocks Merge
+
+- 🧭 Max asked to deploy the authenticated Backend to Singapore production now.
+  Live readback still shows production `kpb2dvsn` on revision `1.0.2` / SCM
+  `1.0.0.11`; PPE `mmyp0srw` runs authenticated revision `1.0.5` / SCM
+  `1.0.0.13`. The current normal Bits development task is `2844150`, associated
+  release `1229200073986`.
+- 🔐 Granted Local Network Access narrowly to the task-required Bits and ByteCloud
+  origins in the existing Chrome DevTools MCP browser; no separate Chrome was
+  launched. The Bits GEC report became readable.
+- ✅ Completed Develop-stage GEC's five manual declarations individually as
+  Not involved, with remarks grounded in Max's confirmation that DECC marking
+  and ROW↔TTP sharing do not apply, the SG-only deployment, and the Backend's lack
+  of TCC/RDS integration. GEC reported `passFlag: true`; its two no-test-plan
+  warnings were non-blocking. The normal Complete development action advanced to
+  Test; the Test pipeline succeeded.
+- ⛔ Test-stage GEC has one remaining Blocked item: Nario Scenario Coverage Rate.
+  QCSS report `2331366` cannot map its worker ID to a PSM and commit. A single-
+  item normal retry and a full GEC recheck reproduced that platform metadata
+  error (new worker `01M2NMGXDKP3KVT1XF54KYPHKQ@1@7`). The two Test-stage
+  manual declarations are complete, and no check was skipped or force-completed.
+  Bits keeps Merge disabled; the release ticket has zero change items and
+  production is unchanged.
+- 🔀 Once production authentication is actually deployed and verified, the
+  public route can drop the forced PPE header, but it still needs the `/lookup`
+  rewrite. Pending NetLink ticket `379619` includes the PPE header and will not
+  change automatically. No NetLink ticket was cancelled or deployed in response
+  to this production request.
+
+Next: obtain a normal GEC/QA disposition or repair of the new task's Nario
+worker-to-commit mapping, then finish Merge and the authenticated production
+release through Bits. Verify production auth before changing the public route.
+
+### 2026-09-16 — revised ByteDance deployment plan recorded
+
+- 📄 Added [the full revised PPE-to-production plan](bytedance-ppe-to-production-plan.md)
+  verbatim from the Codex Plan response and linked it from `plan.md`. It
+  supersedes the pending NetLink rewrite/PPE-header approach: cancel ticket
+  `379619` if still in review, add the prefixed Go handler, and select PPE from
+  the app during the trial. No ticket cancellation or deployment was performed
+  by this documentation update.
+- 🔀 The cutover is explicit: only after the **alias-bearing** Backend build is
+  in production and the public path is verified without `x-tt-env`, remove the
+  app's PPE-header setting, rebuild/install, and verify a production Lookup.
+  The existing release pinned to SCM `1.0.0.13` cannot trigger that switch.
+
+Next: execute the documented plan, beginning with a live check of ticket
+`379619` and preserving the currently working Railway installation until the
+public PPE endpoint passes acceptance.
