@@ -51,7 +51,7 @@ func TestALookupThroughTheServer(t *testing.T) {
 	s := &Server{fetcher: NewFetcher(&liveSource{client}), translator: &Translator{client}}
 	s.fetcher.Log = func(string, ...any) {}
 
-	body := `{"title":"Larklish 测试群","text":"Bot: 这是一条很长的消息，前四十五个...","whenMs":1787869583000,"userToken":"u-test"}`
+	body := `{"title":"Larklish 测试群","text":"Bot: 这是一条很长的消息，前四十五个...","whenMs":1787869583000,"userToken":"u-test","flowId":"test-flow"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/_/test/demo/larklish/lookup", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer test-backend-token")
@@ -71,6 +71,27 @@ func TestALookupThroughTheServer(t *testing.T) {
 	}
 	if got.English == nil || !strings.HasPrefix(*got.English, "This is a long message") {
 		t.Errorf("english = %v", got.English)
+	}
+	wantCalls := map[string]bool{
+		"GET /open-apis/im/v1/chats/search":                    false,
+		"GET /open-apis/im/v1/messages":                        false,
+		"POST /open-apis/auth/v3/tenant_access_token/internal": false,
+		"POST /open-apis/translation/v1/text/translate":        false,
+		"lookup":    false,
+		"translate": false,
+	}
+	for _, span := range got.Timings {
+		if span.Ms < 0 || span.Failed {
+			t.Errorf("unexpected timing span: %+v", span)
+		}
+		if _, ok := wantCalls[span.Name]; ok {
+			wantCalls[span.Name] = true
+		}
+	}
+	for name, seen := range wantCalls {
+		if !seen {
+			t.Errorf("missing timing for %s: %+v", name, got.Timings)
+		}
 	}
 	for _, b := range *bearers {
 		if b != "Bearer u-test" {

@@ -7,6 +7,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import java.io.File
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,7 @@ class LarkListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        val receivedAt = System.nanoTime()
         if (sbn.packageName != LARK) return
         val n = sbn.notification
         // Android's autogroup summary for Lark: no title, no text (Experiment 01).
@@ -75,40 +77,88 @@ class LarkListener : NotificationListenerService() {
         val title = n.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
         val text = n.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
         val preview = Preview.parse(text)
+        val timing = FlowTiming()
+        val flowId = UUID.randomUUID().toString()
         // A translate failure (no model, no network) would crash the service. The model is on the
         // phone after the first Layer 2 run, so this is unlikely; Android restarts the service.
         // Lark reuses one key per chat: a newer Original on the same key makes the older
         // Update wrong, so cancel it (plan.md Layer 5).
         updates.remove(sbn.key)?.cancel()
-        updates[sbn.key] = scope.launch {
-            val relayTitle = translator.englishOf(title)
-            val relaySender = translator.senderOf(preview.sender)
-            val relay =
-                buildRelay(
-                    this@LarkListener,
-                    sbn,
-                    relayTitle,
-                    relaySender,
-                    preview.mention,
-                    translator.englishOf(preview.message),
-                )
-            manager.notify(sbn.key, RELAY_ID, relay)
-            val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-            recorder.relayed(sbn.key, title, text, relayTitle, relayText, preview.truncated)
-            // Debug builds keep the Original next to the Relay for comparison while we
-            // develop. Release builds cancel it (Max, 2026-08-25).
-            if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
-            Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[$relayText]")
-            // An uncut Preview already holds the whole message, so there is nothing to fetch:
-            // 33 of 34 such Relays had a Full text identical to their Preview (Experiment 13).
-            // Skipping them halves the API load, and with it the translate rate limit that
-            // drives the ML Kit fallback. Recorded, so a soak can still price the exception.
-            if (preview.truncated) {
-                update(sbn, title, text, relayTitle, relaySender, preview)
-            } else {
-                recorder.skipped(sbn.key, "not-truncated")
+        updates[sbn.key] =
+            scope.launch(timing) {
+                var outcome = "canceled"
+                var firstRelayAt = 0L
+                try {
+                    val relayTitle = timing.measure("preview.title") { translator.englishOf(title) }
+                    val relaySender =
+                        timing.measure("preview.sender") { translator.senderOf(preview.sender) }
+                    val relayMessage =
+                        timing.measure("preview.message") { translator.englishOf(preview.message) }
+                    val relay =
+                        buildRelay(
+                            this@LarkListener,
+                            sbn,
+                            relayTitle,
+                            relaySender,
+                            preview.mention,
+                            relayMessage,
+                        )
+                    manager.notify(sbn.key, RELAY_ID, relay)
+                    firstRelayAt = System.nanoTime()
+                    timing.add("original_to_relay", (firstRelayAt - receivedAt) / 1_000_000)
+                    val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+                    recorder.relayed(
+                        sbn.key,
+                        title,
+                        text,
+                        relayTitle,
+                        relayText,
+                        preview.truncated,
+                        flowId,
+                    )
+                    // Debug builds keep the Original next to the Relay for comparison while we
+                    // develop. Release builds cancel it (Max, 2026-08-25).
+                    if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
+                    Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[$relayText]")
+                    // An uncut Preview already holds the whole message, so there is nothing to
+                    // fetch:
+                    // 33 of 34 such Relays had a Full text identical to their Preview (Experiment
+                    // 13).
+                    // Skipping them halves the API load, and with it the translate rate limit that
+                    // drives the ML Kit fallback. Recorded, so a soak can still price the
+                    // exception.
+                    if (preview.truncated) {
+                        outcome =
+                            update(
+                                sbn,
+                                title,
+                                text,
+                                relayTitle,
+                                relaySender,
+                                preview,
+                                flowId,
+                                timing,
+                            )
+                    } else {
+                        recorder.skipped(sbn.key, "not-truncated", flowId = flowId)
+                        outcome = "not-truncated"
+                    }
+                } finally {
+                    if (firstRelayAt != 0L) {
+                        timing.add(
+                            "relay_to_outcome",
+                            (System.nanoTime() - firstRelayAt) / 1_000_000,
+                        )
+                    }
+                    recorder.timing(
+                        sbn.key,
+                        flowId,
+                        outcome,
+                        timing.snapshot(),
+                        (System.nanoTime() - receivedAt) / 1_000_000,
+                    )
+                }
             }
-        }
     }
 
     /**
@@ -122,32 +172,54 @@ class LarkListener : NotificationListenerService() {
         relayTitle: String,
         relaySender: String,
         preview: Preview,
-    ) {
+        flowId: String,
+        timing: FlowTiming,
+    ): String {
         try {
             val answer =
                 withContext(Dispatchers.IO) {
-                    Backend.lookup(title, text, sbn.postTime, userToken.bearer())
+                    Backend.lookup(
+                        title,
+                        text,
+                        sbn.postTime,
+                        timing.measureBlocking("user.token") { userToken.bearer(timing) },
+                        flowId,
+                        timing,
+                    )
                 }
+            timing.backend(answer.timings)
             if (answer.outcome != "found") {
-                recorder.skipped(sbn.key, answer.reason, answer.backend)
-                return
+                recorder.skipped(sbn.key, answer.reason, answer.backend, flowId)
+                return "skipped"
             }
             // No English from the Backend means Lark would not translate it there. The phone's own
             // Translator then tries Lark once more and falls back to ML Kit, marked `~`, as it
             // always has.
             val message =
-                answer.english ?: translator.englishOf(answer.fullText.take(MAX_TRANSLATE_CHARS))
+                answer.english
+                    ?: timing.measure("fulltext.fallback") {
+                        translator.englishOf(answer.fullText.take(MAX_TRANSLATE_CHARS))
+                    }
             val relay = buildRelay(this, sbn, relayTitle, relaySender, preview.mention, message)
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
-            recorder.updated(sbn.key, answer.msgType, answer.fullText, relayText, answer.backend)
+            recorder.updated(
+                sbn.key,
+                answer.msgType,
+                answer.fullText,
+                relayText,
+                answer.backend,
+                flowId,
+            )
             Log.i(TAG, "updated key=${sbn.key} via ${answer.backend} text=[$relayText]")
+            return "updated"
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "update failed key=${sbn.key}: $e")
-            recorder.skipped(sbn.key, "error: $e")
+            recorder.skipped(sbn.key, "error: $e", flowId = flowId)
             if (BuildConfig.DEBUG) manager.notify(ERROR_ID, errorNotification(e))
+            return "error"
         }
     }
 

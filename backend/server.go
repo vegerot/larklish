@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"time"
 )
 
 // LookupRequest is what the phone sends for one cut Preview: the Original's title, its raw
@@ -16,17 +17,19 @@ type LookupRequest struct {
 	Text      string `json:"text"`
 	WhenMs    int64  `json:"whenMs"`
 	UserToken string `json:"userToken"`
+	FlowID    string `json:"flowId,omitempty"`
 }
 
 // LookupResponse: `found` with the Full text and its English (null when Lark would not
 // translate it), or `skipped` with the reason the phone records.
 type LookupResponse struct {
-	Outcome  string  `json:"outcome"`
-	Reason   string  `json:"reason,omitempty"`
-	MsgType  string  `json:"msgType,omitempty"`
-	ChatID   string  `json:"chatId,omitempty"`
-	FullText string  `json:"fullText,omitempty"`
-	English  *string `json:"english"`
+	Outcome  string       `json:"outcome"`
+	Reason   string       `json:"reason,omitempty"`
+	MsgType  string       `json:"msgType,omitempty"`
+	ChatID   string       `json:"chatId,omitempty"`
+	FullText string       `json:"fullText,omitempty"`
+	English  *string      `json:"english"`
+	Timings  []TimingSpan `json:"timings"`
 }
 
 // Server is the Backend: one Lookup per request, the chat cache for the helper, and a liveness probe.
@@ -62,26 +65,39 @@ func (s *Server) routes(token string) http.Handler {
 }
 
 func (s *Server) handleLookup(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	var req LookupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Title == "" || req.Text == "" || req.WhenMs == 0 || req.UserToken == "" {
 		http.Error(w, "need title, text, whenMs, userToken", http.StatusBadRequest)
 		return
 	}
-	ctx := withToken(r.Context(), req.UserToken)
-	pick := s.fetcher.FullTextOf(ctx, req.Title, ParsePreview(req.Text), req.WhenMs)
+	timing := &lookupTiming{}
+	defer func() {
+		// Log successful and skipped Lookups alike for remote soaking; no message content or tokens.
+		entry, _ := json.Marshal(struct {
+			FlowID  string       `json:"flowId"`
+			TotalMs int64        `json:"totalMs"`
+			Spans   []TimingSpan `json:"timings"`
+		}{req.FlowID, time.Since(start).Milliseconds(), timing.snapshot()})
+		infoLog.Printf("lookup timing %s", entry)
+	}()
+	ctx := withTiming(withToken(r.Context(), req.UserToken), timing)
+	var pick Pick
+	timing.stage("lookup", func() { pick = s.fetcher.FullTextOf(ctx, req.Title, ParsePreview(req.Text), req.WhenMs) })
 	if pick.Found == nil {
 		logger := infoLog
 		if pick.failed() {
 			logger = log.Default()
 		}
 		logger.Printf("[%s] → %s", req.Title, pick.Reason)
-		writeJSON(w, LookupResponse{Outcome: "skipped", Reason: pick.Reason})
+		writeJSON(w, LookupResponse{Outcome: "skipped", Reason: pick.Reason, Timings: timing.snapshot()})
 		return
 	}
 	full := pick.Found.Text
-	english := s.translator.EnglishOf(ctx, cut(full, maxTranslateChars))
+	var english *string
+	timing.stage("translate", func() { english = s.translator.EnglishOf(ctx, cut(full, maxTranslateChars)) })
 	infoLog.Printf("[%s] → found %s in %s, english: %v", req.Title, pick.Found.MsgType, pick.ChatID, english != nil)
-	writeJSON(w, LookupResponse{Outcome: "found", MsgType: pick.Found.MsgType, ChatID: pick.ChatID, FullText: full, English: english})
+	writeJSON(w, LookupResponse{Outcome: "found", MsgType: pick.Found.MsgType, ChatID: pick.ChatID, FullText: full, English: english, Timings: timing.snapshot()})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

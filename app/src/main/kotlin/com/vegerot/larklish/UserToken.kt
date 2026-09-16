@@ -39,26 +39,26 @@ class UserToken(
 
     /** A valid access token. Refreshes when the current one is within 5 min of expiry. */
     @Synchronized
-    fun bearer(): String {
-        if (System.currentTimeMillis() >= expiresAt - REFRESH_AHEAD_MS) refresh()
+    fun bearer(timing: FlowTiming? = null): String {
+        if (System.currentTimeMillis() >= expiresAt - REFRESH_AHEAD_MS) refresh(timing)
         return accessToken
     }
 
     /** `POST authen/v2/oauth/token` with `grant_type=refresh_token`; rotates the refresh token. */
     @Synchronized
-    fun refresh() {
+    fun refresh(timing: FlowTiming? = null) {
         try {
-            refreshWith(refreshToken)
+            refreshWith(refreshToken, timing)
         } catch (e: IOException) {
             // 20064: this chain is dead — its refresh token was used elsewhere (single-use). The
             // build's seed may be a newer chain; the same old seed only fails again, honestly.
             if (!e.message.orEmpty().contains("code 20064") || refreshToken == seed) throw e
             Log.w(TAG, "chain dead ($e); starting over from the build's seed")
-            refreshWith(seed)
+            refreshWith(seed, timing)
         }
     }
 
-    private fun refreshWith(token: String) {
+    private fun refreshWith(token: String, timing: FlowTiming?) {
         val json =
             LarkHttp.postJson(
                 "/open-apis/authen/v2/oauth/token",
@@ -67,6 +67,7 @@ class UserToken(
                     .put("refresh_token", token)
                     .put("client_id", appId)
                     .put("client_secret", appSecret),
+                timing = timing,
             )
         accessToken = json.getString("access_token")
         refreshToken = json.getString("refresh_token")

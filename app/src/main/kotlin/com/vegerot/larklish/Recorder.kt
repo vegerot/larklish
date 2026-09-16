@@ -22,6 +22,7 @@ class Recorder(
         relayTitle: String,
         relayText: String,
         truncated: Boolean,
+        flowId: String = "",
     ) {
         append(
             JSONObject()
@@ -32,6 +33,7 @@ class Recorder(
                 .put("relayTitle", relayTitle)
                 .put("relayText", relayText)
                 .put("truncated", truncated)
+                .put("flowId", flowId)
         )
     }
 
@@ -45,6 +47,7 @@ class Recorder(
         fullText: String,
         relayText: String,
         backend: String,
+        flowId: String = "",
     ) {
         append(
             JSONObject()
@@ -54,6 +57,7 @@ class Recorder(
                 .put("fullText", fullText)
                 .put("relayText", relayText)
                 .put("backend", backend)
+                .put("flowId", flowId)
         )
     }
 
@@ -61,10 +65,33 @@ class Recorder(
      * Layer 5: no Update; `reason` is `no-chat`, `no-match`, `type:<msg_type>` or `error: …`.
      * `backend` is the URL that answered a skip; null when none did (`error:`, `not-truncated`).
      */
-    fun skipped(key: String, reason: String, backend: String? = null) {
-        val json = JSONObject().put("event", "skipped").put("key", key).put("reason", reason)
+    fun skipped(key: String, reason: String, backend: String? = null, flowId: String = "") {
+        val json =
+            JSONObject()
+                .put("event", "skipped")
+                .put("key", key)
+                .put("reason", reason)
+                .put("flowId", flowId)
         if (backend != null) json.put("backend", backend)
         append(json)
+    }
+
+    fun timing(
+        key: String,
+        flowId: String,
+        outcome: String,
+        spans: org.json.JSONArray,
+        totalMs: Long,
+    ) {
+        append(
+            JSONObject()
+                .put("event", "timing")
+                .put("key", key)
+                .put("flowId", flowId)
+                .put("outcome", outcome)
+                .put("totalMs", totalMs)
+                .put("spans", spans)
+        )
     }
 
     /**

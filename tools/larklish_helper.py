@@ -540,21 +540,32 @@ def served_by(e: Event) -> str:
 
 
 def relays_with_outcomes(events: list[Event]) -> list[Relay]:
-    """Pair by key and order, retaining the final event and Update latency.
+    """Pair new events by flow ID, old events by key and order.
 
     Missing outcomes are observations, not proof of cancellation. Recorder has no
     per-Original ID, so a late result can still attach to a newer Relay on its key.
     """
     relays: list[Relay] = []
     open_by_key: dict[str, Relay] = {}
+    by_flow: dict[str, Relay] = {}
     for e in events:
         kind = e["event"]
         if kind == "relayed":
             r: Relay = dict(e, outcome="no recorded outcome", cut=e.get("truncated"))
             relays.append(r)
             open_by_key[e["key"]] = r
-        elif kind in {"updated", "skipped"} and e["key"] in open_by_key:
-            r = open_by_key[e["key"]]
+            if e.get("flowId"):
+                by_flow[e["flowId"]] = r
+        elif kind == "timing" and e.get("flowId") in by_flow:
+            by_flow[e["flowId"]]["timing"] = e
+        elif kind in {"updated", "skipped"}:
+            r = (
+                by_flow.get(e["flowId"])
+                if e.get("flowId")
+                else open_by_key.get(e["key"])
+            )
+            if r is None:
+                continue
             r["result"] = e
             r.pop("latencySeconds", None)
             if kind == "updated":
@@ -566,6 +577,41 @@ def relays_with_outcomes(events: list[Event]) -> list[Relay]:
                     reason.split(":")[0] if reason.startswith("error") else reason
                 )
     return relays
+
+
+def timing_rows(events: list[Event], args: argparse.Namespace) -> list[dict[str, Any]]:
+    relays = selected(relays_with_outcomes(select(events, until=args.until)), args)
+    rows = []
+    for relay in relays:
+        timing = relay.get("timing")
+        if timing is None or (args.flow_id and relay.get("flowId") != args.flow_id):
+            continue
+        rows.append(
+            {
+                "flowId": relay["flowId"],
+                "at": relay["at"],
+                "outcome": timing["outcome"],
+                "totalMs": timing["totalMs"],
+                "spans": timing["spans"],
+            }
+        )
+    return rows[-args.limit :]
+
+
+def events_timing(events: list[Event], args: argparse.Namespace) -> None:
+    rows = timing_rows(events, args)
+    if args.json:
+        print(json.dumps(rows, indent=2))
+        return
+    for row in rows:
+        print(f"{row['at']} {row['flowId']} {row['outcome']} total {row['totalMs']} ms")
+        for span in row["spans"]:
+            state = " FAILED" if span.get("failed") else ""
+            print(f"  {span['name']}: {span['ms']} ms{state}")
+    if not rows:
+        print(
+            "No recorded timing flows. Timing starts when the app receives an Original; older records have no breakdown."
+        )
 
 
 def latency_stats(values: list[float]) -> dict[str, Any]:
@@ -1140,6 +1186,10 @@ def events_list(events: list[Event], args: argparse.Namespace) -> None:
             print(f"{when(e, args.utc)} S  {e['reason']}{served_by(e)}")
         elif kind == "fallback":
             print(f"{when(e, args.utc)} F  {e['reason']}")
+        elif kind == "timing":
+            print(
+                f"{when(e, args.utc)} T  flow={e['flowId']} {e['outcome']} {e['totalMs']} ms"
+            )
         else:
             r = e["reason"]
             print(
@@ -1278,6 +1328,7 @@ def cmd_events(args: argparse.Namespace) -> None:
         "list": events_list,
         "stats": events_stats,
         "grade": events_grade,
+        "timing": events_timing,
         "pull": events_pull,
     }[args.view](events, args)
 
@@ -1702,6 +1753,14 @@ def main() -> None:
     )
     grade.add_argument("--group-by", choices=["network", "backend", "day"])
     grade.add_argument("--json", action="store_true", help="emit the report as JSON")
+    timing = view.add_parser(
+        "timing", help="per-flow durations from Original receipt to Relay and outcome"
+    )
+    timing.add_argument("--flow-id", help="show only this Original's flow")
+    timing.add_argument(
+        "--limit", type=int, default=10, help="number of latest flows (default 10)"
+    )
+    timing.add_argument("--json", action="store_true", help="emit timing rows as JSON")
     view.add_parser(
         "pull", help="save the entire raw JSONL (ignores filters)"
     ).add_argument("out")

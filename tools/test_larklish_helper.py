@@ -113,6 +113,33 @@ class EventsTests(unittest.TestCase):
         self.assertEqual(report["summary"]["outcomes"]["no recorded outcome"], 1)
         self.assertEqual(report["summary"]["latencySeconds"]["median"], 2)
 
+    def test_flow_id_keeps_late_outcome_with_older_original(self):
+        older = relay(flowId="old")
+        newer = relay(at="2026-09-15T12:00:02Z", flowId="new")
+        late = update(at="2026-09-15T12:00:04Z", flowId="old")
+        timing = {
+            "event": "timing",
+            "at": "2026-09-15T12:00:05Z",
+            "key": "key",
+            "flowId": "old",
+            "outcome": "updated",
+            "totalMs": 4000,
+            "spans": [{"name": "original_to_relay", "ms": 100}],
+        }
+        paired = h.relays_with_outcomes([older, newer, late, timing])
+        self.assertEqual(paired[0]["outcome"], "updated (text)")
+        self.assertEqual(paired[1]["outcome"], "no recorded outcome")
+        rows = h.timing_rows(
+            [older, newer, late, timing], options(flow_id=None, limit=10)
+        )
+        self.assertEqual(rows[0]["spans"][0]["ms"], 100)
+        self.assertNotIn("text", rows[0])
+
+    def test_old_record_has_no_timing_rows(self):
+        self.assertEqual(
+            h.timing_rows([relay(), update()], options(flow_id=None, limit=10)), []
+        )
+
     def test_raw_errors_differ_from_paired_outcomes(self):
         skipped = {
             "event": "skipped",

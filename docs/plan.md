@@ -4,6 +4,9 @@ Larklish grows like an onion 🧅. Each layer is the smallest thing that answers
 question. Commit every layer, even the ones we throw away. The settled decisions are in
 the table below; `CONTEXT.md` holds the words.
 
+The end-to-end flow timing plan and its implementation additions are in
+[`experiments/28-flow-timing.md`](experiments/28-flow-timing.md).
+
 ## Working rules
 
 - Keep `progress.md` short, append-only, and continuation-ready.

@@ -2,6 +2,7 @@ package com.vegerot.larklish
 
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -21,6 +22,7 @@ class LarkApiTranslator(private val appId: String, private val appSecret: String
 
     override suspend fun zhToEn(text: String): String =
         withContext(Dispatchers.IO) {
+            val timing = currentCoroutineContext()[FlowTiming]
             val out =
                 try {
                     LarkHttp.postJson(
@@ -29,7 +31,8 @@ class LarkApiTranslator(private val appId: String, private val appSecret: String
                                 .put("source_language", "zh")
                                 .put("target_language", "en")
                                 .put("text", text),
-                            token(),
+                            token(timing),
+                            timing,
                         )
                         .getJSONObject("data")
                         .getString("text")
@@ -44,12 +47,13 @@ class LarkApiTranslator(private val appId: String, private val appSecret: String
             out
         }
 
-    private fun token(): String {
+    private fun token(timing: FlowTiming?): String {
         if (System.currentTimeMillis() < tokenExpiresAt) return token
         val body =
             LarkHttp.postJson(
                 "/open-apis/auth/v3/tenant_access_token/internal",
                 JSONObject().put("app_id", appId).put("app_secret", appSecret),
+                timing = timing,
             )
         token = body.getString("tenant_access_token")
         // Renew a minute early so a call never starts with a token that expires mid-flight.

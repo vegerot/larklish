@@ -3,6 +3,7 @@ package com.vegerot.larklish
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.TranslatorOptions
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.tasks.await
 
 /** On-device translation with Google ML Kit. The model (~30 MB) downloads on first use. */
@@ -16,7 +17,12 @@ class MlKitTranslator : Translator {
         )
 
     override suspend fun zhToEn(text: String): String {
-        client.downloadModelIfNeeded().await() // no-op once the model is on the phone
-        return client.translate(text).await()
+        val timing = currentCoroutineContext()[FlowTiming]
+        if (timing == null) {
+            client.downloadModelIfNeeded().await()
+            return client.translate(text).await()
+        }
+        timing.measure("device.model") { client.downloadModelIfNeeded().await() }
+        return timing.measure("device.translate") { client.translate(text).await() }
     }
 }

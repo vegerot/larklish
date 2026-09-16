@@ -17,6 +17,7 @@ data class Lookup(
     val fullText: String,
     val english: String?,
     val backend: String,
+    val timings: org.json.JSONArray,
 )
 
 /**
@@ -26,45 +27,64 @@ data class Lookup(
  * 200; the listener records that as `error: …`, like a failed fetch.
  */
 object Backend {
-    fun lookup(title: String, text: String, whenMs: Long, userToken: String): Lookup {
+    fun lookup(
+        title: String,
+        text: String,
+        whenMs: Long,
+        userToken: String,
+        flowId: String = "",
+        timing: FlowTiming? = null,
+    ): Lookup {
         val body =
             JSONObject()
                 .put("title", title)
                 .put("text", text)
                 .put("whenMs", whenMs)
                 .put("userToken", userToken)
-        return post(BuildConfig.LARKLISH_BACKEND_URL, body)
+                .put("flowId", flowId)
+        return post(BuildConfig.LARKLISH_BACKEND_URL, body, timing)
     }
 
-    private fun post(url: String, body: JSONObject): Lookup {
-        val conn = URL("$url/lookup").openConnection() as HttpURLConnection
-        conn.requestMethod = "POST"
-        conn.connectTimeout = 5_000
-        conn.readTimeout =
-            30_000 // a DM Lookup polls the search index for up to 12 s, then reads the chat
-        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-        conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.LARKLISH_BACKEND_TOKEN}")
-        if (BuildConfig.LARKLISH_BACKEND_TT_ENV.isNotEmpty()) {
-            conn.setRequestProperty("x-tt-env", BuildConfig.LARKLISH_BACKEND_TT_ENV)
+    private fun post(url: String, body: JSONObject, timing: FlowTiming?): Lookup {
+        val started = System.nanoTime()
+        var status = 0
+        var failed = true
+        try {
+            val conn = URL("$url/lookup").openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 5_000
+            conn.readTimeout =
+                30_000 // a DM Lookup polls the search index for up to 12 s, then reads the chat
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.LARKLISH_BACKEND_TOKEN}")
+            if (BuildConfig.LARKLISH_BACKEND_TT_ENV.isNotEmpty()) {
+                conn.setRequestProperty("x-tt-env", BuildConfig.LARKLISH_BACKEND_TT_ENV)
+            }
+            conn.doOutput = true
+            conn.outputStream.use { it.write(body.toString().toByteArray()) }
+            status = conn.responseCode
+            val answer =
+                (if (status == 200) conn.inputStream else conn.errorStream)
+                    ?.bufferedReader()
+                    ?.readText()
+                    .orEmpty()
+            if (status != 200) throw IOException("Backend /lookup: http $status ${answer.trim()}")
+            val json = JSONObject(answer)
+            val result =
+                Lookup(
+                    json.getString("outcome"),
+                    json.optString("reason"),
+                    json.optString("msgType"),
+                    json.optString("fullText"),
+                    if (json.isNull("english")) null
+                    else json.getString("english"), // optString would read JSON null as "null"
+                    backend = url,
+                    timings = json.optJSONArray("timings") ?: org.json.JSONArray(),
+                )
+            failed = false
+            return result
+        } finally {
+            timing?.add("POST /lookup", (System.nanoTime() - started) / 1_000_000, failed, status)
         }
-        conn.doOutput = true
-        conn.outputStream.use { it.write(body.toString().toByteArray()) }
-        val status = conn.responseCode
-        val answer =
-            (if (status == 200) conn.inputStream else conn.errorStream)
-                ?.bufferedReader()
-                ?.readText()
-                .orEmpty()
-        if (status != 200) throw IOException("Backend /lookup: http $status ${answer.trim()}")
-        val json = JSONObject(answer)
-        return Lookup(
-            json.getString("outcome"),
-            json.optString("reason"),
-            json.optString("msgType"),
-            json.optString("fullText"),
-            if (json.isNull("english")) null
-            else json.getString("english"), // optString would read JSON null as "null"
-            backend = url,
-        )
     }
 }

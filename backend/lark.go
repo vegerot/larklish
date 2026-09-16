@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	lark "github.com/larksuite/oapi-sdk-go/v3"
@@ -13,7 +14,7 @@ import (
 // translate call); user-identity calls carry the phone's token per request (withToken).
 func newLark(appID, appSecret, host string) *lark.Client {
 	return lark.NewClient(appID, appSecret, lark.WithOpenBaseUrl(host), lark.WithReqTimeout(15*time.Second),
-		lark.WithLogLevel(larkcore.LogLevelWarn))
+		lark.WithLogLevel(larkcore.LogLevelWarn), lark.WithHttpClient(timedHTTPClient{&http.Client{Timeout: 15 * time.Second}}))
 }
 
 // larkErr words a failed call like the phone's LarkHttp did, so the record's `error:` rows read the same.

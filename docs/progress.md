@@ -3551,3 +3551,46 @@ Merge or production. The PPE trial can continue without bypassing that gate.
 Next: obtain normal QA/GEC resolution for the alias task's non-skippable
 Nario worker-to-commit mapping failure. Before retiring the old task/release,
 verify the normal close/cancel effects on the shared PPE lane.
+
+### 2026-09-16 — end-to-end flow timing in progress
+
+- 📄 Copied the timing plan verbatim to `docs/experiments/28-flow-timing.md`, then
+  recorded Max's additions: on-device translation, Original-to-first-Relay gap,
+  and Backend-side timing logs for remote soaking.
+- ⏱️ Added per-Original flow IDs and monotonic timings on the phone, per-call
+  timing for phone Lark/Backend requests and SDK calls on the Go Backend, and
+  a private `events timing` view. Backend responses include timing spans and
+  Backend logs emit a content-free timing record for each valid Lookup.
+- 🧪 Android unit tests and APK build passed; focused Backend tests and 28
+  helper tests passed. The full Go suite still fails its established replay
+  threshold (67/165), unrelated to timing. Phone acceptance and final review
+  remain pending; no remote deployment or production cutover was performed.
+
+Next: finish tests and formatting, run a phone timing probe if the connected
+Pixel stays available, and review the flow breakdown and working copy.
+
+### 2026-09-16 — flow timing verified on the Pixel
+
+- ✅ Backend tests except the pre-existing replay threshold, `go vet`, Android
+  unit tests/build/ktfmt, 28 helper tests and Ruff checks passed. The full Go
+  suite still reports 67/165 replay matches against its existing threshold.
+- 📱 Installed the debug APK in place twice through `phone install`: the user
+  token file was preserved byte-for-byte, all prior events remained, and the
+  listener stayed bound. Two marked probes passed, but Lark delivered complete
+  bot Previews both times, so neither exercised a Backend Update.
+- ⏱️ The second probe's private timing record showed 1,905 ms from Original
+  receipt to first Relay, 22 ms Relay-to-skip, and 1,928 ms total. The title
+  translation took 1,341 ms (including a 778 ms tenant-token call and 375 ms
+  translate call); message translation took 525 ms. No message contents or
+  credentials appear in timing rows. Backend response spans and remote logs
+  were verified through the local fake-Lark integration test, not a deployed
+  Backend.
+- 🧵 A separate Backend-URL edit appeared in the shared working copy while
+  timing work was underway; it is preserved. The combined Android working
+  copy compiles and passes tests. No remote Backend deployment or production
+  cutover was made. The timing work was committed separately from the
+  Backend-URL edit.
+
+Next: when an actually cut Preview is available, verify a full Relay-to-Update
+timing row against a Backend running this build. Deploy only through the
+normal release process.
