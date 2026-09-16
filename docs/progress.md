@@ -3693,3 +3693,23 @@ production promotion and phone cutover separate.
 Next: soak the two Backends with real cut-Preview Lookups and compare their
 timing records. Keep the phone's Backend choice and production promotion as
 separate decisions.
+
+### 2026-09-16 — phone URL switch exercises the deployed PPE Backend
+
+- 🔎 Read commit `8c600bb` for the shell-protected Backend URL broadcast.
+  The phone had no saved Backend override and used Railway by default.
+- 📱 Set the phone's Backend URL to the direct I18N-TT PPE trigger
+  `https://mmyp0srw.sg-fn.tiktok-row.net`. A debug Lookup with a synthetic,
+  never-seen title logged a `skipped` response with `backend` equal to that
+  PPE URL and a timing field. No Lark message was sent.
+- 🔁 Set the URL back to the Railway default and verified a second debug
+  Lookup logged the Railway URL and timing field. Removed only the preference
+  file created for this test; on-disk state again has no Backend override.
+  The listener remains bound, Wi-Fi is on, and the phone is at Home.
+- ⚠️ This tests the app-to-PPE Lookup path and restoration, not a complete
+  Original → Relay → Update on a cut Preview. Lark was not running, and no
+  fresh Original was generated in this test.
+
+Next: wait for a natural cut Preview or obtain explicit approval for a marked
+test message (recipient, content, and sender identity) before claiming a full
+notification-flow acceptance on PPE.
