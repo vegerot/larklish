@@ -3156,3 +3156,19 @@ period has not elapsed, so no full-month cost is claimed.
   unchanged by the backend field-rename refactor.
 
 Validation: no new test failures were introduced by the refactor.
+
+### 2026-09-15 — Railway log severity corrected
+
+- 🔧 Go's standard logger sent every message to stderr, which Railway labels
+  `error`. Added one stdout logger for startup, candidate diagnostics, successful
+  Lookups and ordinary misses. Failed Lookups and fatal errors still use stderr.
+- 🧪 Local process probes verified healthy startup on stdout, missing credentials
+  and bind failures on stderr, and HTTP Lookup misses versus Lark API failures on
+  their respective streams. `go -C backend test -skip Replay ./...` passed;
+  the known corpus replay threshold failure remains excluded from this check.
+- 🚀 Pushed `c4ad2563f8dd` through GitHub `main`; Railway deployment
+  `b2d8c12f-c770-484e-90b2-efaca89ba6f1` succeeded. Its startup log is
+  `level: "info"`. Public health and authenticated/unauthenticated cache checks
+  passed. Existing historical logs retain their old classification.
+- 📚 Execution details and sources are appended to
+  [Experiment 26](experiments/26-railway-deployment.md).

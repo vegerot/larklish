@@ -403,3 +403,44 @@ Follow-up: observe normal use and Trial credit consumption before choosing paid
 service or changing sleep/cache behavior. The existing internal-production TODO
 is independent. Private rollback files and test data remain in the ignored
 deployment output directory; no credential values are recorded here.
+
+## Follow-up — log severity (2026-09-15 PDT)
+
+Max noticed successful Lookup logs marked `error` and requested a trivial fix.
+
+1. Read `backend/main.go`, `server.go` and `fetcher.go`. All routine messages used
+   Go's default logger. Confirmed the mechanism in the
+   [Go log documentation](https://pkg.go.dev/log) and
+   [Railway log normalization documentation](https://docs.railway.com/observability/logs#normalization-strategy):
+   the default logger writes stderr; Railway maps stderr to error and stdout to info.
+2. Added `infoLog = log.New(os.Stdout, "", log.LstdFlags)` and used it for startup,
+   candidate diagnostics, successful Lookups and ordinary misses. A failed Lookup
+   uses `log.Default()`; existing fatal calls keep stderr. No logging dependency
+   or log-format change was needed.
+3. Built a temporary local binary and captured stdout/stderr independently.
+   Healthy startup and `/v1/ping` passed with an empty stderr stream. Missing
+   credentials exited 1 with only stderr. A second process on the occupied port
+   emitted its startup to stdout, then its bind failure to stderr and exited 1.
+4. Started a temporary local HTTP stub for Lark. Sent authenticated Lookups to
+   the local Backend: an empty chat search returned `skipped/no-chat`, logged
+   only on stdout; a stubbed Lark API error returned a failed Lookup, logged only
+   on stderr. Used dummy credentials and no real Lark calls for these probes.
+5. `gofmt` and `go -C backend test -skip Replay ./...` passed. The known replay
+   threshold failure was not re-run. Required `./gradlew ktfmtFormat` and
+   `uvx --system-certs ruff format tools` passed. `sl diff --check` is unsupported;
+   a direct whitespace check of the changed Go files passed instead.
+6. Refreshed `github/main` with `sl pull github --bookmark main`. The previous
+   refactor/test-record commits were already published and deployed as
+   `4e8a60339758`; there was no unpublished predecessor to include. Committed
+   only the three logging files as `c4ad2563f8dd`, then ran
+   `sl push github --to main --rev c4ad2563f8ddb66855dd6170a491ba2c6f5f8ea2`.
+   Concurrent helper changes remained outside this commit.
+7. Polled `railway deployment list` with explicit project, environment and service
+   IDs. Native GitHub deployment `b2d8c12f-c770-484e-90b2-efaca89ba6f1` reached
+   `SUCCESS` with source `c4ad2563f8dd`. Bounded `railway logs ... --lines 10 --json`
+   returned the Backend startup at **2026-09-16 00:25:18 UTC** with `level: "info"`.
+8. Verified public `/v1/ping` returned 200 (`pong go1.25.14 linux/amd64`), `/chats`
+   with the existing Backend token returned 200, and `/chats` without it returned
+   401. No phone actions or new Lark messages were needed. Historical logs keep
+   their original labels; the fix applies to new deployments' output.
+9. Recorded the change and evidence here and in `docs/progress.md`.
