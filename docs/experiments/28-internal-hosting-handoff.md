@@ -530,3 +530,18 @@ produced an English Relay over cellular with VPN off and the same correct
 notification. Wi-Fi was restored after the cellular probe. Thus the earlier
 no-Relay probe was transient; notification interception works on both networks,
 but these bot messages still do not measure full Relay-to-Update timing.
+
+### Older Bits task disposition
+
+Read-only Bits checks after the PPE trial showed that both development tasks
+`2844150` (SCM `1.0.0.13`, no prefixed handler) and `2850411` (SCM
+`1.0.0.19`, alias-bearing) remain open at Test with GEC failed. Their
+automatically associated release tickets, `1229200073986` and
+`1229776511490`, are both still integrating and have **zero change items**.
+Production is unchanged at SCM `1.0.0.11`. The older task is redundant as a
+production candidate: its authentication change is included in the newer code,
+but it cannot serve the public prefixed path. Keep its Nario report as
+comparison evidence for the QA/GEC owner, then retire the older task and
+release through normal controls after checking whether closure affects the
+PPE lane shared with the new task. This is a recommendation, **not** a
+completed cancellation; no Bits task or release was cancelled.

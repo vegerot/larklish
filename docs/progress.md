@@ -3533,3 +3533,21 @@ its normal QA/GEC process. Do not skip or force it.
 Next: obtain a normal QA/GEC resolution for the Nario worker-to-commit mapping
 failure on both old task `2844150` and alias task `2850411` before attempting
 Merge or production. The PPE trial can continue without bypassing that gate.
+
+### 2026-09-16 — older Bits release is superseded, not cancelled
+
+- 🔎 Live Bits readback: old task `2844150` and alias task `2850411` are open at
+  Test with GEC failed. Their releases `1229200073986` and `1229776511490`
+  remain integrating with zero change items. Production still runs SCM
+  `1.0.0.11`; PPE runs alias-bearing SCM `1.0.0.19`.
+- 🧭 Recommendation: do not clear the old gate merely to release SCM
+  `1.0.0.13`—it has authentication but no prefixed handler, and the new
+  artifact includes both. Keep the old Nario report for QA/GEC comparison;
+  then retire the old task and release normally after checking whether task
+  closure affects the PPE lane shared with the new task. No Bits cancellation
+  was performed. The phone stays on PPE until the new code reaches production
+  and passes the plan's acceptance checks.
+
+Next: obtain normal QA/GEC resolution for the alias task's non-skippable
+Nario worker-to-commit mapping failure. Before retiring the old task/release,
+verify the normal close/cancel effects on the shared PPE lane.
