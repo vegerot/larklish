@@ -3525,6 +3525,10 @@ its normal QA/GEC process. Do not skip or force it.
   pending manual count is zero. One normal Nario-only retry finished with the
   same mapping error; GEC remains `CheckStatusFailed` and Merge unavailable.
   No check was skipped or forced, and no alias-bearing production release ran.
+- 🔎 Final live FaaS readback: the Test pipeline redeployed the same SCM
+  `1.0.0.19` artifact to PPE revision `1.0.8` (`8mbean5svb`); production remains
+  SCM `1.0.0.11` revision `1.0.2`. Wi-Fi is restored, Larklish is running,
+  and the worktree is otherwise clean.
 
 Next: obtain a normal QA/GEC resolution for the Nario worker-to-commit mapping
 failure on both old task `2844150` and alias task `2850411` before attempting

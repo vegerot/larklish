@@ -462,7 +462,9 @@ was created from task `2844150` with the new SCM version pinned, PPE enabled,
 and BOE disabled. Bits automatically associated release ticket `1229776511490`;
 no production release action was taken. Its ordinary self-test pipeline
 succeeded, deploying PPE function `mmyp0srw` revision `c45ojbhrt6` (`1.0.7`)
-from SCM `1.0.0.19` to `faas-sg`.
+from SCM `1.0.0.19` to `faas-sg`. The later Test pipeline redeployed the same
+SCM artifact as revision `8mbean5svb` (`1.0.8`), which was the final live PPE
+readback; production remained on SCM `1.0.0.11` (`1.0.2`).
 
 For the direct gateway **and** public exact route, `POST` with
 `x-tt-env: ppe_deploy_i18n_1` returned 401 with missing or wrong Backend Bearer
