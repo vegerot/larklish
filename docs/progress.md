@@ -3201,3 +3201,39 @@ Validation: no new test failures were introduced by the refactor.
 Next: use the new commands for ordinary Backend and phone acceptance. Keep
 provider deployment, billing, rollback APKs, network toggling and notification
 ranking out of the helper until their workflows repeat independently.
+
+
+### 2026-09-16 — grouped helper reports and explicit acceptance outcomes
+
+- 🔀 Rebased onto GitHub `main` at `abc4e5a`. Integrated the overlapping
+  acceptance-command changes, preserving its phone install command, saved-event
+  Lookup input, timeout flags and optional JSON report files.
+- 🧰 Added bounded event windows, dedicated-test-group exclusion, grouped grades
+  by network/Backend/day, JSON output and Relay-to-Update latency statistics.
+  Fixed Han filtering dropping paired Updates; missing outcomes now say
+  `no recorded outcome`. Unknown truncation stays outside the denominator.
+- 📱 Probes use distinct markers, observe the reply for thread tests, support
+  explicit `--expect auto|relayed|updated`, require matching Full text for an
+  Update, and preserve logcat. Failure reports include phone diagnostics.
+  `phone status --details` includes version/update time and retained app exits;
+  active VPN networks are distinguished from app-specific routing.
+- 🌐 Added `backend lookup --repeat`; report HTTP status, translation availability,
+  timing and text fingerprint. Lookup and status failures exit nonzero. No
+  response body containing credentials is echoed and no token is refreshed.
+- 🧪 Twenty-five offline tests pass, including real CLI requests against a local
+  HTTP server. Ruff format/check and whitespace checks pass. The live 2,614-event
+  snapshot reproduces Experiment 19's 177 Relays, 43 cut Previews, 13 Updates,
+  28 paired errors, two missing outcomes and 3.466-second median latency.
+  Phone diagnostics work over the restored Mac ADB tunnel. Railway health/auth
+  and two replays of an existing synthetic Original pass (3.656 and 4.577 s).
+- 📚 [Experiment 27](experiments/27-helper-reports.md) records command semantics,
+  evidence and limits. No fresh test message, reinstall, token refresh or network
+  change was performed; probe changes were exercised offline. Recorder's reused-key
+  ambiguity remains explicit and requires a per-Original identifier to resolve.
+
+Next: use these commands for subsequent soak and acceptance reviews. Changes are
+ready for review; provider deployment and Recorder schema changes remain separate.
+
+Commit checks: `./gradlew ktfmtFormat` and Ruff format/check passed without
+source changes; all 25 helper tests and whitespace checks passed. GitHub `main`
+was refreshed and remains the rebased base `abc4e5a`.

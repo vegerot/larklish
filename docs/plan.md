@@ -536,22 +536,23 @@ adb shell pm grant com.vegerot.larklish android.permission.ACCESS_FINE_LOCATION 
 adb shell pm grant com.vegerot.larklish android.permission.ACCESS_BACKGROUND_LOCATION # listener runs in the background
 adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
 tools/larklish-helper probe "中文消息"                          # post, then show the Recorder outcome
-tools/larklish-helper probe --idle "中文消息"                   #   …in deep idle, so Lark posts the cut push payload (the Update path)
+tools/larklish-helper probe --idle --expect updated "中文消息"  # require an Update; deep idle does not guarantee a cut Preview
 tools/larklish-helper probe --thread "中文消息"                 #   …with a reply in a thread
 tools/larklish-helper probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch
 tools/larklish-helper chats                                   # what the configured Backend's chat-id cache holds
 tools/larklish-helper events stats                            # the Relay record; views: list, stats, grade, pull
 tools/larklish-helper events --since 2026-08-29T00:30 --han list
 tools/larklish-helper events --since 2026-09-01T03:50 grade   #   the soak grade: cut Previews vs their Update outcome
+tools/larklish-helper events --exclude-test-group --utc grade --group-by network --json
 tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then (id or title)
 tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits, and how often they appear
 tools/larklish-helper translate '先别发布' --repeat 30          # one Lark translate call, with its code (rate-limit probe)
-tools/larklish-helper phone status                      # adb pre-flight: apps, listener, idle, active network, reverse
+tools/larklish-helper phone status --details            # adb pre-flight: apps, listener, idle, active network, reverse
 tools/larklish-helper phone install                     # test + install; prove user-token.json survived unchanged
 tools/larklish-helper phone log -n 20                   #   the app's logcat, keys shortened; --clear resets it
 tools/larklish-helper phone shade shot.png              #   adb helpers: top, home, shot, shade
 tools/larklish-helper backend status                    # configured Backend health, authentication and cache
-tools/larklish-helper backend lookup                    # replay the newest recorded Original, sanitized output
+tools/larklish-helper backend lookup --repeat 3         # replay the newest recorded Original, sanitized output
 uv run --script tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish side by side
                                                           #   → docs/showcase/; force-idle the phone first for the cut
 tools/larklish-helper replay fetch                            # pull replay-corpus/ (gitignored: real messages)

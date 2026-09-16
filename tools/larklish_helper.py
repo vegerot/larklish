@@ -4,19 +4,20 @@
     tools/larklish-helper events stats                  # the Relay record (list, stats, grade, pull)
     tools/larklish-helper events --since 2026-08-29T00:30 --han list
     tools/larklish-helper events --since 2026-09-01T03:50 grade   # the soak grade: each Relay and its outcome
+    tools/larklish-helper events --exclude-test-group grade --group-by network --json
     tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then
     tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits
     tools/larklish-helper translate '先别发布' --repeat 30                          # one Lark translate call
     tools/larklish-helper probe "中文消息"               # post, then show the Recorder outcome
-    tools/larklish-helper probe --idle "中文消息"        #   …with the phone in deep idle, so Lark cuts it
+    tools/larklish-helper probe --idle --expect updated "中文消息"  # require an Update with matching Full text
     tools/larklish-helper probe --debug fetch           #   …or run a MainActivity debug hook
     tools/larklish-helper chats                         # the Backend's chat-id cache
-    tools/larklish-helper phone status                  # adb pre-flight: apps, listener, idle, active network
+    tools/larklish-helper phone status --details        # network, install time, retained app exits
     tools/larklish-helper phone install                 # test + install; prove the user token survived
     tools/larklish-helper phone log -n 20               # the app's logcat, keys shortened (--clear resets)
     tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
     tools/larklish-helper backend status                # configured Backend health, authentication, cache
-    tools/larklish-helper backend lookup                # replay the newest recorded Original
+    tools/larklish-helper backend lookup --repeat 3     # replay the newest recorded Original
     tools/larklish-helper replay fetch                  # pull the corpus the Go replay test scores
     tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish, side by side
     tools/larklish-helper token --write                 # credentials from lark-cli's store
@@ -44,16 +45,19 @@ import hashlib
 import importlib
 import io
 import json
+import math
 import os
 import pathlib
 import re
 import shlex
+import statistics
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import datetime, timezone
@@ -241,7 +245,37 @@ def short_keys(lines: list[str]) -> list[str]:
     return [re.sub(r"key=\S+", "key=…", line) for line in lines]
 
 
-def phone_status() -> dict[str, str]:
+def connectivity_status(dump: str) -> dict[str, str]:
+    """System default transport and active VPN networks, not per-app VPN routing.
+
+    Android ConnectivityService prints NetworkAgentInfo rows in Current Networks.
+    Ignore request history, which also contains transport names and stale networks.
+    """
+    active = re.search(r"Active default network: (\d+|none)", dump)
+    section = dump.partition("Current Networks:")[2].partition(
+        "Status for known UIDs:"
+    )[0]
+    networks = {}
+    for line in section.splitlines():
+        net = re.match(r"\s*NetworkAgentInfo\{network\{(\d+)\}", line)
+        transport = re.search(r"Transports: ([A-Z_|]+)", line.partition("nc{")[2])
+        if net and transport:
+            networks[net[1]] = transport[1]
+    default = active[1] if active else "unknown"
+    return {
+        "default network": default,
+        "default transport": "none"
+        if default == "none"
+        else networks.get(default, "unknown"),
+        "active VPN networks": (
+            ", ".join(k for k, v in networks.items() if "VPN" in v.split("|")) or "none"
+        )
+        if section
+        else "unknown",
+    }
+
+
+def phone_status(details: bool = False) -> dict[str, str]:
     """The pre-flight facts: device, app and Lark processes, the listener binding, the foreground
     activity, deep idle, active network, and reverse mapping to a Backend on this machine."""
     devices = [
@@ -264,22 +298,13 @@ def phone_status() -> dict[str, str]:
         adb("shell", "ip", "-4", "addr", "show", "wlan0", allow_fail=True).stdout,
     )
     connectivity = adb("shell", "dumpsys", "connectivity").stdout
-    active = re.search(r"Active default network: (\d+)", connectivity)
-    transports: list[str] = []
-    if active:
-        network = re.search(
-            rf"NetworkAgentInfo\{{network\{{{active.group(1)}\}}.*?Transports: ([A-Z|]+)",
-            connectivity,
-            re.DOTALL,
-        )
-        if network:
-            transports = network.group(1).split("|")
+    network = connectivity_status(connectivity)
     wifi_on = adb("shell", "settings", "get", "global", "wifi_on").stdout.strip()
     mobile_data = adb(
         "shell", "settings", "get", "global", "mobile_data"
     ).stdout.strip()
     reverse = adb("reverse", "--list", allow_fail=True).stdout
-    return {
+    status = {
         "device": ", ".join(devices) or "none",
         "app": f"running (pid {pid(PACKAGE)})" if pid(PACKAGE) else "not running",
         "listener": "bound"
@@ -288,8 +313,8 @@ def phone_status() -> dict[str, str]:
         "lark": f"running (pid {pid(LARK)})" if pid(LARK) else "not running",
         "foreground": top(),
         "deep idle": idle,
-        "transport": "|".join(transports) or "unknown",
-        "vpn": "yes" if "VPN" in transports else "no",
+        "transport": network["default transport"],
+        "active VPN networks": network["active VPN networks"],
         "wifi": (
             f"on, {inet.group(1)}" if wifi_on == "1" and inet else "on, disconnected"
         )
@@ -298,6 +323,22 @@ def phone_status() -> dict[str, str]:
         "mobile data": "on" if mobile_data == "1" else "off",
         "reverse": "tcp:8787 → this machine" if "tcp:8787" in reverse else "none",
     }
+    package = adb("shell", "dumpsys", "package", PACKAGE).stdout
+    for field in ("versionCode", "versionName", "lastUpdateTime"):
+        match = re.search(rf"^\s*{field}=(.*)$", package, re.MULTILINE)
+        value = match[1].strip() if match else "unknown"
+        status[field] = value.split()[0] if field == "versionCode" else value
+    if details:
+        for label, pkg in (("Larklish", PACKAGE), ("Lark", LARK)):
+            exits = adb("shell", "dumpsys", "activity", "exit-info", pkg).stdout
+            reasons = Counter(
+                re.findall(r"(?<!sub)reason=\d+ \((.*?)\)(?=\s|$)", exits)
+            )
+            status[f"{label} retained exits"] = (
+                ", ".join(f"{reason}: {n}" for reason, n in reasons.items())
+                or "none recorded"
+            )
+    return status
 
 
 def backend_status() -> dict[str, str]:
@@ -309,11 +350,15 @@ def backend_status() -> dict[str, str]:
                 f"{resp.read().decode().strip()} in {time.monotonic() - started:.2f} s"
             )
     except OSError as e:
+        if isinstance(e, urllib.error.HTTPError):
+            e.close()
         ping = f"FAILED: {e}"
     status = {"backend": backend_url(), "health": ping}
     try:
         cache = read_chat_cache()
     except OSError as e:
+        if isinstance(e, urllib.error.HTTPError):
+            e.close()
         status["auth"] = f"FAILED: {e}"
     else:
         status["auth"] = "accepted by /chats"
@@ -322,46 +367,58 @@ def backend_status() -> dict[str, str]:
 
 
 def backend_lookup(event: Event, timeout: float) -> dict[str, Any]:
-    """Replay one recorded Original and return a sanitized result."""
-    payload = json.dumps(
-        {
-            "title": event["title"],
-            "text": event["text"],
-            "whenMs": event_ms(event),
-            "userToken": phone_user_token(),
-        }
-    ).encode()
+    """Replay one historical Original; return only a credential-free summary."""
+    original = {
+        "title": event["title"],
+        "text": event["text"],
+        "whenMs": event_ms(event),
+    }
+    user_token = phone_user_token()
+    url = backend_url()
     token = backend_setting("LARKLISH_BACKEND_TOKEN", "larklish.backendToken")
     request = urllib.request.Request(
-        backend_url() + "/lookup",
-        data=payload,
+        url + "/lookup",
+        data=json.dumps(dict(original, userToken=user_token)).encode(),
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         },
     )
     started = time.monotonic()
+    result: dict[str, Any] = {"backend": url, "httpStatus": None, "ok": False}
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
-            answer = json.load(response)
+            result["httpStatus"] = response.status
+            body = json.load(response)
+        # Do not echo bodies/errors: a misconfigured endpoint may reflect credentials.
+        outcome = body.get("outcome")
+        result.update(
+            outcome=outcome if outcome in {"found", "skipped"} else "invalid response",
+            reason=body.get("reason"),
+            msgType=body.get("msgType"),
+            translationAvailable=isinstance(body.get("english"), str)
+            and bool(body["english"]),
+            fullTextCharacters=len(body.get("fullText", "")),
+            fullTextHash=hashlib.sha256(body.get("fullText", "").encode()).hexdigest()[
+                :12
+            ]
+            if body.get("fullText")
+            else None,
+            ok=outcome == "found",
+        )
+        for field in ("reason", "msgType"):
+            if isinstance(result[field], str):
+                for secret in (token, user_token):
+                    result[field] = result[field].replace(secret, "[redacted]")
     except urllib.error.HTTPError as error:
-        sys.exit(f"Backend /lookup: HTTP {error.code}: {error.read().decode().strip()}")
-    except OSError as error:
-        sys.exit(f"Backend /lookup: {error}")
-    full_text = answer.get("fullText", "")
-    return {
-        "backend": backend_url(),
-        "recordedAt": event["at"],
-        "seconds": round(time.monotonic() - started, 3),
-        "outcome": answer.get("outcome"),
-        "reason": answer.get("reason"),
-        "msgType": answer.get("msgType"),
-        "fullTextChars": len(full_text),
-        "fullTextHash": hashlib.sha256(full_text.encode()).hexdigest()[:12]
-        if full_text
-        else None,
-        "englishPresent": answer.get("english") is not None,
-    }
+        error.close()
+        result["httpStatus"] = error.code
+        result["error"] = f"HTTP {error.code}"
+    except (OSError, ValueError, TypeError, AttributeError) as error:
+        result["error"] = type(error).__name__
+    result["recordedAt"] = event["at"]
+    result["elapsedSeconds"] = round(time.monotonic() - started, 3)
+    return result
 
 
 def top() -> str:
@@ -434,21 +491,42 @@ def preview_sender(text: str) -> str:
     return head[:-4] if head.endswith(("@you", "@all")) else head
 
 
+def utc_seconds(value: str) -> float:
+    """An ISO timestamp; event filter times without an offset mean UTC."""
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).timestamp()
+
+
 def select(
     events: list[Event],
     since: str | None = None,
     han: bool = False,
     no_removed: bool = False,
+    until: str | None = None,
+    exclude_test_group: bool = False,
 ) -> list[Event]:
-    """`since` is an ISO UTC prefix; `han` keeps only Relays with Han in the Original."""
+    """Select [since, until). Content filters retain a Relay's keyed events too.
+
+    Unkeyed fallback events cannot be attributed to a Relay and are omitted when
+    filtering by Han or test group. Pair full records before selecting a grade.
+    """
+    lower = utc_seconds(since) if since else -math.inf
+    upper = utc_seconds(until) if until else math.inf
+    if lower >= upper:
+        raise ValueError("--since must be before --until")
     out = []
+    keep_by_key = {}
     for e in events:
-        if since and e["at"] < since:
+        kind = e["event"]
+        if kind == "relayed":
+            keep_by_key[e["key"]] = (
+                not han or has_han(e["text"]) or has_han(e["title"])
+            ) and (not exclude_test_group or e["title"] != TEST_TITLE)
+        if not lower <= utc_seconds(e["at"]) < upper:
             continue
-        relayed = e["event"] == "relayed"
-        if e["event"] == "removed" and no_removed:
+        if kind == "removed" and no_removed:
             continue
-        if han and not (relayed and (has_han(e["text"]) or has_han(e["title"]))):
+        if (han or exclude_test_group) and not keep_by_key.get(e.get("key"), False):
             continue
         out.append(e)
     return out
@@ -462,27 +540,90 @@ def served_by(e: Event) -> str:
 
 
 def relays_with_outcomes(events: list[Event]) -> list[Relay]:
-    """Each Relay with what the Update did to it: `updated (<msgType>)`, `skipped <reason>`, or
-    `canceled` (a newer Original took the key before the fetch returned), and `cut` — whether Lark
-    cut the Preview (`None` when not recorded). Outcomes are keyed by the Original, so they
-    pair by key, in order."""
+    """Pair by key and order, retaining the final event and Update latency.
+
+    Missing outcomes are observations, not proof of cancellation. Recorder has no
+    per-Original ID, so a late result can still attach to a newer Relay on its key.
+    """
     relays: list[Relay] = []
     open_by_key: dict[str, Relay] = {}
     for e in events:
         kind = e["event"]
         if kind == "relayed":
-            # Use the phone's decision (Preview.truncated); missing is unknown, not complete.
-            r: Relay = dict(e, outcome="canceled", cut=e.get("truncated"))
+            r: Relay = dict(e, outcome="no recorded outcome", cut=e.get("truncated"))
             relays.append(r)
             open_by_key[e["key"]] = r
-        elif kind == "updated" and e["key"] in open_by_key:
-            open_by_key[e["key"]]["outcome"] = f"updated ({e['msgType']})"
-        elif kind == "skipped" and e["key"] in open_by_key:
-            reason = e["reason"]
-            open_by_key[e["key"]]["outcome"] = "skipped " + (
-                reason.split(":")[0] if reason.startswith("error") else reason
-            )
+        elif kind in {"updated", "skipped"} and e["key"] in open_by_key:
+            r = open_by_key[e["key"]]
+            r["result"] = e
+            r.pop("latencySeconds", None)
+            if kind == "updated":
+                r["outcome"] = f"updated ({e['msgType']})"
+                r["latencySeconds"] = (event_ms(e) - event_ms(r)) / 1000
+            else:
+                reason = e["reason"]
+                r["outcome"] = "skipped " + (
+                    reason.split(":")[0] if reason.startswith("error") else reason
+                )
     return relays
+
+
+def latency_stats(values: list[float]) -> dict[str, Any]:
+    """Seconds, with nearest-rank p90; an empty sample has no percentiles."""
+    values = sorted(values)
+    return {
+        "count": len(values),
+        "median": statistics.median(values) if values else None,
+        "p90": values[math.ceil(0.9 * len(values)) - 1] if values else None,
+        "max": max(values) if values else None,
+    }
+
+
+def grade_summary(relays: list[Relay]) -> dict[str, Any]:
+    cut = [r for r in relays if r["cut"] is True]
+    return {
+        "relays": len(relays),
+        "cut": len(cut),
+        "complete": sum(r["cut"] is False for r in relays),
+        "unknown": sum(r["cut"] is None for r in relays),
+        "updated": sum(r["outcome"].startswith("updated") for r in cut),
+        "outcomes": dict(Counter(r["outcome"] for r in cut)),
+        "latencySeconds": latency_stats(
+            [r["latencySeconds"] for r in cut if "latencySeconds" in r]
+        ),
+    }
+
+
+def grade_group(relay: Relay, by: str, utc: bool) -> str:
+    if by == "backend":
+        return relay.get("result", {}).get("backend") or "unknown"
+    if by == "day":
+        dt = datetime.fromtimestamp(utc_seconds(relay["at"]), tz=timezone.utc)
+        return (dt if utc else dt.astimezone()).date().isoformat()
+    network = relay.get("network") or {}
+    wifi = network.get("wifiConnected")
+    name = (
+        "Wi-Fi: " + (network.get("wifiSsid") or "unknown SSID")
+        if wifi is True
+        else "no Wi-Fi"
+        if wifi is False
+        else "unknown Wi-Fi"
+    )
+    vpn = {True: "on", False: "off", None: "unknown"}[network.get("vpn")]
+    return f"{name}; VPN {vpn}"
+
+
+def error_kind(reason: str) -> str:
+    lower = reason.lower()
+    if "failed to connect" in lower or "connect timed out" in lower:
+        return "connection failure"
+    if "read timed out" in lower:
+        return "read timeout"
+    if "ssl" in lower or "tls" in lower:
+        return "TLS"
+    if "end of stream" in lower:
+        return "end of stream"
+    return "other"
 
 
 # ── the Open API under Max's user identity, through `lark-cli api` ────────────
@@ -969,8 +1110,17 @@ def compose(slug: str, caption: str) -> str:
 
 # ══ driver: the subcommands. Only these print. ════════════════════════════════
 # ── events: the Relay record (`filesDir/events.jsonl`, written by Recorder.kt) ─
+
+
 def selected(events: list[Event], args: argparse.Namespace) -> list[Event]:
-    return select(events, since=args.since, han=args.han, no_removed=args.no_removed)
+    return select(
+        events,
+        since=args.since,
+        until=args.until,
+        han=args.han,
+        no_removed=args.no_removed,
+        exclude_test_group=args.exclude_test_group,
+    )
 
 
 def events_list(events: list[Event], args: argparse.Namespace) -> None:
@@ -1044,30 +1194,76 @@ def events_stats(events: list[Event], args: argparse.Namespace) -> None:
         print(f"span {when(relayed[0], args.utc)} → {when(relayed[-1], args.utc)}")
 
 
+def soak_report(events: list[Event], args: argparse.Namespace) -> dict[str, Any]:
+    # Stop observation at until, then select the Relay cohort after pairing. Outcomes
+    # after since can belong to earlier Relays; content filters must not discard them.
+    observed = select(events, until=args.until)
+    relays = selected(relays_with_outcomes(observed), args)
+    raw = selected(events, args)
+    errors = [
+        e for e in raw if e["event"] == "skipped" and e["reason"].startswith("error")
+    ]
+    groups: dict[str, list[Relay]] = {}
+    if args.group_by:
+        for r in relays:
+            groups.setdefault(grade_group(r, args.group_by, args.utc), []).append(r)
+    return {
+        "since": args.since,
+        "until": args.until,
+        "groupBy": args.group_by,
+        "dayTimezone": "UTC" if args.utc else "local",
+        "summary": grade_summary(relays),
+        "raw": {
+            "events": len(raw),
+            "errors": len(errors),
+            "errorKinds": dict(Counter(error_kind(e["reason"]) for e in errors)),
+        },
+        "groups": {name: grade_summary(rows) for name, rows in sorted(groups.items())},
+        "misses": [
+            {k: r[k] for k in ("at", "key", "title", "text", "outcome")}
+            for r in relays
+            if r["cut"] is True and not r["outcome"].startswith("updated")
+        ],
+        "notes": [
+            "Outcomes pair by notification key and order; late results can be misattributed.",
+            "Latency covers Updated cut Previews, from Relay to Update; p90 is nearest rank.",
+            "Raw events and paired Relay outcomes have different denominators.",
+        ]
+        + (
+            ["Content filters omit unkeyed fallback events."]
+            if args.han or args.exclude_test_group
+            else []
+        ),
+    }
+
+
 def events_grade(events: list[Event], args: argparse.Namespace) -> None:
-    """The soak grade (Experiments 12–14): `not-truncated` is by design, so the denominator is the
-    Relays whose Preview Lark cut — and the list of those that did not Update is the work list."""
-    relays = relays_with_outcomes(selected(events, args))
-    cut = [r for r in relays if r["cut"] is True]
-    complete = sum(r["cut"] is False for r in relays)
-    unknown = sum(r["cut"] is None for r in relays)
-    updated = [r for r in cut if r["outcome"].startswith("updated")]
+    report = soak_report(events, args)
+    if args.json:
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return
+    total = report["summary"]
     print(
-        f"Relays {len(relays)}   Preview cut {len(cut)}   complete {complete} (skipped by design)"
+        f"Relays {total['relays']}   Preview cut {total['cut']}   complete {total['complete']} (skipped by design)"
     )
-    if unknown:
-        print(f"Excluded {unknown} Relays without recorded truncation from the grade.")
-    print(f"\ncut Previews → Updated {len(updated)} of {len(cut)}")
-    for outcome, n in Counter(r["outcome"] for r in cut).most_common():
+    print(
+        f"Excluded {total['unknown']} Relays without recorded truncation from the grade."
+    )
+    print(f"\ncut Previews → Updated {total['updated']} of {total['cut']}")
+    for outcome, n in total["outcomes"].items():
         print(f"  {n:4}  {outcome}")
-    misses = [r for r in cut if not r["outcome"].startswith("updated")]
-    if misses:
+    print("Relay-to-Update seconds:", json.dumps(total["latencySeconds"]))
+    print("Raw events/errors:", json.dumps(report["raw"]))
+    for name, group in report["groups"].items():
+        print(f"\n{name}: {json.dumps(group, ensure_ascii=False)}")
+    if report["misses"]:
         print("\ncut, not Updated:")
-        for r in misses:
-            outcome = r["outcome"].removeprefix("skipped ")
+        for r in report["misses"]:
             print(
-                f"  {when(r, args.utc)} {outcome:18} [{r['title'][:30]}] {one_line(r['text'])[:80]}"
+                f"  {when(r, args.utc)} {r['outcome']:24} [{r['title'][:30]}] {one_line(r['text'])[:80]}"
             )
+    for note in report["notes"]:
+        print(f"Note: {note}")
 
 
 def events_pull(events: list[Event], args: argparse.Namespace) -> None:
@@ -1087,126 +1283,97 @@ def cmd_events(args: argparse.Namespace) -> None:
 
 
 # ── probe: post one message and show what Larklish did with it ────────────────
-def probe_matches(event: Event, texts: list[str]) -> bool:
-    """The first 12 non-space characters identify a test message even when Lark cuts it."""
-    preview = re.sub(r"\s+", "", event.get("text", "")).casefold()
-    return any(re.sub(r"\s+", "", text).casefold()[:12] in preview for text in texts)
-
-
-def probe_report(relay: Event, events: list[Event], texts: list[str]) -> dict[str, Any]:
-    outcome = next(
-        (
-            event
-            for event in events
-            if event.get("key") == relay["key"]
-            and event.get("at", "") > relay["at"]
-            and event.get("event") in ("updated", "skipped")
-        ),
-        {},
-    )
-    network = outcome.get("network", relay.get("network", {}))
-    row: dict[str, Any] = {
-        "relayedAt": relay["at"],
-        "previewTruncated": relay.get("truncated"),
-        "relayHasHan": has_han(relay.get("relayText", "")),
-        "outcome": outcome.get("event"),
-        "reason": outcome.get("reason"),
-        "backend": outcome.get("backend"),
-        "network": {
-            key: network.get(key) for key in ("wifiConnected", "wifiSsid", "vpn")
-        },
+def probe_observation(
+    events: list[Event], marker: str, sent_text: str, expect: str
+) -> dict[str, Any]:
+    relays = [r for r in relays_with_outcomes(events) if marker in r["text"]]
+    if not relays:
+        return {"ok": False, "outcome": "no matching Relay observed"}
+    relay = relays[-1]
+    result = relay.get("result", {})
+    updated = result.get("event") == "updated"
+    matches = result.get("fullText") == sent_text if updated else None
+    complete = relay["cut"] is False and result.get("reason") == "not-truncated"
+    ok = expect == "relayed" or (updated and matches is True)
+    if expect == "auto":
+        ok = (relay["cut"] is True and updated and matches is True) or complete
+    return {
+        "ok": ok,
+        "outcome": relay["outcome"],
+        "relayAt": relay["at"],
+        "key": relay["key"],
+        "truncated": relay["cut"],
+        "relayHasHan": has_han(relay["relayText"]),
+        "updatedRelayHasHan": has_han(result.get("relayText", "")) if updated else None,
+        "backend": result.get("backend"),
+        "network": relay.get("network"),
+        "updateNetwork": result.get("network") if updated else None,
+        "relayToUpdateSeconds": relay.get("latencySeconds"),
+        "fullTextMatches": matches,
     }
-    if outcome.get("event") == "updated":
-        row.update(
-            {
-                "fullTextMatches": outcome.get("fullText") in texts,
-                "updatedRelayHasHan": has_han(outcome.get("relayText", "")),
-                "relayToUpdateSeconds": round(
-                    (
-                        datetime.fromisoformat(outcome["at"])
-                        - datetime.fromisoformat(relay["at"])
-                    ).total_seconds(),
-                    3,
-                ),
-            }
-        )
-    return row
+
+
+def wait_for_probe(
+    start: int, marker: str, sent_text: str, expect: str, wait: float
+) -> dict[str, Any]:
+    deadline = time.monotonic() + wait
+    while True:
+        report = probe_observation(read_events()[start:], marker, sent_text, expect)
+        # A skip is a terminal result, including a complete Preview's not-truncated.
+        if report["ok"] or report["outcome"].startswith(("skipped", "updated")):
+            return report
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return report
+        time.sleep(min(1, remaining))
 
 
 def cmd_probe(args: argparse.Namespace) -> None:
     if not args.text and not args.debug:
         sys.exit("give a message to send, or --debug HOOK")
+    if args.debug and (args.expect != "auto" or args.output_json or args.thread):
+        sys.exit(
+            "--debug prints hook logs; it cannot be combined with --expect, --json or --thread"
+        )
     require_device()
-    adb("logcat", "-c")
-    if args.idle:
-        # Lark composes a whole notification itself when its process was recently in the
-        # foreground; in deep idle the push path posts the FCM payload, cut at 45 characters.
-        adb("shell", "input", "keyevent", "KEYCODE_HOME")
-        adb("shell", "dumpsys", "deviceidle", "force-idle")
+    start = len(read_events()) if not args.debug else 0
     try:
+        if args.idle:
+            adb("shell", "input", "keyevent", "KEYCODE_HOME")
+            adb("shell", "dumpsys", "deviceidle", "force-idle")
         if args.debug:
             debug_hook(args.debug, args.title, args.text or "")
-            time.sleep(min(args.timeout, 12))
+            time.sleep(args.timeout)
             print(*short_keys(log_lines()), sep="\n")
             return
-        else:
-            before = len(read_events())
-            started = datetime.now(timezone.utc).isoformat()
-            texts = [args.text]
-            root = send_test_message(args.text)
-            print(f"sent {root}")
-            if args.thread:
-                time.sleep(min(args.timeout, 8))
-                texts.append("回复：" + args.text)
-                print(
-                    f"replied {send_test_message('回复：' + args.text, reply_to=root)}"
-                )
-            deadline = time.monotonic() + args.timeout
-            events: list[Event] = []
-            relay: Event | None = None
-            while time.monotonic() < deadline:
-                time.sleep(2)
-                events = read_events()[before:]
-                relay = next(
-                    (
-                        event
-                        for event in events
-                        if event.get("event") == "relayed"
-                        and probe_matches(event, texts)
-                    ),
-                    None,
-                )
-                if relay and any(
-                    event.get("key") == relay["key"]
-                    and event.get("event") in ("updated", "skipped")
-                    for event in events
-                ):
-                    break
+        marker = f"[probe:{uuid.uuid4().hex[:8]}]"
+        sent_text = f"{marker} {args.text}"
+        message_id = send_test_message(sent_text)
+        root = None
+        if args.thread:
+            root = message_id
+            time.sleep(min(args.timeout, 8))
+            marker = f"[probe:{uuid.uuid4().hex[:8]}]"
+            sent_text = f"{marker} 回复：{args.text}"
+            message_id = send_test_message(sent_text, reply_to=root)
+        report = wait_for_probe(start, marker, sent_text, args.expect, args.timeout)
+        report.update(
+            messageId=message_id,
+            rootMessageId=root,
+            marker=marker,
+            expected=args.expect,
+        )
+        if not report["ok"]:
+            report["diagnostics"] = phone_status(details=True)
     finally:
         if args.idle:
             adb("shell", "dumpsys", "deviceidle", "unforce")
-    if relay is None:
-        print(*short_keys(log_lines()), sep="\n")
-        sys.exit(f"no matching Relay within {args.timeout:g} seconds")
-    report = {
-        "started": started,
-        "messageId": root,
-        "relay": probe_report(relay, events, texts),
-    }
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    output = json.dumps(report, ensure_ascii=False, indent=2)
+    print(output)
     if args.output_json:
-        pathlib.Path(args.output_json).write_text(
-            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-        print(f"report: {args.output_json}")
-    expected = (
-        report["relay"]["outcome"] == "updated"
-        if report["relay"]["previewTruncated"]
-        else report["relay"]["outcome"] == "skipped"
-        and report["relay"]["reason"] == "not-truncated"
-    )
-    if not expected:
-        sys.exit("the Relay did not reach its expected outcome")
+        pathlib.Path(args.output_json).write_text(output + "\n", encoding="utf-8")
+    if not report["ok"]:
+        raise SystemExit(1)
 
 
 # ── chats: the Backend's chat-id cache (GET /chats; in memory, so a restart clears it) ──
@@ -1294,7 +1461,7 @@ def cmd_translate(args: argparse.Namespace) -> None:
 def cmd_phone(args: argparse.Namespace) -> None:
     require_device()
     if args.act == "status":
-        status = phone_status()
+        status = phone_status(details=args.details)
         if args.json:
             print(json.dumps(status, indent=2))
         else:
@@ -1352,11 +1519,14 @@ def cmd_phone(args: argparse.Namespace) -> None:
 def cmd_backend(args: argparse.Namespace) -> None:
     if args.act == "status":
         status = backend_status()
+        ok = not any(value.startswith("FAILED:") for value in status.values())
         if args.json:
-            print(json.dumps(status, indent=2))
+            print(json.dumps(dict(status, ok=ok), indent=2))
         else:
             for k, v in status.items():
                 print(f"{k:9} {v}")
+        if not ok:
+            raise SystemExit(1)
     elif args.act == "lookup":
         relays = [
             event for event in read_events(args.file) if event["event"] == "relayed"
@@ -1369,14 +1539,21 @@ def cmd_backend(args: argparse.Namespace) -> None:
             sys.exit(
                 f"only {len(relays)} recorded Relays; index {args.index} is out of range"
             )
-        report = backend_lookup(event, args.timeout)
+        results = [backend_lookup(event, args.timeout) for _ in range(args.repeat)]
+        report = {
+            "ok": all(r["ok"] for r in results),
+            "recordedAt": event["at"],
+            "runs": results,
+        }
         print(json.dumps(report, ensure_ascii=False, indent=2))
         if args.output_json:
             pathlib.Path(args.output_json).write_text(
                 json.dumps(report, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
-            print(f"report: {args.output_json}")
+            print(f"report: {args.output_json}", file=sys.stderr)
+        if not report["ok"]:
+            raise SystemExit(1)
 
 
 # ── replay: pull the corpus that the Go replay test scores ──────────────────
@@ -1513,6 +1690,12 @@ def main() -> None:
     e.add_argument(
         "--since", help="ISO UTC prefix, e.g. 2026-08-29T00:30 (Layer 6 went live)"
     )
+    e.add_argument("--until", help="exclusive ISO end time; no offset means UTC")
+    e.add_argument(
+        "--exclude-test-group",
+        action="store_true",
+        help="exclude the dedicated Larklish test group",
+    )
     e.add_argument(
         "--han", action="store_true", help="only Relays whose Original has Han text"
     )
@@ -1521,14 +1704,22 @@ def main() -> None:
     view = e.add_subparsers(dest="view", required=True)
     view.add_parser("list", help="every event, oldest first")
     view.add_parser("stats", help="counts")
-    view.add_parser(
+    grade = view.add_parser(
         "grade",
         help="the soak grade: every Relay paired with its Update outcome, cut Previews first",
     )
-    view.add_parser("pull", help="save the raw JSONL").add_argument("out")
+    grade.add_argument("--group-by", choices=["network", "backend", "day"])
+    grade.add_argument("--json", action="store_true", help="emit the report as JSON")
+    view.add_parser(
+        "pull", help="save the entire raw JSONL (ignores filters)"
+    ).add_argument("out")
     e.set_defaults(fn=cmd_events)
 
-    b = group.add_parser("probe", help="post one message and show its Recorder outcome")
+    b = group.add_parser(
+        "probe",
+        help="post one message and show its Recorder outcome",
+        description="Prefix the test message with a unique [probe:…] marker, then observe its Recorder outcome. --thread checks the reply, not the root. JSON goes to stdout; --json also saves it.",
+    )
     b.add_argument(
         "text", nargs="?", help="the message to post (Chinese exercises the Translator)"
     )
@@ -1545,8 +1736,13 @@ def main() -> None:
     b.add_argument(
         "--idle",
         action="store_true",
-        help="deep-idle the phone first (HOME, deviceidle force-idle) so Lark posts the cut push"
-        " payload; unforce after",
+        help="deep-idle the phone first (HOME, deviceidle force-idle), then unforce; check recorded truncation, since a cut Preview is not guaranteed",
+    )
+    b.add_argument(
+        "--expect",
+        choices=["auto", "relayed", "updated"],
+        default="auto",
+        help="required outcome; auto checks the recorded cut/complete decision",
     )
     b.add_argument("--title", default=TEST_TITLE, help="title for --debug fetch")
     b.add_argument(
@@ -1623,6 +1819,11 @@ def main() -> None:
         "status",
         help="pre-flight: apps, listener, foreground, idle, active network, reverse",
     )
+    status.add_argument(
+        "--details",
+        action="store_true",
+        help="include retained exit reasons for both apps",
+    )
     status.add_argument("--json", action="store_true", help="print JSON")
     act.add_parser(
         "install", help="run unit tests, install in place, and verify the user token"
@@ -1653,6 +1854,12 @@ def main() -> None:
     )
     lookup.add_argument(
         "--file", help="read this saved events.jsonl instead of the phone"
+    )
+    lookup.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="sequential calls; does not assume a cold cache",
     )
     lookup.add_argument(
         "--index", type=int, default=-1, help="Relay index (default -1, the newest)"
@@ -1715,7 +1922,14 @@ def main() -> None:
     t.set_defaults(fn=cmd_token)
 
     args = p.parse_args()
-    args.fn(args)
+    if args.group in {"probe", "backend"} and getattr(args, "timeout", 1) <= 0:
+        p.error("--timeout must be positive")
+    if args.group == "backend" and args.act == "lookup" and args.repeat <= 0:
+        p.error("--repeat must be positive")
+    try:
+        args.fn(args)
+    except ValueError as error:
+        p.error(str(error))
 
 
 if __name__ == "__main__":
