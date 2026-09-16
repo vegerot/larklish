@@ -3172,3 +3172,32 @@ Validation: no new test failures were introduced by the refactor.
   passed. Existing historical logs retain their old classification.
 - 📚 Execution details and sources are appended to
   [Experiment 26](experiments/26-railway-deployment.md).
+
+### 2026-09-15 — repeated acceptance steps moved into `larklish-helper`
+
+- 🧰 `probe` now follows the Recorder instead of sleeping for a fixed time and
+  printing logcat. It correlates the synthetic message with its Relay and Update
+  or skip, checks the expected cut/complete outcome, restores forced idle, and can
+  write a sanitized JSON report with timing, Backend and network evidence.
+- 📱 `phone status` now reports the active default transport, VPN, Wi-Fi and
+  mobile-data state; `--json` gives the same facts for scripts. New `phone install`
+  runs the Android unit tests, installs in place, proves `user-token.json` is
+  byte-for-byte unchanged, and verifies the listener rebound.
+- 🌐 `backend lookup` replays one recorded Original through the configured
+  Backend using the phone's current access token. Its output is sanitized: outcome,
+  reason, type, timing, Full-text length/hash and whether English is present. An
+  expired access token stops before the request rather than printing or refreshing
+  credentials outside the app's normal Update path.
+- 🧪 Live verification: status identified Wi-Fi as the active transport with no
+  VPN; the verified install passed 21 unit tests, preserved 2,610 Recorder events
+  and the token file, and rebound the listener. A fresh cut test message Updated
+  from Railway in 4.065 s with exact Full text and English output. Replaying that
+  Original directly returned `found`, `text`, English present in 3.377 s.
+- 🔎 The first cut probe honestly exposed a stale in-memory token after a manual
+  debug refresh (`20037`); installing restarted the process against the current
+  on-disk chain, and the repeated normal Update passed. No network setting or
+  Backend configuration changed.
+
+Next: use the new commands for ordinary Backend and phone acceptance. Keep
+provider deployment, billing, rollback APKs, network toggling and notification
+ranking out of the helper until their workflows repeat independently.

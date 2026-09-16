@@ -7,14 +7,16 @@
     tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then
     tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits
     tools/larklish-helper translate '先别发布' --repeat 30                          # one Lark translate call
-    tools/larklish-helper probe "中文消息"               # post to the test group, show the Relay
+    tools/larklish-helper probe "中文消息"               # post, then show the Recorder outcome
     tools/larklish-helper probe --idle "中文消息"        #   …with the phone in deep idle, so Lark cuts it
     tools/larklish-helper probe --debug fetch           #   …or run a MainActivity debug hook
     tools/larklish-helper chats                         # the Backend's chat-id cache
-    tools/larklish-helper phone status                  # adb pre-flight: app, listener, idle, Wi-Fi, reverse
+    tools/larklish-helper phone status                  # adb pre-flight: apps, listener, idle, active network
+    tools/larklish-helper phone install                 # test + install; prove the user token survived
     tools/larklish-helper phone log -n 20               # the app's logcat, keys shortened (--clear resets)
     tools/larklish-helper phone shade shot.png          # adb helpers (top, shade, shot, home)
     tools/larklish-helper backend status                # configured Backend health, authentication, cache
+    tools/larklish-helper backend lookup                # replay the newest recorded Original
     tools/larklish-helper replay fetch                  # pull the corpus the Go replay test scores
     tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish, side by side
     tools/larklish-helper token --write                 # credentials from lark-cli's store
@@ -38,6 +40,7 @@ everything else runs on plain `python3`. For those two, the repo's venv (once pe
 
 import argparse
 import base64
+import hashlib
 import importlib
 import io
 import json
@@ -48,6 +51,7 @@ import shlex
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -127,6 +131,44 @@ def read_events(path: str | None = None) -> list[Event]:
     return [json.loads(line) for line in text.split("\n") if line.strip()]
 
 
+def read_phone_file(path: str) -> bytes | None:
+    """A private app file, byte-for-byte; None when it does not exist."""
+    require_device()
+    present = b"__LARKLISH_FILE__\n"
+    missing = b"__LARKLISH_MISSING__\n"
+    script = (
+        f"if test -f {shlex.quote(path)}; then printf '{present.decode()}'; "
+        f"cat {shlex.quote(path)}; else printf '{missing.decode()}'; fi"
+    )
+    out = subprocess.run(
+        ["adb", "exec-out", "run-as", PACKAGE, "sh", "-c", script],
+        capture_output=True,
+        check=False,
+    )
+    if out.stdout.startswith(present):
+        return out.stdout[len(present) :]
+    if out.stdout == missing:
+        return None
+    sys.exit(f"could not read {path}: {(out.stderr or out.stdout).decode().strip()}")
+
+
+def phone_user_token() -> str:
+    """The current access token, without refreshing or printing it."""
+    value = os.environ.get("LARKLISH_USER_TOKEN", "")
+    if value:
+        return value
+    raw = read_phone_file("files/user-token.json")
+    if raw is None:
+        sys.exit("the phone has no files/user-token.json; set LARKLISH_USER_TOKEN")
+    saved = json.loads(raw)
+    if time.time() * 1000 >= saved["expiresAt"] - 5 * 60 * 1000:
+        sys.exit(
+            "the phone access token is expired or near expiry; "
+            "let the phone refresh it through its normal Update path, then retry"
+        )
+    return saved["accessToken"]
+
+
 def backend_url() -> str:
     """The configured Backend; LARKLISH_BACKEND can select a local Backend for experiments."""
     return backend_setting("LARKLISH_BACKEND", "larklish.backendUrl").rstrip("/")
@@ -201,7 +243,7 @@ def short_keys(lines: list[str]) -> list[str]:
 
 def phone_status() -> dict[str, str]:
     """The pre-flight facts: device, app and Lark processes, the listener binding, the foreground
-    activity, deep idle, the Wi-Fi address, the reverse mapping to a Backend on this machine."""
+    activity, deep idle, active network, and reverse mapping to a Backend on this machine."""
     devices = [
         ln.split("\t")[0]
         for ln in adb("devices").stdout.splitlines()[1:]
@@ -221,6 +263,21 @@ def phone_status() -> dict[str, str]:
         r"inet (\S+)",
         adb("shell", "ip", "-4", "addr", "show", "wlan0", allow_fail=True).stdout,
     )
+    connectivity = adb("shell", "dumpsys", "connectivity").stdout
+    active = re.search(r"Active default network: (\d+)", connectivity)
+    transports: list[str] = []
+    if active:
+        network = re.search(
+            rf"NetworkAgentInfo\{{network\{{{active.group(1)}\}}.*?Transports: ([A-Z|]+)",
+            connectivity,
+            re.DOTALL,
+        )
+        if network:
+            transports = network.group(1).split("|")
+    wifi_on = adb("shell", "settings", "get", "global", "wifi_on").stdout.strip()
+    mobile_data = adb(
+        "shell", "settings", "get", "global", "mobile_data"
+    ).stdout.strip()
     reverse = adb("reverse", "--list", allow_fail=True).stdout
     return {
         "device": ", ".join(devices) or "none",
@@ -231,7 +288,14 @@ def phone_status() -> dict[str, str]:
         "lark": f"running (pid {pid(LARK)})" if pid(LARK) else "not running",
         "foreground": top(),
         "deep idle": idle,
-        "wifi": inet.group(1) if inet else "no wlan0 address",
+        "transport": "|".join(transports) or "unknown",
+        "vpn": "yes" if "VPN" in transports else "no",
+        "wifi": (
+            f"on, {inet.group(1)}" if wifi_on == "1" and inet else "on, disconnected"
+        )
+        if wifi_on == "1"
+        else "off",
+        "mobile data": "on" if mobile_data == "1" else "off",
         "reverse": "tcp:8787 → this machine" if "tcp:8787" in reverse else "none",
     }
 
@@ -255,6 +319,49 @@ def backend_status() -> dict[str, str]:
         status["auth"] = "accepted by /chats"
         status["cache"] = f"{len(cache)} chat mappings"
     return status
+
+
+def backend_lookup(event: Event, timeout: float) -> dict[str, Any]:
+    """Replay one recorded Original and return a sanitized result."""
+    payload = json.dumps(
+        {
+            "title": event["title"],
+            "text": event["text"],
+            "whenMs": event_ms(event),
+            "userToken": phone_user_token(),
+        }
+    ).encode()
+    token = backend_setting("LARKLISH_BACKEND_TOKEN", "larklish.backendToken")
+    request = urllib.request.Request(
+        backend_url() + "/lookup",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+    )
+    started = time.monotonic()
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            answer = json.load(response)
+    except urllib.error.HTTPError as error:
+        sys.exit(f"Backend /lookup: HTTP {error.code}: {error.read().decode().strip()}")
+    except OSError as error:
+        sys.exit(f"Backend /lookup: {error}")
+    full_text = answer.get("fullText", "")
+    return {
+        "backend": backend_url(),
+        "recordedAt": event["at"],
+        "seconds": round(time.monotonic() - started, 3),
+        "outcome": answer.get("outcome"),
+        "reason": answer.get("reason"),
+        "msgType": answer.get("msgType"),
+        "fullTextChars": len(full_text),
+        "fullTextHash": hashlib.sha256(full_text.encode()).hexdigest()[:12]
+        if full_text
+        else None,
+        "englishPresent": answer.get("english") is not None,
+    }
 
 
 def top() -> str:
@@ -980,13 +1087,56 @@ def cmd_events(args: argparse.Namespace) -> None:
 
 
 # ── probe: post one message and show what Larklish did with it ────────────────
+def probe_matches(event: Event, texts: list[str]) -> bool:
+    """The first 12 non-space characters identify a test message even when Lark cuts it."""
+    preview = re.sub(r"\s+", "", event.get("text", "")).casefold()
+    return any(re.sub(r"\s+", "", text).casefold()[:12] in preview for text in texts)
+
+
+def probe_report(relay: Event, events: list[Event], texts: list[str]) -> dict[str, Any]:
+    outcome = next(
+        (
+            event
+            for event in events
+            if event.get("key") == relay["key"]
+            and event.get("at", "") > relay["at"]
+            and event.get("event") in ("updated", "skipped")
+        ),
+        {},
+    )
+    network = outcome.get("network", relay.get("network", {}))
+    row: dict[str, Any] = {
+        "relayedAt": relay["at"],
+        "previewTruncated": relay.get("truncated"),
+        "relayHasHan": has_han(relay.get("relayText", "")),
+        "outcome": outcome.get("event"),
+        "reason": outcome.get("reason"),
+        "backend": outcome.get("backend"),
+        "network": {
+            key: network.get(key) for key in ("wifiConnected", "wifiSsid", "vpn")
+        },
+    }
+    if outcome.get("event") == "updated":
+        row.update(
+            {
+                "fullTextMatches": outcome.get("fullText") in texts,
+                "updatedRelayHasHan": has_han(outcome.get("relayText", "")),
+                "relayToUpdateSeconds": round(
+                    (
+                        datetime.fromisoformat(outcome["at"])
+                        - datetime.fromisoformat(relay["at"])
+                    ).total_seconds(),
+                    3,
+                ),
+            }
+        )
+    return row
+
+
 def cmd_probe(args: argparse.Namespace) -> None:
     if not args.text and not args.debug:
         sys.exit("give a message to send, or --debug HOOK")
     require_device()
-    if args.install:
-        print("installing…")
-        run(["./gradlew", "--quiet", "installDebug"])
     adb("logcat", "-c")
     if args.idle:
         # Lark composes a whole notification itself when its process was recently in the
@@ -996,19 +1146,67 @@ def cmd_probe(args: argparse.Namespace) -> None:
     try:
         if args.debug:
             debug_hook(args.debug, args.title, args.text or "")
+            time.sleep(min(args.timeout, 12))
+            print(*short_keys(log_lines()), sep="\n")
+            return
         else:
+            before = len(read_events())
+            started = datetime.now(timezone.utc).isoformat()
+            texts = [args.text]
             root = send_test_message(args.text)
             print(f"sent {root}")
             if args.thread:
-                time.sleep(min(args.wait, 8))
+                time.sleep(min(args.timeout, 8))
+                texts.append("回复：" + args.text)
                 print(
                     f"replied {send_test_message('回复：' + args.text, reply_to=root)}"
                 )
-        time.sleep(args.wait)
+            deadline = time.monotonic() + args.timeout
+            events: list[Event] = []
+            relay: Event | None = None
+            while time.monotonic() < deadline:
+                time.sleep(2)
+                events = read_events()[before:]
+                relay = next(
+                    (
+                        event
+                        for event in events
+                        if event.get("event") == "relayed"
+                        and probe_matches(event, texts)
+                    ),
+                    None,
+                )
+                if relay and any(
+                    event.get("key") == relay["key"]
+                    and event.get("event") in ("updated", "skipped")
+                    for event in events
+                ):
+                    break
     finally:
         if args.idle:
             adb("shell", "dumpsys", "deviceidle", "unforce")
-    print(*short_keys(log_lines()), sep="\n")
+    if relay is None:
+        print(*short_keys(log_lines()), sep="\n")
+        sys.exit(f"no matching Relay within {args.timeout:g} seconds")
+    report = {
+        "started": started,
+        "messageId": root,
+        "relay": probe_report(relay, events, texts),
+    }
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    if args.output_json:
+        pathlib.Path(args.output_json).write_text(
+            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        print(f"report: {args.output_json}")
+    expected = (
+        report["relay"]["outcome"] == "updated"
+        if report["relay"]["previewTruncated"]
+        else report["relay"]["outcome"] == "skipped"
+        and report["relay"]["reason"] == "not-truncated"
+    )
+    if not expected:
+        sys.exit("the Relay did not reach its expected outcome")
 
 
 # ── chats: the Backend's chat-id cache (GET /chats; in memory, so a restart clears it) ──
@@ -1096,8 +1294,39 @@ def cmd_translate(args: argparse.Namespace) -> None:
 def cmd_phone(args: argparse.Namespace) -> None:
     require_device()
     if args.act == "status":
-        for k, v in phone_status().items():
-            print(f"{k:11} {v}")
+        status = phone_status()
+        if args.json:
+            print(json.dumps(status, indent=2))
+        else:
+            for k, v in status.items():
+                print(f"{k:11} {v}")
+    elif args.act == "install":
+        token_before = read_phone_file("files/user-token.json")
+        events_before = len(read_events())
+        result = subprocess.run(
+            ["./gradlew", "testDebugUnitTest", "installDebug"], check=False
+        )
+        if result.returncode:
+            sys.exit(result.returncode)
+        token_after = read_phone_file("files/user-token.json")
+        if token_before != token_after:
+            sys.exit("installed, but files/user-token.json changed")
+        status = phone_status()
+        if status["listener"] != "bound":
+            sys.exit(
+                "installed and preserved the user token, but the listener is not bound"
+            )
+        print("installed app/build/outputs/apk/debug/app-debug.apk")
+        print(
+            "user token  "
+            + (
+                "absent before and after"
+                if token_before is None
+                else "preserved byte-for-byte"
+            )
+        )
+        print(f"events      {events_before} → {len(read_events())}")
+        print("listener    bound")
     elif args.act == "log":
         if args.clear:
             adb("logcat", "-c")
@@ -1121,8 +1350,33 @@ def cmd_phone(args: argparse.Namespace) -> None:
 
 # ── backend: configured health, authentication and cache ───────────────────
 def cmd_backend(args: argparse.Namespace) -> None:
-    for k, v in backend_status().items():
-        print(f"{k:9} {v}")
+    if args.act == "status":
+        status = backend_status()
+        if args.json:
+            print(json.dumps(status, indent=2))
+        else:
+            for k, v in status.items():
+                print(f"{k:9} {v}")
+    elif args.act == "lookup":
+        relays = [
+            event for event in read_events(args.file) if event["event"] == "relayed"
+        ]
+        if not relays:
+            sys.exit("no recorded Relays")
+        try:
+            event = relays[args.index]
+        except IndexError:
+            sys.exit(
+                f"only {len(relays)} recorded Relays; index {args.index} is out of range"
+            )
+        report = backend_lookup(event, args.timeout)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        if args.output_json:
+            pathlib.Path(args.output_json).write_text(
+                json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            print(f"report: {args.output_json}")
 
 
 # ── replay: pull the corpus that the Go replay test scores ──────────────────
@@ -1274,12 +1528,9 @@ def main() -> None:
     view.add_parser("pull", help="save the raw JSONL").add_argument("out")
     e.set_defaults(fn=cmd_events)
 
-    b = group.add_parser("probe", help="post one message and show the Relay")
+    b = group.add_parser("probe", help="post one message and show its Recorder outcome")
     b.add_argument(
         "text", nargs="?", help="the message to post (Chinese exercises the Translator)"
-    )
-    b.add_argument(
-        "--install", action="store_true", help="./gradlew installDebug first"
     )
     b.add_argument(
         "--thread",
@@ -1299,10 +1550,13 @@ def main() -> None:
     )
     b.add_argument("--title", default=TEST_TITLE, help="title for --debug fetch")
     b.add_argument(
-        "--wait",
-        type=int,
-        default=12,
-        help="seconds to wait for the Update (default 12)",
+        "--timeout",
+        type=float,
+        default=45,
+        help="seconds to wait for the Relay outcome (default 45)",
+    )
+    b.add_argument(
+        "--json", dest="output_json", help="also write a sanitized JSON report"
     )
     b.set_defaults(fn=cmd_probe)
 
@@ -1365,9 +1619,13 @@ def main() -> None:
 
     f = group.add_parser("phone", help="adb helpers")
     act = f.add_subparsers(dest="act", required=True)
-    act.add_parser(
+    status = act.add_parser(
         "status",
-        help="pre-flight: device, app, listener, Lark, foreground, idle, Wi-Fi, reverse",
+        help="pre-flight: apps, listener, foreground, idle, active network, reverse",
+    )
+    status.add_argument("--json", action="store_true", help="print JSON")
+    act.add_parser(
+        "install", help="run unit tests, install in place, and verify the user token"
     )
     lg = act.add_parser(
         "log", help="the app's logcat so far, notification keys shortened"
@@ -1385,8 +1643,28 @@ def main() -> None:
     bk = group.add_parser(
         "backend", help="configured Backend health and authentication"
     )
-    bk.add_subparsers(dest="act", required=True).add_parser(
+    bk_sub = bk.add_subparsers(dest="act", required=True)
+    bk_status = bk_sub.add_parser(
         "status", help="health probe, Bearer authentication and chat-cache count"
+    )
+    bk_status.add_argument("--json", action="store_true", help="print JSON")
+    lookup = bk_sub.add_parser(
+        "lookup", help="replay one recorded Original through the configured Backend"
+    )
+    lookup.add_argument(
+        "--file", help="read this saved events.jsonl instead of the phone"
+    )
+    lookup.add_argument(
+        "--index", type=int, default=-1, help="Relay index (default -1, the newest)"
+    )
+    lookup.add_argument(
+        "--timeout",
+        type=float,
+        default=30,
+        help="request timeout in seconds (default 30)",
+    )
+    lookup.add_argument(
+        "--json", dest="output_json", help="also write a sanitized JSON report"
     )
     bk.set_defaults(fn=cmd_backend)
 
