@@ -69,13 +69,17 @@ func (s *Server) handleLookup(w http.ResponseWriter, r *http.Request) {
 	ctx := withToken(r.Context(), req.UserToken)
 	pick := s.fetcher.FullTextOf(ctx, req.Title, ParsePreview(req.Text), req.WhenMs)
 	if pick.Found == nil {
-		log.Printf("[%s] → %s", req.Title, pick.Reason)
+		logger := infoLog
+		if pick.failed() {
+			logger = log.Default()
+		}
+		logger.Printf("[%s] → %s", req.Title, pick.Reason)
 		writeJSON(w, LookupResponse{Outcome: "skipped", Reason: pick.Reason})
 		return
 	}
 	full := pick.Found.Text
 	english := s.translator.EnglishOf(ctx, cut(full, maxTranslateChars))
-	log.Printf("[%s] → found %s in %s, english: %v", req.Title, pick.Found.MsgType, pick.ChatID, english != nil)
+	infoLog.Printf("[%s] → found %s in %s, english: %v", req.Title, pick.Found.MsgType, pick.ChatID, english != nil)
 	writeJSON(w, LookupResponse{Outcome: "found", MsgType: pick.Found.MsgType, ChatID: pick.ChatID, FullText: full, English: english})
 }
 

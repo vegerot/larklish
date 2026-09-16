@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 )
@@ -40,7 +39,7 @@ type Fetcher struct {
 }
 
 func NewFetcher(src Source) *Fetcher {
-	return &Fetcher{src: src, Log: log.Printf, chats: map[string]string{}}
+	return &Fetcher{src: src, Log: infoLog.Printf, chats: map[string]string{}}
 }
 
 // FullTextOf finds the Full text behind an Original. A chat that cannot be read is just one

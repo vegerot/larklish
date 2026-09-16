@@ -18,6 +18,9 @@ import (
 	"os"
 )
 
+// Railway labels stdout as info and stderr as error. Keep log.Fatal on stderr.
+var infoLog = log.New(os.Stdout, "", log.LstdFlags)
+
 func main() {
 	port := flag.String("port", first(os.Getenv("_BYTEFAAS_RUNTIME_PORT"), os.Getenv("PORT"), "8787"), "listen port")
 	host := flag.String("lark", first(os.Getenv("LARK_HOST"), "https://open.feishu.cn"), "Lark Open API host")
@@ -35,6 +38,6 @@ func main() {
 	}
 	client := newLark(appID, appSecret, *host)
 	server := &Server{fetcher: NewFetcher(&liveSource{client}), translator: &Translator{client}}
-	log.Printf("Larklish Backend on :%s, Lark at %s", *port, *host)
+	infoLog.Printf("Larklish Backend on :%s, Lark at %s", *port, *host)
 	log.Fatal(http.ListenAndServe(":"+*port, server.routes(backendToken)))
 }
