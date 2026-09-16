@@ -500,8 +500,12 @@ the same platform-metadata error as the older task. Its two Test-stage manual
 items were each marked **Not involved** with separate remarks: this demo needs
 no DECC marking, and this Backend code release changes no TLB configuration.
 The manual pending count reached zero. One normal retry of only the Nario item
-was started; it was still running at the last check. Skip and Force Test Out
-were not used. The alias-bearing production release remains gated.
+finished with the same worker-to-PSM/commit mapping error. Bits GEC remains
+`CheckStatusFailed` with `passFlag: false`; Merge is unavailable. Skip and
+Force Test Out were not used. The alias-bearing production release remains
+gated. The task is
+[2850411](https://bits.bytedance.net/devops/470900839426/develop/detail/2850411/flow?devops_space_type=server_fe),
+and its automatically associated release ticket is `1229776511490`.
 
 The new Bits task's Develop-stage GEC report had five manual items. Each was
 recorded individually as **Not involved** with a reason: this is one Singapore

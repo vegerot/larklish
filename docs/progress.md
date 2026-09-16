@@ -3522,8 +3522,10 @@ its normal QA/GEC process. Do not skip or force it.
   `01M2NTFGB059K1PYWF06XFCCMZ@1@7` to a PSM and commit, matching the older
   task's platform failure. The two Test-stage manual items (DECC marking and
   TLB configuration) were each recorded as Not involved with separate reasons;
-  pending manual count is zero. One normal Nario-only retry is running. No
-  check was skipped or forced, and no alias-bearing production release ran.
+  pending manual count is zero. One normal Nario-only retry finished with the
+  same mapping error; GEC remains `CheckStatusFailed` and Merge unavailable.
+  No check was skipped or forced, and no alias-bearing production release ran.
 
-Next: wait for that single retry to finish. If it repeats the metadata error,
-obtain a normal QA/GEC resolution before attempting Merge or production.
+Next: obtain a normal QA/GEC resolution for the Nario worker-to-commit mapping
+failure on both old task `2844150` and alias task `2850411` before attempting
+Merge or production. The PPE trial can continue without bypassing that gate.
