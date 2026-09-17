@@ -4,10 +4,11 @@ Real captures of the Pixel 4a's notification shade, 2026-09-03. Each pair is one
 posted to `Larklish 测试群` by the bot; the left card is Lark's Original, the right card is
 Larklish's Relay, cropped from the same shade and placed side by side (`tools/larklish-helper showcase`).
 
-| File | What it shows |
-| --- | --- |
+| File              | What it shows                                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `01-chinese.webp` | A 90-character Chinese alert. Lark cut it at 45 characters; the Backend found the message and the Relay shows all of it in English, with `P99`, `300ms`, `customFetch`, `MR #3245` intact. |
-| `02-english.webp` | A 280-character English message. Lark cut it at 45 characters (`release train...`); the Backend found the message and the Relay shows all of it. |
-| `03-mention.webp` | A Chinese message that @-mentions Max. Lark cut it; the Relay keeps `@you`, `@Max Coplan`, the MR number and the code names, in English. |
+| `02-english.webp` | A 280-character English message. Lark cut it at 45 characters (`release train...`); the Backend found the message and the Relay shows all of it.                                           |
+| `03-mention.webp` | A Chinese message that @-mentions Max. Lark cut it; the Relay keeps `@you`, `@Max Coplan`, the MR number and the code names, in English.                                                   |
+|                   |                                                                                                                                                                                            |
 
 The `-lark.webp` / `-larklish.webp` files are the two halves on their own.
