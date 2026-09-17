@@ -3713,3 +3713,33 @@ separate decisions.
 Next: wait for a natural cut Preview or obtain explicit approval for a marked
 test message (recipient, content, and sender identity) before claiming a full
 notification-flow acceptance on PPE.
+
+### 2026-09-16 — two marked timing messages, Railway then PPE
+
+- 📨 With Max's approval, sent two copies of the agreed long Chinese test
+  message as the bot to `Larklish 测试群`, each with the helper's unique marker:
+  `[probe:e30623a2]` while the phone used Railway and `[probe:6c36f3fa]`
+  while it used PPE. `probe --idle --expect updated` restored device idle after
+  each send. Both produced English Relays, but Lark supplied complete Previews;
+  both correctly recorded `skipped not-truncated`, so no Backend Update ran.
+- ⏱️ The first Original-to-Relay gap was 1,747 ms (1,772 ms to skip),
+  including 463 ms to fetch a tenant token, 702 ms to translate the title,
+  and 504 ms to translate the Preview message. The second gap was 907 ms
+  (933 ms to skip), with a cached tenant token and 370 ms/514 ms translate
+  calls. These are phone-path measurements, not a Railway-vs-PPE Update
+  comparison.
+- 🔎 Explicitly replayed each recorded Original through its respective
+  Backend: both returned HTTP 200 `found`, English available, and 67 Full-text
+  characters. On a subsequent same-Original parallel Lookup, Railway took
+  3,988 ms wall time (2,686 ms message list, 846 ms translation); PPE took
+  3,658 ms (2,654 ms message list, 230 ms translation). These are individual
+  samples with different cache and network conditions, not a performance
+  ranking.
+- 🔁 Restored the phone's Railway default and removed the preference file
+  created for the PPE switch. Readback shows no saved Backend override, the
+  listener bound, Wi-Fi on, and device idle active. A separate untracked
+  hackathon-submission document was left untouched.
+
+Next: wait for a naturally cut Preview to verify Relay-to-Update timing on
+either deployed Backend. Do not count the complete bot Previews as Update
+failures or keep sending equivalent bot messages expecting a different path.
