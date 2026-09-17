@@ -441,6 +441,7 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   [Experiment 28](experiments/28-internal-hosting-handoff.md) records the
   earlier route work and blockers; its rewrite/PPE-pinning instructions are
   superseded by this plan.
+- [ ] Add performance dashboard in the app
 
 ## Shortcuts (fix before Larklish is a public app)
 
