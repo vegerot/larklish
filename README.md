@@ -2,7 +2,7 @@
 
 > **A language barrier should not become an attention barrier:** Larklish translates Lark notifications in-place and shows the full message, so you can understand and triage messages without opening Lark.
 >
-![[01-chinese.webp]]
+![Lark Original and Larklish Relay](docs/showcase/01-chinese.webp)
 ## The one-line pitch
 
 Larklish is a full-stack, AI-powered notification bridge for cross-language teams. It listens to Lark notifications on your phone, translates the visible Preview, and replaces the Lark notification with an English Relay in the same place the Original appeared. When Lark has truncated the Preview, a Go Backend uses the user's Lark access to perform a targeted Lookup, retrieve the Full text, translate it, and Update the Relay.
@@ -11,7 +11,7 @@ The result is deliberately simple for the teammate using it: keep using Lark nor
 
 [Read the Larklish hackathon submission in Lark Docs](https://bytedance.us.larkoffice.com/docx/BuiYd05cvoXy4Vxp267uKodKsWg)
 
-![Conceptual illustration of a Chinese notification becoming an understandable English notification](showcase/04-attention-barrier.webp)
+![Conceptual illustration of a Chinese notification becoming an understandable English notification](docs/showcase/04-attention-barrier.webp)
 <!-- website: OpenAI ImageGen via Codex; prompt: Use case ads-marketing. Asset type editorial hero illustration for a hackathon product submission. Create a polished conceptual visual for a notification translation product: show one busy global-team professional in a natural everyday moment, glancing at a phone notification while also relying on hands-free audio. Communicate a language barrier becoming an attention barrier, then becoming understandable: a muted unreadable notification with Chinese glyphs transitions into a calm, readable English notification represented by clean abstract lines and a checkmark. Conceptual context, not a literal app screenshot. Clean split composition, left side muted and obstructed, right side calm and clear. Premium editorial illustration, modern product-marketing visual, subtle depth, crisp shapes, wide landscape, generous negative space, cool tense left side and warm relieved right side, charcoal, soft blue-gray, teal and orange accent, white. No brand logos, Siri interface, fake app UI, watermark, or illegible paragraphs of text; only a few large Chinese glyphs and simple abstract notification shapes. -->
 
 *The product story in one picture: the message can stay in the sender’s natural language while the recipient gets an actionable notification.*
@@ -37,11 +37,11 @@ The alternative is to open Lark every time, find the conversation, translate the
 
 Larklish solves both headline annoyances at their shared boundary: it makes the notification understandable before the user has to open the app, and it puts the English result back into the native notification stream so it can be read or spoken normally.
 
-![Lark Original and Larklish Relay showing a truncated Chinese alert and the complete English result](showcase/01-chinese.webp)
+![Lark Original and Larklish Relay showing a truncated Chinese alert and the complete English result](docs/showcase/01-chinese.webp)
 
 *A real notification example: the Original is cut off, while the Larklish Relay preserves the complete operational detail and identifiers.*
 
-<video controls preload="metadata" playsinline src="showcase/larklish-gemini.mp4"></video>
+<video controls preload="metadata" playsinline src="docs/showcase/larklish-gemini.mp4"></video>
 <!-- website: https://gemini.google.com/u/1/app/642f12298fbf275; model: Gemini video generation via Flash Extended; prompt: Create an 8-second cinematic comedy commercial in landscape 16:9 for the new app called Larklish. A frazzled global-team professional is cooking dinner when one unreadable Chinese notification triggers absurd chaos: dozens of glowing notification bubbles swarm the kitchen, a smart speaker tries to read them and comically throws up its hands, and the professional grabs a giant magnifying glass to decode every message. Suddenly Larklish arrives as a tiny friendly superhero made of teal and orange light. The notification bubbles transform into one calm, clear English notification in the same place, the chaos vanishes, and the professional happily keeps cooking while the team continues working. End with a satisfying close-up of the calm notification and a playful wink. Warm, polished, exaggerated but believable, fast visual storytelling. -->
 
 *One ordinary notification becomes an absurd emergency until Larklish makes it understandable.*
@@ -57,13 +57,13 @@ Larklish keeps the phone’s notification workflow intact.
 5. If the Preview was complete, the Relay is done.
 6. If the Preview was cut, the Backend performs a Lookup and Larklish sends an Update containing the Full text in English.
 
-![Lark Original and Larklish Relay showing long-message recovery](showcase/02-english.webp)
+![Lark Original and Larklish Relay showing long-message recovery](docs/showcase/02-english.webp)
 
 *A real long-message example: Lark truncates the Preview, and Larklish retrieves and shows the rest of the message.*
 
 The user does not need to open a second app, copy text, or ask a colleague for help. The useful information arrives where the Original arrived.
 
-![Lark Original and Larklish Relay side by side](showcase/05-same-notification.webp)
+![Lark Original and Larklish Relay side by side](docs/showcase/05-same-notification.webp)
 <!-- website: OpenAI ImageGen via Codex; prompt: Use case ads-marketing. Asset type conceptual product story visual for a hackathon submission. Visualize the no unnecessary app switch benefit: show a phone notification as a small bridge between a sender writing naturally in Chinese and an English-speaking teammate continuing their work without opening the chat app. The notification begins as a compact Chinese Preview with an ellipsis and resolves into a clear English notification with a complete message, represented by readable short lines and a completion mark. Make it obvious that the same notification slot becomes useful. Minimal workspace with a phone in the foreground and subtle directional flow from Original to Relay to Update. Refined 3D product illustration, restrained and believable, not a fake screenshot, wide landscape, clear left-to-right narrative, optimistic, efficient, trustworthy, white, graphite, soft blue, teal, warm orange accent. No brand logos, Siri interface, fake Lark or Android UI, watermark, dense text, or random UI labels. -->
 
 *Conceptual product flow: the same notification becomes useful without an unnecessary app switch.*
@@ -134,7 +134,7 @@ Larklish has been built by testing the real layers separately and then joining t
 
 The current acceptance boundary is clear: complete Previews are fully verified on the phone, and the Backend Lookup is verified live. A fresh phone probe that starts with an actually cut Preview is the remaining proof point for claiming the complete Relay-to-Update timing path on the deployed Backend.
 
-<video controls preload="metadata" playsinline src="showcase/larklish-byteartist.mp4"></video>
+<video controls preload="metadata" playsinline src="docs/showcase/larklish-byteartist.mp4"></video>
 <!-- website: https://byteartist-beta.bytedance.net/model/video?mode=video; model: Seedance 2.5; prompt: Create a fast, funny, exaggerated cinematic office comedy. A Chinese Lark notification arrives and instantly makes a global team act like they are decoding an ancient alien transmission: one teammate squints at the phone, another grabs a giant magnifying glass, and a third prepares an absurd emergency translation committee. The recipient asks the voice assistant to read it, but the assistant throws up its hands. Then Larklish swoops in like a tiny superhero, replaces the notification in the same slot with a clear English message, and the entire team instantly relaxes and keeps working. End on a confident close-up of the phone notification and a playful wink. Warm, polished, visually clear, genuinely funny. No real app logos, no fake UI screenshots, no illegible text, no watermark. -->
 
 *Notification overload resolves into a calm, actionable message.*
@@ -155,7 +155,7 @@ The sender can keep writing naturally in the language that is fastest and most p
 
 Urgent messages, mentions, incident coordination, and launch decisions become visible to more of the people who need to act. That reduces the chance that a language boundary becomes an invisible ownership boundary.
 
-![Lark Original and Larklish Relay preserving a mention, MR number, and technical identifiers](showcase/03-mention.webp)
+![Lark Original and Larklish Relay preserving a mention, MR number, and technical identifiers](docs/showcase/03-mention.webp)
 
 *A real technical-team example: translation keeps the mention, MR number, and code names actionable.*
 
@@ -204,7 +204,7 @@ The audience should leave with one memorable idea:
 > **Larklish does not ask the team to communicate differently. It makes the communication they already have immediately usable.**
 
 
-<video controls preload="metadata" playsinline src="showcase/larklish-translation-emergency.mp4"></video>
+<video controls preload="metadata" playsinline src="docs/showcase/larklish-translation-emergency.mp4"></video>
 <!-- website: https://sora.com; model: OpenAI Sora; prompt: Create a polished 10-second landscape comedy commercial for my new app Larklish. A busy global teammate receives one confusing notification and suddenly an absurd “translation emergency” begins: tiny paper messages multiply into a tornado, coworkers appear wearing detective hats with magnifying glasses, and an enormous filing cabinet labeled only with abstract symbols rolls across the office. The teammate is about to open the chat app when a friendly teal-and-orange origami bird swoops in. It folds the entire storm into one calm notification card with a simple checkmark. The teammate smiles, keeps working, and never leaves the current task. End with the same phone notification glowing peacefully in place. Warm, cinematic, fast-paced, exaggerated, genuinely funny, and instantly understandable. Use abstract symbols instead of readable text. -->
 
 *Larklish turns notification chaos into one calm card without interrupting the work.*
@@ -220,5 +220,5 @@ The next acceptance step is a marked or naturally cut Preview on the deployed Ba
 
 *One team, many languages, one message everyone can act on.*
 
-![[showcase/06-global-team-bridge.webp]]
+![A global team connected by one understandable notification](docs/showcase/06-global-team-bridge.webp)
 <!-- website: OpenAI ImageGen via Codex; model: prompt: Use case ads-marketing. Asset type closing image for a hackathon product submission. Create a warm, memorable final visual for Larklish. Show a diverse global team continuing to work calmly across a bright shared workspace while a single small notification card travels along a glowing bridge between them. The bridge represents language becoming understanding; the team should look focused, connected, and relieved rather than overwhelmed. Communicate the closing idea: people can write naturally, and everyone can act on the same message. Airy modern global-team workspace with subtle world-map and city-light motifs, no specific company setting. Three or four diverse teammates at separate workstations connected by one elegant glowing notification bridge. Premium editorial illustration with polished cinematic 3D elements, sophisticated product-marketing finish, wide landscape, balanced left-to-right flow, generous negative space, warm morning light, calm momentum, optimistic and quietly triumphant, white, charcoal, soft blue-gray, teal, restrained warm orange accent, glass, paper, soft light trails, subtle paper-card notification shapes. Conceptual visual, not a literal product screenshot; no readable text, brand logos, fake app interface, watermark, chaos, fear, emergency imagery, clutter, dense typography, distorted faces, or extra limbs. -->
