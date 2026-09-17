@@ -9,6 +9,8 @@ Larklish is a full-stack, AI-powered notification bridge for cross-language team
 
 The result is deliberately simple for the teammate using it: keep using Lark normally, but understand important messages immediately.
 
+[Read the Larklish hackathon submission in Lark Docs](https://bytedance.us.larkoffice.com/docx/BuiYd05cvoXy4Vxp267uKodKsWg)
+
 ![Conceptual illustration of a Chinese notification becoming an understandable English notification](showcase/04-attention-barrier.webp)
 <!-- website: OpenAI ImageGen via Codex; prompt: Use case ads-marketing. Asset type editorial hero illustration for a hackathon product submission. Create a polished conceptual visual for a notification translation product: show one busy global-team professional in a natural everyday moment, glancing at a phone notification while also relying on hands-free audio. Communicate a language barrier becoming an attention barrier, then becoming understandable: a muted unreadable notification with Chinese glyphs transitions into a calm, readable English notification represented by clean abstract lines and a checkmark. Conceptual context, not a literal app screenshot. Clean split composition, left side muted and obstructed, right side calm and clear. Premium editorial illustration, modern product-marketing visual, subtle depth, crisp shapes, wide landscape, generous negative space, cool tense left side and warm relieved right side, charcoal, soft blue-gray, teal and orange accent, white. No brand logos, Siri interface, fake app UI, watermark, or illegible paragraphs of text; only a few large Chinese glyphs and simple abstract notification shapes. -->
 
@@ -39,7 +41,7 @@ Larklish solves both headline annoyances at their shared boundary: it makes the 
 
 *A real notification example: the Original is cut off, while the Larklish Relay preserves the complete operational detail and identifiers.*
 
-![[showcase/larklish-gemini.mp4]]
+<video controls preload="metadata" playsinline src="showcase/larklish-gemini.mp4"></video>
 <!-- website: https://gemini.google.com/u/1/app/642f12298fbf275; model: Gemini video generation via Flash Extended; prompt: Create an 8-second cinematic comedy commercial in landscape 16:9 for the new app called Larklish. A frazzled global-team professional is cooking dinner when one unreadable Chinese notification triggers absurd chaos: dozens of glowing notification bubbles swarm the kitchen, a smart speaker tries to read them and comically throws up its hands, and the professional grabs a giant magnifying glass to decode every message. Suddenly Larklish arrives as a tiny friendly superhero made of teal and orange light. The notification bubbles transform into one calm, clear English notification in the same place, the chaos vanishes, and the professional happily keeps cooking while the team continues working. End with a satisfying close-up of the calm notification and a playful wink. Warm, polished, exaggerated but believable, fast visual storytelling. -->
 
 *One ordinary notification becomes an absurd emergency until Larklish makes it understandable.*
@@ -132,7 +134,7 @@ Larklish has been built by testing the real layers separately and then joining t
 
 The current acceptance boundary is clear: complete Previews are fully verified on the phone, and the Backend Lookup is verified live. A fresh phone probe that starts with an actually cut Preview is the remaining proof point for claiming the complete Relay-to-Update timing path on the deployed Backend.
 
-![[showcase/larklish-byteartist.mp4]]
+<video controls preload="metadata" playsinline src="showcase/larklish-byteartist.mp4"></video>
 <!-- website: https://byteartist-beta.bytedance.net/model/video?mode=video; model: Seedance 2.5; prompt: Create a fast, funny, exaggerated cinematic office comedy. A Chinese Lark notification arrives and instantly makes a global team act like they are decoding an ancient alien transmission: one teammate squints at the phone, another grabs a giant magnifying glass, and a third prepares an absurd emergency translation committee. The recipient asks the voice assistant to read it, but the assistant throws up its hands. Then Larklish swoops in like a tiny superhero, replaces the notification in the same slot with a clear English message, and the entire team instantly relaxes and keeps working. End on a confident close-up of the phone notification and a playful wink. Warm, polished, visually clear, genuinely funny. No real app logos, no fake UI screenshots, no illegible text, no watermark. -->
 
 *Notification overload resolves into a calm, actionable message.*
@@ -202,7 +204,7 @@ The audience should leave with one memorable idea:
 > **Larklish does not ask the team to communicate differently. It makes the communication they already have immediately usable.**
 
 
-![[showcase/larklish-translation-emergency.mp4]]
+<video controls preload="metadata" playsinline src="showcase/larklish-translation-emergency.mp4"></video>
 <!-- website: https://sora.com; model: OpenAI Sora; prompt: Create a polished 10-second landscape comedy commercial for my new app Larklish. A busy global teammate receives one confusing notification and suddenly an absurd “translation emergency” begins: tiny paper messages multiply into a tornado, coworkers appear wearing detective hats with magnifying glasses, and an enormous filing cabinet labeled only with abstract symbols rolls across the office. The teammate is about to open the chat app when a friendly teal-and-orange origami bird swoops in. It folds the entire storm into one calm notification card with a simple checkmark. The teammate smiles, keeps working, and never leaves the current task. End with the same phone notification glowing peacefully in place. Warm, cinematic, fast-paced, exaggerated, genuinely funny, and instantly understandable. Use abstract symbols instead of readable text. -->
 
 *Larklish turns notification chaos into one calm card without interrupting the work.*
