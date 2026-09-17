@@ -176,7 +176,7 @@ def phone_user_token() -> str:
 def backend_url() -> str:
     """Default Backend; LARKLISH_BACKEND selects a different one for experiments."""
     return os.environ.get(
-        "LARKLISH_BACKEND", "https://backend-production-a712b.up.railway.app"
+        "LARKLISH_BACKEND", "https://shop.tiktokglobalshop.com/_/test/demo/larklish"
     ).rstrip("/")
 
 

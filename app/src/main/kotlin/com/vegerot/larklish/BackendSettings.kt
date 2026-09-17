@@ -17,7 +17,7 @@ class BackendSettings(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_URL = "https://backend-production-a712b.up.railway.app"
+        const val DEFAULT_URL = "https://shop.tiktokglobalshop.com/_/test/demo/larklish"
 
         fun normalize(input: String): String? {
             val value = input.trim().trimEnd('/')

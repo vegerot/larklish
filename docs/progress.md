@@ -3743,3 +3743,27 @@ notification-flow acceptance on PPE.
 Next: wait for a naturally cut Preview to verify Relay-to-Update timing on
 either deployed Backend. Do not count the complete bot Previews as Update
 failures or keep sending equivalent bot messages expecting a different path.
+
+### 2026-09-16 — public TikTok Backend is the default
+
+- 🛠️ Changed the built-in Android and helper Backend URL from Railway to the public TikTok route: `https://shop.tiktokglobalshop.com/_/test/demo/larklish`.
+  Device-local overrides and `LARKLISH_BACKEND` remain available for other targets.
+- ✅ Added a unit assertion for the built-in URL. Kotlin formatting, Android debug
+  unit tests, and the helper's default/override smoke check passed.
+
+Next: install a new APK when ready; existing installed devices retain their saved Backend URL until that override is removed.
+
+### 2026-09-16 — public TikTok default installed; Lark did not notify test messages
+
+- 📱 Added the private PPE selection for the public route, rebuilt, and installed
+  the debug APK in place. Android unit tests passed; the user token file and all
+  2,844 existing Recorder events were preserved, and the listener remained bound.
+- ✅ A synthetic Lookup reached `https://shop.tiktokglobalshop.com/_/test/demo/larklish`
+  with `x-tt-env` selected and returned `skipped no-chat` after a 1.137 s Backend
+  call. Before the PPE selection, the same route returned HTTP 404.
+- 📨 Sent two distinct, idempotent bot probes to `Larklish 测试群` (positions 83
+  and 84). Lark accepted both, but posted no Original after more than 35 seconds;
+  the app consequently recorded no Relay or Update. The phone stayed listener-bound,
+  awake, and on Wi-Fi; its Lark regular-message channel is enabled.
+
+Next: investigate why this group no longer produces a Lark Original before sending another duplicate probe. The public TikTok Backend path itself is verified, but end-to-end notification acceptance is not.

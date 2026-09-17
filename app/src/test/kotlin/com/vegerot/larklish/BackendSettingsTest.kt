@@ -6,6 +6,14 @@ import org.junit.Test
 
 class BackendSettingsTest {
     @Test
+    fun hasTikTokBackendDefault() {
+        assertEquals(
+            "https://shop.tiktokglobalshop.com/_/test/demo/larklish",
+            BackendSettings.DEFAULT_URL,
+        )
+    }
+
+    @Test
     fun normalizesHttpsUrl() {
         assertEquals(
             "https://example.com/backend",
