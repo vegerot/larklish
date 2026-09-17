@@ -1,61 +1,52 @@
-# Larklish: Make every Lark notification understandable
+# Larklish: Read the full Lark notification before you open the app
 
-> **A language barrier should not become an attention barrier:** Larklish translates Lark notifications in-place and shows the full message, so you can understand and triage messages without opening Lark.
->
-![Lark Original and Larklish Relay](docs/showcase/01-chinese.webp)
-## The one-line pitch
+> **A truncated notification should not become an attention barrier.** Larklish turns an incomplete Lark notification into the full message in the same place. It can also translate that message for you, so you can decide whether it matters without opening Lark.
 
-Larklish is a full-stack, AI-powered notification bridge for cross-language teams. It listens to Lark notifications on your phone, translates the visible Preview, and replaces the Lark notification with an English Relay in the same place the Original appeared. When Lark has truncated the Preview, a Go Backend uses the user's Lark access to perform a targeted Lookup, retrieve the Full text, translate it, and Update the Relay.
+![Lark Original and Larklish Relay showing a truncated notification becoming complete](docs/showcase/01-chinese.webp)
 
-The result is deliberately simple for the teammate using it: keep using Lark normally, but understand important messages immediately.
+*A real example: Lark truncates the Original; Larklish puts the complete message back in the notification stream.*
+
+The sender keeps writing naturally in the language that is fastest and most precise. The recipient gets the complete message at the moment they need it—between meetings, away from their desk, or handling an urgent issue. If they need English, Larklish translates it too.
 
 [Read the Larklish hackathon submission in Lark Docs](https://bytedance.us.larkoffice.com/docx/BuiYd05cvoXy4Vxp267uKodKsWg)
 
-![Conceptual illustration of a Chinese notification becoming an understandable English notification](docs/showcase/04-attention-barrier.webp)
+## The problem
+
+A message can arrive successfully and still fail at the moment it matters. For our mostly Chinese-speaking team, the main problem is that Lark often shows only a truncated Preview. To know what the message actually says, the recipient must stop what they are doing, open Lark, find the conversation, and read the rest. If the message is in another language Siri will say she cannot read the message either.
+
+That happens over and over. Every notification becomes a small interruption, even when most messages are routine. An incomplete notification becomes an attention tax.
+
+![Conceptual illustration of a truncated notification becoming a complete, understandable notification](docs/showcase/04-attention-barrier.webp)
 <!-- website: OpenAI ImageGen via Codex; prompt: Use case ads-marketing. Asset type editorial hero illustration for a hackathon product submission. Create a polished conceptual visual for a notification translation product: show one busy global-team professional in a natural everyday moment, glancing at a phone notification while also relying on hands-free audio. Communicate a language barrier becoming an attention barrier, then becoming understandable: a muted unreadable notification with Chinese glyphs transitions into a calm, readable English notification represented by clean abstract lines and a checkmark. Conceptual context, not a literal app screenshot. Clean split composition, left side muted and obstructed, right side calm and clear. Premium editorial illustration, modern product-marketing visual, subtle depth, crisp shapes, wide landscape, generous negative space, cool tense left side and warm relieved right side, charcoal, soft blue-gray, teal and orange accent, white. No brand logos, Siri interface, fake app UI, watermark, or illegible paragraphs of text; only a few large Chinese glyphs and simple abstract notification shapes. -->
 
-*The product story in one picture: the message can stay in the sender’s natural language while the recipient gets an actionable notification.*
+*The product story in one picture: the message can stay in the sender’s natural language while the recipient gets the complete, actionable notification.*
 
-## The two everyday annoyances
+## The 10-second experience
 
-Larklish starts from two related failures in the notification experience, not from an abstract desire to add another translation tool.
+1. A long Lark notification in an unknown language arrives, often truncated.
+2. Larklish retrieves the missing context and restores the complete message in the same notification.
+3. If needed, Larklish translates the complete message.
+4. The recipient decides whether to act without switching apps.
 
-### 1. Voice assistants cannot reliably read the message
-
-In the motivating setup, when a Lark notification arrives in Chinese, Siri says she cannot read the message. The notification may be present, but it is not accessible as spoken information. That matters when the user is walking, driving, cooking, exercising, or otherwise relying on audio instead of looking at the screen. A notification that cannot be understood cannot be triaged. Larklish addresses the underlying problem by putting an English Relay back into the native notification stream; platform-specific voice-assistant behavior is a client integration detail, not a requirement for the product’s core value.
-
-### 2. The user must open Lark for every notification
-
-The alternative is to open Lark every time, find the conversation, translate the message, and decide whether it needs a response. For a busy team, that is a lot of unnecessary app-opening and context switching. It turns every notification into a small interruption, even when most messages are not urgent.
-
-| Everyday failure | Team consequence |
-|-|-|
-| **Voice assistant cannot read the message** | Spoken notifications fail at the moment the user needs hands-free awareness. |
-| **Every notification requires opening Lark** | Triage becomes slow and disruptive, so important mentions, incidents, approvals, and launch changes are easier to miss. |
-| **Long messages are truncated** | The visible Preview may omit the detail needed to decide what to do. |
-| **Every sender is expected to solve the language gap** | People must change how they communicate, repeat messages, or rely on a colleague as a human translation layer. |
-
-Larklish solves both headline annoyances at their shared boundary: it makes the notification understandable before the user has to open the app, and it puts the English result back into the native notification stream so it can be read or spoken normally.
-
-![Lark Original and Larklish Relay showing a truncated Chinese alert and the complete English result](docs/showcase/01-chinese.webp)
-
-*A real notification example: the Original is cut off, while the Larklish Relay preserves the complete operational detail and identifiers.*
+The product does not ask the team to communicate differently. It makes the communication they already have immediately usable. The recipient gets the whole message first and opens Lark only when the message deserves deeper action.
 
 <video controls preload="metadata" playsinline src="docs/showcase/larklish-gemini.mp4"></video>
 <!-- website: https://gemini.google.com/u/1/app/642f12298fbf275; model: Gemini video generation via Flash Extended; prompt: Create an 8-second cinematic comedy commercial in landscape 16:9 for the new app called Larklish. A frazzled global-team professional is cooking dinner when one unreadable Chinese notification triggers absurd chaos: dozens of glowing notification bubbles swarm the kitchen, a smart speaker tries to read them and comically throws up its hands, and the professional grabs a giant magnifying glass to decode every message. Suddenly Larklish arrives as a tiny friendly superhero made of teal and orange light. The notification bubbles transform into one calm, clear English notification in the same place, the chaos vanishes, and the professional happily keeps cooking while the team continues working. End with a satisfying close-up of the calm notification and a playful wink. Warm, polished, exaggerated but believable, fast visual storytelling. -->
 
 *One ordinary notification becomes an absurd emergency until Larklish makes it understandable.*
 
-## The experience: one notification, two layers of help
+> **Measured proof:** In one long-message run, the first English notification appeared 1,905 ms after the original notification.
 
-Larklish keeps the phone’s notification workflow intact.
+## How it works under the hood
+
+Larklish keeps the phone’s notification workflow intact while restoring missing message context only when it is needed.
 
 1. Lark posts an Original notification.
 2. The Larklish client receives its title and text through the platform’s notification listener.
 3. The client translates the text.
 4. Larklish posts a Relay using the same notification key, so it occupies the same familiar notification slot.
 5. If the Preview was complete, the Relay is done.
-6. If the Preview was cut, the Backend performs a Lookup and Larklish sends an Update containing the Full text in English.
+6. If the Preview was cut, the Backend performs a Lookup and Larklish sends an Update containing the Full text in your language.
 
 ![Lark Original and Larklish Relay showing long-message recovery](docs/showcase/02-english.webp)
 
@@ -68,16 +59,16 @@ The user does not need to open a second app, copy text, or ask a colleague for h
 
 *Conceptual product flow: the same notification becomes useful without an unnecessary app switch.*
 
-## Why Larklish is more than a translation API call
+## Why Larklish is more than a translation shortcut
 
-The hard part is the boundary between a notification system and a messaging system. Larklish handles the details that make the experience reliable:
+The hard part is not translating a sentence. It is recognizing when the notification is incomplete, recovering the missing message, and preserving the notification experience around it. Larklish handles the details that make that experience reliable:
 
 - The app understands Lark’s actual notification shape: the title is the group name and the text begins with the Sender.
 - It translates both the group title and the message Preview, preserving the Sender boundary.
 - It preserves platform notification identity and follows Lark when Lark withdraws an Original.
 - It detects whether the Preview is truncated instead of fetching every message, keeping the common path fast and inexpensive.
 - It handles direct messages differently from group chats when resolving a conversation for a Lookup.
-- It uses the Lark translation API first and keeps an on-device ML Kit fallback for cases where the API cannot provide a result. A `~` marker makes a fallback visible rather than silently pretending all translations came from the same path.
+- It uses the Lark translation API first and keeps an on-device ML Kit fallback for cases where translation is needed but the API cannot provide a result. A `~` marker makes a fallback visible rather than silently pretending all translations came from the same path.
 - It refreshes the user token through the normal Lark user-token chain. The Backend receives the user's access token per request; it does not own a long-lived user session.
 
 These choices turn an apparently small feature into a complete, usable product loop.
@@ -102,7 +93,7 @@ flowchart LR
 
 ### Frontend: a native experience that stays out of the way
 
-The current app is intentionally focused. It owns notification interception, Preview parsing, translation, Relay/Update presentation, the user-token chain, recording, and the editable Backend URL. A future native client on another platform can implement the same small contract while reusing the Backend and product behavior. No client requires changes to the Lark app or cooperation from message senders.
+The current app is intentionally focused. It owns notification interception, Preview parsing, translation, Relay/Update presentation, the user-token chain, and recording. A future native client on another platform can implement the same small contract while reusing the Backend and product behavior. No client requires changes to the Lark app or cooperation from message senders.
 
 The reference implementation is tested on a rooted Pixel 4a running LineageOS 23.2 / Android 16. That focus let the project optimize for a real end-to-end experience while keeping the product architecture open to other clients.
 
@@ -116,7 +107,7 @@ It is stateless apart from an in-memory chat cache and LRU. It uses Go’s `net/
 
 ### AI and data handling
 
-AI is used exactly where it creates user value: turning Chinese language into English at notification speed. The rest of the system is deterministic and testable: notification parsing, sender extraction, truncation detection, chat resolution, message selection, token handling, and notification replacement.
+AI is used exactly where it creates user value: translating the recovered message into English when needed. The rest of the system is deterministic and testable: notification parsing, sender extraction, truncation detection, chat resolution, message selection, token handling, and notification replacement.
 
 This division matters. The model or translation service handles language; code handles identity, routing, and safety-sensitive data flow. In the single-user demo, the notification Preview and the user's access token transit the configured Backend and Lark APIs; the Backend does not retain a long-lived user session.
 
@@ -139,39 +130,18 @@ The current acceptance boundary is clear: complete Previews are fully verified o
 
 *Notification overload resolves into a calm, actionable message.*
 
-## Real team value
-
-Larklish improves several kinds of work at once:
-
-### For the recipient
-
-The recipient gets immediate comprehension without changing their Lark habits. They can triage a notification in seconds, even when they are away from their desk or moving between Wi-Fi and cellular.
-
-### For the sender
-
-The sender can keep writing naturally in the language that is fastest and most precise for them. Larklish removes pressure to write a second English version for every operational message.
-
-### For managers and on-call owners
-
-Urgent messages, mentions, incident coordination, and launch decisions become visible to more of the people who need to act. That reduces the chance that a language boundary becomes an invisible ownership boundary.
-
-![Lark Original and Larklish Relay preserving a mention, MR number, and technical identifiers](docs/showcase/03-mention.webp)
-
-*A real technical-team example: translation keeps the mention, MR number, and code names actionable.*
-
-### For the organization
-
-The pattern is reusable. The same architecture can become a general bridge for other notification surfaces, language pairs, or accessibility transformations, while the first product remains focused and easy to validate.
-
 ## Business value
 
 Larklish’s business value is the attention and coordination time it gives back to the team. A notification is the cheapest moment to decide whether a message matters; forcing someone to open Lark, locate the conversation, and translate it turns every message into a workflow interruption. Larklish makes that decision available immediately.
 
-- **Faster response to important work:** Mentions, incidents, approvals, and launch changes become understandable before they are missed or delayed.
-- **Fewer unnecessary interruptions:** Teammates open Lark only when a notification deserves deeper action, instead of opening it for every message.
-- **More effective global collaboration:** Senders can write naturally and precisely, while recipients get an English notification they can read or hear without asking someone to translate it manually.
-- **Lower coordination overhead:** The team spends less time repeating messages, explaining context, and acting as a human translation relay.
-- **A reusable capability:** The same notification bridge can extend to more languages, client platforms, and accessibility use cases without changing how people communicate.
+- **For recipients:** They can triage a notification in seconds without changing their Lark habits, even when they are away from their desk or relying on spoken notifications.
+- **For senders:** They can write naturally and precisely without producing a second English version for every operational message.
+- **For managers and on-call owners:** Mentions, incidents, approvals, and launch changes become visible to more of the people who need to act.
+- **For the organization:** The same notification bridge can extend to more languages, client platforms, and accessibility use cases without changing how people communicate.
+
+![Lark Original and Larklish Relay preserving a mention, MR number, and technical identifiers](docs/showcase/03-mention.webp)
+
+*A real technical-team example: translation keeps the mention, MR number, and code names actionable.*
 
 This is not value measured by adding another dashboard or another place to work. It is value created by removing friction from work that is already happening: understand the message, decide whether it matters, and act sooner.
 
@@ -182,7 +152,7 @@ Larklish maps directly to the Demo Day criteria:
 | Criterion | Larklish evidence |
 |-|-|
 | **Technical completeness** | A real native frontend reference implementation, notification lifecycle, token chain, Go HTTP Backend, Lark API integration, deployment targets, timing instrumentation, tests, and a working demo path. |
-| **Work productivity** | It removes repeated manual translation, reduces context switching, and makes cross-language notifications actionable. |
+| **Work productivity** | It removes the need to open Lark just to read the rest of a message, reduces context switching, and makes cross-language notifications actionable. |
 | **Innovation** | It applies AI at an overlooked boundary—the notification Preview—while preserving the operating system’s native workflow. |
 | **Room to evolve** | More languages, smarter policy controls, team distribution, accessibility features, and richer notification actions can build on the same seam. |
 
@@ -192,12 +162,12 @@ Many productivity tools help after a user opens a web page. Larklish helps at th
 
 The clearest live demo is a before-and-after on the same phone:
 
-1. Show a Chinese Lark Original in the notification shade.
-2. Show the matching English Larklish Relay in the same notification position.
-3. Send a long message and show that the ordinary Preview is insufficient.
-4. Show the Relay first, then the Backend-driven Update with the Full text.
-5. Switch between Wi-Fi and cellular and show that the experience remains local at the notification layer.
-6. Open Larklish settings to show the Backend URL and the diagnostic record of Relay, Update, fallback, and timing events.
+1. Show a Chinese Lark notification.
+2. Show the English Larklish notification in the same position.
+3. Send a long message and show the complete English result after the notification is cut short.
+4. Explain that teammates can read and triage the message without opening Lark.
+
+If time remains, show the Wi-Fi/cellular transition and diagnostic settings.
 
 The audience should leave with one memorable idea:
 
@@ -212,11 +182,9 @@ The audience should leave with one memorable idea:
 
 Larklish is a real working app with a live ByteFaaS Backend in ByteCloud.
 
-The next acceptance step is a marked or naturally cut Preview on the deployed Backend, verifying the final Relay-to-Update timing row end to end. That is a small validation step—not a change to the product thesis or architecture.
-
 ---
 
-**Larklish — translate less in your head, miss less in your day.** 🚀
+**Larklish — read the whole message, miss less in your day.** 🚀
 
 *One team, many languages, one message everyone can act on.*
 
