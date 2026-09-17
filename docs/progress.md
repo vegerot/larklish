@@ -3767,3 +3767,12 @@ Next: install a new APK when ready; existing installed devices retain their save
   awake, and on Wi-Fi; its Lark regular-message channel is enabled.
 
 Next: investigate why this group no longer produces a Lark Original before sending another duplicate probe. The public TikTok Backend path itself is verified, but end-to-end notification acceptance is not.
+
+### 2026-09-16 — Backend-only Lark translation plan recorded
+
+- 📄 Saved `docs/backend-translation-plan.md` with the agreed ML Kit first Relay,
+  Backend Preview or Full-text translation, complete English-message skip,
+  failure analytics, and PPE-plus-phone rollout. No app or Backend code changed.
+
+Next: implement the plan, verify both Backend branches and phone behavior, then
+release only to PPE for the planned soak.
