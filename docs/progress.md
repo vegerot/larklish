@@ -976,7 +976,7 @@ Next:
 ### 2026-08-27 — App icon v1 (译鸟)
 
 - 🎨 Max picked an AI-generated flat bird (navy body, orange belly, two chirp arcs on a
-  teal `#00d3b2` disc): `docs/logo/larklish-v1.png`. Cut the bird out of the disc
+  teal `#00d3b2` disc): `docs/logo/larklish-v1.webp`. Cut the bird out of the disc
   (pillow/numpy under `uv`), placed it at 60 dp inside the 108 dp adaptive canvas →
   `res/drawable-xxxhdpi/ic_launcher_foreground.png`; solid-color background; the same
   alpha silhouette as `ic_launcher_monochrome.png` (themed icons) and as the 24 dp

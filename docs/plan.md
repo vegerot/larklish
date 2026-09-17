@@ -371,7 +371,7 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   now takes the Sender already in English, like the title and the message.
   Evidence: `docs/experiments/05-lark-api.md` "Soak".
 - [ ] **App icon: finish the 译鸟 mark.** 2026-08-27: an AI-generated flat bird (navy
-  body, orange belly, two chirp arcs, teal disc; `docs/logo/larklish-v1.png`) is in use as
+  body, orange belly, two chirp arcs, teal disc; `docs/logo/larklish-v1.webp`) is in use as
   the adaptive launcher icon and, as an alpha silhouette, the notification small icon.
   Todo before it is final: (1) two **bold chirp arcs** about the size of the head — the
   current ones vanish at 24 dp; (2) a **rounded, fuller wing tip** (the taper fades at small
