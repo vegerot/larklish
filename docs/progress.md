@@ -3799,6 +3799,29 @@ Next: commit the tested change, build it in SCM from `origin/main`, release only
 `mmyp0srw` in `ppe_deploy_i18n_1`, verify both Backend branches, then install the APK in place
 without clearing the Pixel's token or Recorder history.
 
+### 2026-09-17 — Backend-only translation released to I18N-TT PPE
+
+- 📦 Committed the implementation as `5912507` and pushed it to ByteDance `origin/main`. SCM's
+  first artifact `oec/seller/larklish:1.0.0.27` failed before compilation because its Git fetch
+  answered HTTP 503. An empty retry commit `aa17ad5` left the tested tree unchanged; SCM
+  `1.0.0.28` then built successfully from that exact commit on the Go 1.26 image.
+- 🚀 Created SCM-backed code revision `1.0.11` / `hh0qycuyy1` for PPE function `mmyp0srw`, then
+  released only `faas-sg` in `ppe_deploy_i18n_1`. Ticket `5bk1czcczo9db3vx` succeeded. Function
+  readback names `oec/seller/larklish:1.0.0.28`; its direct trigger returns
+  `pong go1.26.4 linux/amd64`.
+- 🧪 The authenticated public PPE Lookup route passed both server branches. A complete Han Preview
+  returned `found`, `source: preview`, English, and only tenant-token/translation timing spans.
+  A cut-marker request entered `chats/search` and `messages` then returned the expected
+  `no-message`; no fabricated message was sent. The public alias does not expose `/v1/ping`, so
+  its 404 there is expected; the direct trigger is the health probe.
+- 📱 ADB has no connected device, so the APK was not installed and no phone token or Recorder file
+  was read, refreshed, replaced, or cleared. Phone end-to-end acceptance remains unverified.
+
+Next: reconnect the Pixel, install the already-built debug APK in place while proving
+`user-token.json` and Recorder history survive, then wait for one natural complete Han Original
+and one cut Original to measure Relay-to-Update timing and the new failure counts. Do not send a
+new marked message without Max's authorization.
+
 ### 2026-09-23 — Snap-O evaluated for Larklish diagnostics
 
 - 📱 Verified Snap-O live against the connected Pixel 4a with Computer Use. Live Preview and a
