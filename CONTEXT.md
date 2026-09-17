@@ -1,7 +1,7 @@
 # Larklish
 
-Larklish reads Lark's Android notifications, translates the Chinese preview to English
-on-device, and posts an English notification in its place.
+Larklish reads Lark's Android notifications, posts an on-device English Relay, then lets the
+Backend improve it with Lark translation.
 
 ## Language
 
@@ -29,16 +29,20 @@ _Avoid_: level, mode, preference, rule
 The component that turns Chinese text into English text.
 _Avoid_: engine, backend, provider
 
+The phone uses ML Kit for the first Relay. The Backend owns Lark translation for the Update.
+
 **Full text**:
 The whole message body that the Lark Open API returns for one message.
 _Avoid_: body, content, full message
 
 **Update**:
-A second `notify` on the same Relay key that replaces the Preview with the Full text.
+A second `notify` on the same Relay key that replaces the Preview with a Lark-translated Preview
+or Full text.
 _Avoid_: refresh, re-post, second post
 
 **Backend**:
-The Go HTTP server that runs the Lookup and translates the Full text for the phone.
+The Go HTTP server that translates a Preview directly or runs the Lookup and translates Full text
+for the phone.
 _Avoid_: server, service, proxy, cloud
 
 **Lookup**:

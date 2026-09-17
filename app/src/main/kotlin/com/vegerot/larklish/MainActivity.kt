@@ -79,13 +79,15 @@ private suspend fun MainActivity.debugHook(what: String, title: String, text: St
     runCatching {
         if (what == "fetch") {
             // Layer 7: the Lookup runs on the Backend; this asks it the way the listener does.
+            val previewText = text.ifEmpty { "..." }
             val answer =
                 Backend.lookup(
                     this,
                     title,
-                    text.ifEmpty { "..." },
+                    previewText,
                     System.currentTimeMillis(),
-                    defaultUserToken(this).bearer(),
+                    if (Preview.parse(previewText).truncated) defaultUserToken(this).bearer() else null,
+                    flowId = "debug-fetch",
                 )
             Log.i(TAG, "debug fetch [$title]: $answer")
             return@runCatching

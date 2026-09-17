@@ -87,6 +87,7 @@ The end-to-end flow timing plan and its implementation additions are in
 | SCM's Go image must match `go.mod` | spooky-bio's builds failed twice on an image older than its `go.mod` and passed on the 1.26 image; SCM does not honour `GOTOOLCHAIN`. The newest image seen is `bytedance.golang.compile_tango_1_26_bookworm` | `bytedcli scm repo version list --repo-id 524000` |
 | An IPv6-only instance needs the intranet Lark host | `fsopen.bytedance.net` has A and AAAA records; `open.feishu.cn` has no AAAA, and public egress from ByteFaaS needs a Mesh Egress whitelist (Aime) | `dig`; spooky-bio's cluster env `LARK_API_BASE_URL` |
 | ByteFaaS releases are self-service tickets | spooky-bio's 11 releases: steps Build → ReleaseCanary → ReleaseRegion → Release_All, 1–3 min, no approver | `bytedcli faas release list --service-id n3e8d5na` |
+| Backend translation ownership | The phone posts an ML Kit Relay, then the Backend translates every Han Preview and every cut Preview; only a cut Preview sends a user token and runs the Lookup. A complete Latin message skips the Backend. | `docs/backend-translation-plan.md` |
 
 ## Layers
 
@@ -115,29 +116,25 @@ withdraw — Lark updates the Original in place. `POST_NOTIFICATIONS` is require
 Cancel option (Max): debug builds keep the Original next to the Relay for comparison;
 release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
 
-### Layer 4 — LarkApiTranslator ✅ done
+### Layer 4 — phone Lark Translator ✅ superseded
 
-See `docs/experiments/05-lark-api.md`. `LarkApiTranslator` calls Lark's engine over
-`HttpURLConnection` with the CLI app's credentials from `local.properties` (→
-`BuildConfig`, embedded in the APK; Max OK'd this for now). `FallbackTranslator` uses ML Kit
-when Lark fails (offline, error code, or the silent pass-through on Latin-heavy text) and
-prefixes the fallback output with `~` so the Relay and `events.jsonl` show the engine.
-No pacing: Experiment 05 saw no rate limit. Verified on the phone 2026-08-26: (1) the
-debug hook shows Lark-quality output; (2) a bot DM relays through the listener; (3) the
-Latin-heavy pass-through and radios-off both produce `~` ML Kit output.
+Experiment 05 established Lark's translation quality and rate-limit behaviour. The phone's
+`LarkApiTranslator` and Lark-then-ML-Kit fallback were removed in favour of one clear ownership
+boundary: ML Kit creates the first Relay and the Backend owns Lark translation for Updates.
 
 ### Layer 5 — Full text in the Relay ✅ built, soaking
 
 Lark's Preview is at most 45 characters and often empty (Experiment 06). The Original
-cannot carry more (E1) and no AppLink opens a message (Experiment 07), so the Full text
-comes from the Open API under Max's user identity, **one lookup per Original**: title →
+cannot carry more (E1) and no AppLink opens a message (Experiment 07), so a cut Preview's Full
+text comes from the Open API under Max's user identity: title →
 chat id (`chats/search`, cached in `filesDir/chats.json`) → newest messages (`messages`
 list, `ByCreateTimeDesc`) → pick by time window and Preview stem → translate → **Update**
-the Relay. Two-phase Relay: post from the Preview at once, Update the same key when the
-fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
+the Relay. Two-phase Relay: ML Kit posts from the Preview at once, then the Backend Updates the
+same key with Lark translation. A complete Latin message skips the Backend; a complete Han
+Preview translates directly without a Lookup. Decisions (grilling, 2026-08-27):
 
-- Fetch for every Original. Later optimization: fetch only when the Preview ends in `...`
-  (53 % of real Previews do — Experiment 08).
+- Fetch only when the Preview ends in `...` (53 % of real Previews do — Experiment 08).
+  Complete Han Previews go straight to Backend translation instead.
 - Show the whole translated text in `BigTextStyle`; input capped at 1,000 chars (the
   translation API limit). An AI summary is a 2.0 idea.
 - `text` and `post` messages (`post` flattened: title, one line per paragraph, `[image]`,
@@ -159,7 +156,7 @@ fetch returns (~1–3 s). Decisions (grilling, 2026-08-27):
   `local.properties` → `BuildConfig`; the app persists rotations in
   `filesDir/user-token.json` (2 h access, 7-day sliding refresh, Experiment 06 E4).
 
-Files: `LarkHttp.kt` (HTTP shared with `LarkApiTranslator`), `UserToken.kt`,
+Files: `LarkHttp.kt` (user-token refresh), `UserToken.kt`,
 `MessageFetcher.kt` (pure `pickMessage` + `resolveMentions`, tested), the Update path in
 `LarkListener`, `Recorder` events `updated` / `skipped`, `tools/events` `U` / `S` rows.
 Commits: docs → `LarkHttp` → `UserToken` + `tools/lark-token` → `MessageFetcher` → Update →
@@ -212,11 +209,10 @@ Larklish is also Max's entry in a full-stack hackathon, which needs a front end 
 back end. Max uses it daily, so the Relay stays as fast as it is and the app keeps solving its
 two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are listed below.
 
-- **What moves**: the Update path only — the **Lookup** (title → chat id → newest messages →
-  pick → Full text) and the Full-text translate. The phone keeps the listener, the Relay, the
-  Preview translate, Romanize, the Recorder and the user token chain, and sends its user access
-  token with each request. The Update is off the Relay's critical path, so the extra hop costs
-  nothing Max can feel.
+- **What moves**: all Lark translation and the Update path. The phone keeps the listener, ML Kit
+  first Relay, Romanize, the Recorder and the user-token chain. Complete Han Previews go straight
+  to the Backend; cut Previews add the **Lookup** (title → chat id → newest messages → pick → Full
+  text) and send the user access token. The Update is off the Relay's critical path.
 - **Stateless Backend**, except an in-memory chat cache + LRU, re-learned after a restart (one
   `chats/search` per chat). Refresh tokens are single-use: a server instance that dies between
   a rotation and a write loses the chain, so the chain stays on the phone, where it has run for
@@ -229,11 +225,11 @@ two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are l
   `coplan.lark.spooky`, runtime `native/v1`, cluster `faas-cn-north`, request timeout 7 s).
   Port from `_BYTEFAAS_RUNTIME_PORT` → `PORT` → 8787, `GET /v1/ping`, Lark host from
   `LARK_HOST` (`https://fsopen.bytedance.net` inside the IDC).
-- **Protocol**: `POST /lookup {title, text, whenMs, userToken}` → `{outcome: "found", msgType,
-  chatId, fullText, english | null}` or `{outcome: "skipped", reason}` with today's reason
-  vocabulary, so the record and `events grade` read the same. A null `english` (Lark failed
-  twice, or returned the input unchanged) sends the phone down its own path: Lark once more,
-  then ML Kit with the `~` mark.
+- **Protocol**: `POST /lookup {title, text, flowId}` translates a complete Preview directly;
+  a cut Preview also supplies `{whenMs, userToken}` and runs the Lookup. The result names its
+  `source` (`preview` or `full-text`), message, optional translated title/Sender and timing spans.
+  `translation-failed` leaves the ML Kit Relay in place; a title or Sender failure is recorded but
+  does not block a successful message Update.
 - **Equivalence before deletion**: both replays write one outcome per Original
   (`replay-corpus/outcomes-kotlin.tsv`, `outcomes-go.tsv`); `MessageFetcher.kt` and its tests
   go only when the diff is empty, or Go is better on every differing row. Known edge: 5 of 257
@@ -459,8 +455,8 @@ gap, not an oversight. The future backend removes most of them.
   ran `tools/lark-token --write` needs `lark-cli auth login` again (Experiment 08).
 - No sign-in screen. A public build needs the device-code flow lark-cli uses. It is also
   the fix the day the seed token dies (7 days without a refresh).
-- The Preview translate and the token chain still run on the phone; only the Update path
-  runs on the Backend (Layer 7).
+- ML Kit and the token chain run on the phone; Lark translation and Updates run on the Backend
+  (Layer 7).
 - Backend authentication now requires a Bearer token for `/lookup` and `/chats`;
   the new Android build requires HTTPS. Both changes are tested, but only PPE
   has the authenticated Backend deployed and the phone update remains pending.

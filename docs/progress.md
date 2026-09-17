@@ -3777,6 +3777,28 @@ Next: investigate why this group no longer produces a Lark Original before sendi
 Next: implement the plan, verify both Backend branches and phone behavior, then
 release only to PPE for the planned soak.
 
+### 2026-09-17 — Backend owns Lark translation
+
+- 🧩 Replaced the phone's Lark API Translator and fallback chain with ML Kit for the first Relay.
+  A complete Latin message records `complete-no-han`; a complete Han Preview calls the Backend
+  without a user token; a cut Preview still obtains the token, runs the Lookup, and receives Full
+  text. A newer Original still cancels its older Update.
+- 🛠️ Changed the authenticated `/lookup` contract to require `title`, `text`, and `flowId` for
+  every request, with `whenMs` and `userToken` only for a cut Preview. The Backend returns the
+  Preview-or-Full-text source, translated message, optional title/Sender improvements, individual
+  field failures, and timing spans. A message `translation-failed:<category>` leaves the ML Kit
+  Relay unchanged; title/Sender failures do not block an Update.
+- 📊 Recorder and `larklish-helper` now distinguish Preview Updates, Full-text Updates, Lookup
+  misses, and translation failures. Older Recorder rows remain readable by the helper.
+- ✅ Go tests, Android unit tests, debug APK assembly, Kotlin formatting, Ruff, and 29 helper
+  tests pass locally. Backend tests cover both request branches, authentication, Latin
+  pass-through, bare-name romanization, mixed Han Sender, partial field failure, and message
+  translation failure.
+
+Next: commit the tested change, build it in SCM from `origin/main`, release only PPE function
+`mmyp0srw` in `ppe_deploy_i18n_1`, verify both Backend branches, then install the APK in place
+without clearing the Pixel's token or Recorder history.
+
 ### 2026-09-23 — Snap-O evaluated for Larklish diagnostics
 
 - 📱 Verified Snap-O live against the connected Pixel 4a with Computer Use. Live Preview and a

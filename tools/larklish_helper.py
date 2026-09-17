@@ -94,7 +94,7 @@ def need(module: str) -> Any:
 # ── the phone, over adb ───────────────────────────────────────────────────────
 PACKAGE = "com.vegerot.larklish"
 LARK = "com.larksuite.suite"
-LOG_TAGS = ["LarkListener:I", "Translator:I", "FallbackTranslator:W", "*:S"]
+LOG_TAGS = ["LarkListener:I", "Translator:I", "*:S"]
 
 
 def run(args: list[str], **kw: Any) -> str:
@@ -373,14 +373,19 @@ def backend_lookup(event: Event, timeout: float) -> dict[str, Any]:
     original = {
         "title": event["title"],
         "text": event["text"],
-        "whenMs": event_ms(event),
+        "flowId": event.get("flowId") or "helper-replay",
     }
-    user_token = phone_user_token()
+    if event["text"].endswith("..."):
+        original["whenMs"] = event_ms(event)
+        user_token = phone_user_token()
+        original["userToken"] = user_token
+    else:
+        user_token = ""
     url = backend_url()
     token = backend_setting("LARKLISH_BACKEND_TOKEN", "larklish.backendToken")
     request = urllib.request.Request(
         url + "/lookup",
-        data=json.dumps(dict(original, userToken=user_token)).encode(),
+        data=json.dumps(original).encode(),
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -395,17 +400,21 @@ def backend_lookup(event: Event, timeout: float) -> dict[str, Any]:
         # Do not echo bodies/errors: a misconfigured endpoint may reflect credentials.
         outcome = body.get("outcome")
         result.update(
-            outcome=outcome if outcome in {"found", "skipped"} else "invalid response",
+            outcome=outcome
+            if outcome in {"found", "skipped", "translation-failed"}
+            else "invalid response",
             reason=body.get("reason"),
+            source=body.get("source"),
             msgType=body.get("msgType"),
             translationAvailable=isinstance(body.get("english"), str)
             and bool(body["english"]),
-            fullTextCharacters=len(body.get("fullText", "")),
-            fullTextHash=hashlib.sha256(body.get("fullText", "").encode()).hexdigest()[
+            messageCharacters=len(body.get("message", "")),
+            messageHash=hashlib.sha256(body.get("message", "").encode()).hexdigest()[
                 :12
             ]
-            if body.get("fullText")
+            if body.get("message")
             else None,
+            failures=body.get("failures", []),
             ok=outcome == "found",
         )
         for field in ("reason", "msgType"):
@@ -629,12 +638,29 @@ def latency_stats(values: list[float]) -> dict[str, Any]:
 
 def grade_summary(relays: list[Relay]) -> dict[str, Any]:
     cut = [r for r in relays if r["cut"] is True]
+    updates = [r for r in relays if r.get("result", {}).get("event") == "updated"]
+    source = lambda r: r["result"].get("source", "full-text")
+    misses = [
+        r
+        for r in relays
+        if r.get("result", {}).get("event") == "skipped"
+        and r["result"].get("reason") in {"no-chat", "no-match"}
+    ]
+    translation_failures = [
+        r
+        for r in relays
+        if r.get("result", {}).get("reason", "").startswith("translation-failed:")
+    ]
     return {
         "relays": len(relays),
         "cut": len(cut),
         "complete": sum(r["cut"] is False for r in relays),
         "unknown": sum(r["cut"] is None for r in relays),
         "updated": sum(r["outcome"].startswith("updated") for r in cut),
+        "previewUpdates": sum(source(r) == "preview" for r in updates),
+        "fullTextUpdates": sum(source(r) == "full-text" for r in updates),
+        "lookupMisses": len(misses),
+        "translationFailures": len(translation_failures),
         "outcomes": dict(Counter(r["outcome"] for r in cut)),
         "latencySeconds": latency_stats(
             [r["latencySeconds"] for r in cut if "latencySeconds" in r]
@@ -1181,7 +1207,7 @@ def events_list(events: list[Event], args: argparse.Namespace) -> None:
         elif kind == "updated":
             mark = "~" if e["relayText"].startswith("~") else " "
             print(
-                f"{when(e, args.utc)} U{mark} ({e['msgType']}){served_by(e)} {e['fullText']}"
+                f"{when(e, args.utc)} U{mark} ({e.get('source', 'full-text')} {e['msgType']}){served_by(e)} {e.get('message', e.get('fullText', ''))}"
             )
             print(f"{'':11}  → {e['relayText']}")
         elif kind == "skipped":
@@ -1228,9 +1254,22 @@ def events_stats(events: list[Event], args: argparse.Namespace) -> None:
             "updated types:",
             ", ".join(f"{t} ×{n}" for t, n in types.most_common()) or "-",
         )
+        sources = Counter(e.get("source", "full-text") for e in updated)
+        print(
+            "updated sources:",
+            ", ".join(f"{source} ×{n}" for source, n in sources.most_common()) or "-",
+        )
         print(
             "skipped reasons:",
             ", ".join(f"{r} ×{n}" for r, n in reasons.most_common()) or "-",
+        )
+        summary = grade_summary(relays_with_outcomes(rows))
+        print(
+            "outcomes:"
+            f" Preview Updates ×{summary['previewUpdates']}"
+            f" Full-text Updates ×{summary['fullTextUpdates']}"
+            f" Lookup misses ×{summary['lookupMisses']}"
+            f" translation failures ×{summary['translationFailures']}"
         )
     print(
         f"han in text {len(han_text)}  han in title {len(han_title)}  english pass-through {len(relayed) - len(han_any)}"
@@ -1302,6 +1341,13 @@ def events_grade(events: list[Event], args: argparse.Namespace) -> None:
         f"Excluded {total['unknown']} Relays without recorded truncation from the grade."
     )
     print(f"\ncut Previews → Updated {total['updated']} of {total['cut']}")
+    print(
+        "All Relays:"
+        f" Preview Updates {total['previewUpdates']}"
+        f" Full-text Updates {total['fullTextUpdates']}"
+        f" Lookup misses {total['lookupMisses']}"
+        f" translation failures {total['translationFailures']}"
+    )
     for outcome, n in total["outcomes"].items():
         print(f"  {n:4}  {outcome}")
     print("Relay-to-Update seconds:", json.dumps(total["latencySeconds"]))
@@ -1345,8 +1391,10 @@ def probe_observation(
     relay = relays[-1]
     result = relay.get("result", {})
     updated = result.get("event") == "updated"
-    matches = result.get("fullText") == sent_text if updated else None
-    complete = relay["cut"] is False and result.get("reason") == "not-truncated"
+    matches = (
+        result.get("message", result.get("fullText")) == sent_text if updated else None
+    )
+    complete = relay["cut"] is False and result.get("reason") == "complete-no-han"
     ok = expect == "relayed" or (updated and matches is True)
     if expect == "auto":
         ok = (relay["cut"] is True and updated and matches is True) or complete
@@ -1362,7 +1410,7 @@ def probe_observation(
         "network": relay.get("network"),
         "updateNetwork": result.get("network") if updated else None,
         "relayToUpdateSeconds": relay.get("latencySeconds"),
-        "fullTextMatches": matches,
+        "messageMatches": matches,
     }
 
 
@@ -1372,7 +1420,7 @@ def wait_for_probe(
     deadline = time.monotonic() + wait
     while True:
         report = probe_observation(read_events()[start:], marker, sent_text, expect)
-        # A skip is a terminal result, including a complete Preview's not-truncated.
+        # A skip is a terminal result, including a complete Latin Preview.
         if report["ok"] or report["outcome"].startswith(("skipped", "updated")):
             return report
         remaining = deadline - time.monotonic()

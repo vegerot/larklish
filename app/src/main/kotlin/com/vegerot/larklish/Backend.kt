@@ -7,23 +7,26 @@ import java.net.URL
 import org.json.JSONObject
 
 /**
- * The Backend's answer to one Lookup (Layer 7). `english` is null when Lark would not translate the
- * Full text. `backend` is the HTTPS URL that answered, so the record shows which Backend served
- * each Update.
+ * The Backend's answer to one Update request. `source` says whether `message` came from the Preview
+ * or the Full text. A null title or Sender means the phone keeps its ML Kit result.
  */
 data class Lookup(
     val outcome: String,
     val reason: String,
+    val source: String,
     val msgType: String,
-    val fullText: String,
+    val message: String,
     val english: String?,
+    val title: String?,
+    val sender: String?,
+    val failures: List<String>,
     val backend: String,
     val timings: org.json.JSONArray,
 )
 
 /**
- * The Backend (Layer 7): the Lookup — title → chat id → newest messages → pick — and the Full-text
- * translate run there, under the user token the phone holds and sends along. Blocking: call on
+ * The Backend (Layer 7): complete Previews translate directly; cut Previews run the Lookup and
+ * translate the Full text. Only the latter needs the phone's user token. Blocking: call on
  * `Dispatchers.IO`. Throws [IOException] when the Backend cannot be reached or answers anything but
  * 200; the listener records that as `error: …`, like a failed fetch.
  */
@@ -33,17 +36,14 @@ object Backend {
         title: String,
         text: String,
         whenMs: Long,
-        userToken: String,
+        userToken: String?,
         flowId: String = "",
         timing: FlowTiming? = null,
     ): Lookup {
-        val body =
-            JSONObject()
-                .put("title", title)
-                .put("text", text)
-                .put("whenMs", whenMs)
-                .put("userToken", userToken)
-                .put("flowId", flowId)
+        val body = JSONObject().put("title", title).put("text", text).put("flowId", flowId)
+        if (userToken != null) {
+            body.put("whenMs", whenMs).put("userToken", userToken)
+        }
         return post(BackendSettings(context).url, body, timing)
     }
 
@@ -76,10 +76,18 @@ object Backend {
                 Lookup(
                     json.getString("outcome"),
                     json.optString("reason"),
+                    json.optString("source"),
                     json.optString("msgType"),
-                    json.optString("fullText"),
+                    json.optString("message"),
                     if (json.isNull("english")) null
                     else json.getString("english"), // optString would read JSON null as "null"
+                    if (json.isNull("title")) null else json.getString("title"),
+                    if (json.isNull("sender")) null else json.getString("sender"),
+                    List(json.optJSONArray("failures")?.length() ?: 0) { index ->
+                        json.getJSONArray("failures").getJSONObject(index).let { failure ->
+                            "${failure.getString("field")}:${failure.getString("reason")}"
+                        }
+                    },
                     backend = url,
                     timings = json.optJSONArray("timings") ?: org.json.JSONArray(),
                 )

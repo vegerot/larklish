@@ -5,6 +5,9 @@ interface Translator {
     suspend fun zhToEn(text: String): String
 }
 
+/** The one Translator on the phone: ML Kit. Lark translation belongs to the Backend. */
+fun defaultTranslator(): Translator = MlKitTranslator()
+
 /**
  * Only Han text goes to the Translator. English, names, identifiers and emoji pass unchanged — ML
  * Kit mangles them (Experiment 02; it turned a lone 😀 into "Bamboo").

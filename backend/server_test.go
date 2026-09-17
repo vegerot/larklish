@@ -38,6 +38,16 @@ func fakeLark(t *testing.T) (*httptest.Server, *[]string) {
 			 "mentions":[{"key":"@_user_1","name":"Max Coplan"}]}]}}`)
 	})
 	mux.HandleFunc("/open-apis/translation/v1/text/translate", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Text string `json:"text"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(body.Text, "失败") {
+			reply(w, `{"code":99991400,"msg":"rate limited"}`)
+			return
+		}
 		reply(w, `{"code":0,"msg":"success","data":{"text":"This is a long message\nSecond paragraph @Max Coplan"}}`)
 	})
 	srv := httptest.NewServer(mux)
@@ -66,8 +76,11 @@ func TestALookupThroughTheServer(t *testing.T) {
 	if got.Outcome != "found" || got.ChatID != "oc_test" || got.MsgType != "text" {
 		t.Errorf("got %+v", got)
 	}
-	if want := "这是一条很长的消息，前四十五个字符里没有边界\n第二段 @Max Coplan"; got.FullText != want {
-		t.Errorf("fullText = %q, want %q", got.FullText, want)
+	if got.Source != "full-text" {
+		t.Errorf("source = %q, want full-text", got.Source)
+	}
+	if want := "这是一条很长的消息，前四十五个字符里没有边界\n第二段 @Max Coplan"; got.Message != want {
+		t.Errorf("message = %q, want %q", got.Message, want)
 	}
 	if got.English == nil || !strings.HasPrefix(*got.English, "This is a long message") {
 		t.Errorf("english = %v", got.English)
@@ -77,8 +90,9 @@ func TestALookupThroughTheServer(t *testing.T) {
 		"GET /open-apis/im/v1/messages":                        false,
 		"POST /open-apis/auth/v3/tenant_access_token/internal": false,
 		"POST /open-apis/translation/v1/text/translate":        false,
-		"lookup":    false,
-		"translate": false,
+		"lookup":            false,
+		"translate.message": false,
+		"translate.title":   false,
 	}
 	for _, span := range got.Timings {
 		if span.Ms < 0 || span.Failed {
@@ -108,6 +122,74 @@ func TestALookupThroughTheServer(t *testing.T) {
 	s.routes("test-backend-token").ServeHTTP(rec, req)
 	if rec.Code != 400 {
 		t.Errorf("incomplete request: status %d", rec.Code)
+	}
+}
+
+func TestCompletePreviewSkipsLookupAndUserToken(t *testing.T) {
+	lark, bearers := fakeLark(t)
+	client := newLark("cli_test", "secret", lark.URL)
+	s := &Server{fetcher: NewFetcher(&liveSource{client}), translator: &Translator{client}}
+	s.fetcher.Log = func(string, ...any) {}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/lookup", strings.NewReader(`{"title":"English group","text":"陈昱萌: 中文消息","flowId":"preview-flow"}`))
+	req.Header.Set("Authorization", "Bearer test-backend-token")
+	s.routes("test-backend-token").ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body)
+	}
+	var got LookupResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Outcome != "found" || got.Source != "preview" || got.MsgType != "preview" || got.English == nil {
+		t.Fatalf("got %+v", got)
+	}
+	if got.Sender != nil { // bare Chinese names keep the phone's romanization
+		t.Errorf("sender = %q, want nil", *got.Sender)
+	}
+	if len(*bearers) != 0 {
+		t.Errorf("complete Preview made user calls: %v", *bearers)
+	}
+	for _, span := range got.Timings {
+		if span.Name == "lookup" || strings.Contains(span.Name, "/im/v1/") || span.Name == "translate.sender" {
+			t.Errorf("complete Preview unexpectedly ran %s", span.Name)
+		}
+	}
+}
+
+func TestTranslationFailuresKeepAUsableMessageSeparate(t *testing.T) {
+	lark, _ := fakeLark(t)
+	client := newLark("cli_test", "secret", lark.URL)
+	s := &Server{fetcher: NewFetcher(&liveSource{client}), translator: &Translator{client}}
+	s.fetcher.Log = func(string, ...any) {}
+	handler := s.routes("test-backend-token")
+
+	request := func(body string) LookupResponse {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest("POST", "/lookup", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer test-backend-token")
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status %d: %s", rec.Code, rec.Body)
+		}
+		var got LookupResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+
+	partial := request(`{"title":"失败标题","text":"Bot失败: 中文消息","flowId":"partial"}`)
+	if partial.Outcome != "found" || partial.English == nil || len(partial.Failures) != 2 {
+		t.Errorf("partial result = %+v", partial)
+	}
+	if partial.Title != nil || partial.Sender != nil {
+		t.Errorf("failed fields must be nil: %+v", partial)
+	}
+	failed := request(`{"title":"English group","text":"Bot: 失败消息","flowId":"message"}`)
+	if failed.Outcome != "translation-failed" || failed.Reason != "lark:99991400" || failed.English != nil || len(failed.Failures) != 1 || failed.Failures[0].Field != "message" {
+		t.Errorf("message failure = %+v", failed)
 	}
 }
 

@@ -38,32 +38,36 @@ class Recorder(
     }
 
     /**
-     * Layer 5: the Relay was Updated with the translated Full text. `backend` (Layer 8) is the
-     * Backend URL that answered.
+     * The Relay was Updated from a translated Preview or Full text. `backend` is the Backend URL
+     * that answered; `failures` records title/Sender translations that did not block the Update.
      */
     fun updated(
         key: String,
+        source: String,
         msgType: String,
-        fullText: String,
+        message: String,
         relayText: String,
         backend: String,
+        failures: List<String>,
         flowId: String = "",
     ) {
         append(
             JSONObject()
                 .put("event", "updated")
                 .put("key", key)
+                .put("source", source)
                 .put("msgType", msgType)
-                .put("fullText", fullText)
+                .put("message", message)
                 .put("relayText", relayText)
                 .put("backend", backend)
+                .put("failures", failures)
                 .put("flowId", flowId)
         )
     }
 
     /**
-     * Layer 5: no Update; `reason` is `no-chat`, `no-match`, `type:<msg_type>` or `error: …`.
-     * `backend` is the URL that answered a skip; null when none did (`error:`, `not-truncated`).
+     * No Update; `reason` is `complete-no-han`, a Lookup miss, `translation-failed`, or `error: …`.
+     * `backend` is the URL that answered a skip; null when no request was needed or it failed.
      */
     fun skipped(key: String, reason: String, backend: String? = null, flowId: String = "") {
         val json =

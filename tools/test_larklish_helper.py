@@ -36,8 +36,9 @@ def update(at="2026-09-15T12:00:04Z", key="key", **extra):
         event="updated",
         at=at,
         key=key,
+        source="full-text",
         msgType="text",
-        fullText="中文消息",
+        message="中文消息",
         relayText="Chinese message",
         **extra,
     )
@@ -179,6 +180,42 @@ class EventsTests(unittest.TestCase):
         )
         self.assertIsNone(h.latency_stats([])["median"])
 
+    def test_update_sources_lookup_misses_and_translation_failures_are_separate(self):
+        preview = dict(relay(key="preview"), truncated=False, text="Sender: 中文")
+        cut = relay(key="cut")
+        missed = relay(key="missed")
+        failed = relay(key="failed")
+        preview_update = dict(
+            update(key="preview"), source="preview", msgType="preview"
+        )
+        report = h.soak_report(
+            [
+                preview,
+                cut,
+                missed,
+                failed,
+                preview_update,
+                update(key="cut"),
+                {
+                    "event": "skipped",
+                    "at": "2026-09-15T12:00:02Z",
+                    "key": "missed",
+                    "reason": "no-match",
+                },
+                {
+                    "event": "skipped",
+                    "at": "2026-09-15T12:00:02Z",
+                    "key": "failed",
+                    "reason": "translation-failed:lark:99991400",
+                },
+            ],
+            options(),
+        )
+        self.assertEqual(report["summary"]["previewUpdates"], 1)
+        self.assertEqual(report["summary"]["fullTextUpdates"], 1)
+        self.assertEqual(report["summary"]["lookupMisses"], 1)
+        self.assertEqual(report["summary"]["translationFailures"], 1)
+
     def test_jsonl_unicode_line_separator_and_cli_json(self):
         with tempfile.TemporaryDirectory() as folder:
             path = pathlib.Path(folder) / "events.jsonl"
@@ -215,7 +252,7 @@ class ProbeTests(unittest.TestCase):
     def rows(self, full=None):
         return [
             dict(relay(), text="Sender: " + self.text),
-            dict(update(), fullText=full or self.text),
+            dict(update(), message=full or self.text),
         ]
 
     def test_marker_ignores_unrelated_traffic(self):
@@ -234,7 +271,7 @@ class ProbeTests(unittest.TestCase):
             self.rows(full="unrelated message"), self.marker, self.text, "updated"
         )
         self.assertFalse(report["ok"])
-        self.assertFalse(report["fullTextMatches"])
+        self.assertFalse(report["messageMatches"])
 
     def test_reply_marker_selects_the_thread_reply(self):
         root_marker = "[probe:root0001]"
@@ -242,16 +279,16 @@ class ProbeTests(unittest.TestCase):
         reply_text = reply_marker + " 回复：中文消息"
         rows = [
             dict(relay(key="root"), text="Sender: " + root_marker + " 中文消息"),
-            dict(update(key="root"), fullText=root_marker + " 中文消息"),
+            dict(update(key="root"), message=root_marker + " 中文消息"),
             dict(relay(key="reply"), text="Sender: " + reply_text),
-            dict(update(key="reply"), fullText=reply_text),
+            dict(update(key="reply"), message=reply_text),
         ]
 
         report = h.probe_observation(rows, reply_marker, reply_text, "updated")
 
         self.assertTrue(report["ok"])
         self.assertEqual(report["key"], "reply")
-        self.assertTrue(report["fullTextMatches"])
+        self.assertTrue(report["messageMatches"])
 
     def test_complete_preview_passes_relay_but_not_update(self):
         rows = [
@@ -260,7 +297,7 @@ class ProbeTests(unittest.TestCase):
                 "event": "skipped",
                 "key": "key",
                 "at": "2026-09-15T12:00:01Z",
-                "reason": "not-truncated",
+                "reason": "complete-no-han",
             },
         ]
         self.assertTrue(
@@ -308,7 +345,7 @@ class ProbeTests(unittest.TestCase):
                 "event": "skipped",
                 "key": "key",
                 "at": "2026-09-15T12:00:01Z",
-                "reason": "not-truncated",
+                "reason": "complete-no-han",
             },
         ]
         self.assertTrue(
@@ -477,7 +514,7 @@ class BackendTests(unittest.TestCase):
                                 "outcome": cls.mode,
                                 "reason": "no-chat" if cls.mode == "skipped" else None,
                                 "msgType": "text",
-                                "fullText": "中文",
+                                "message": "中文",
                                 "english": None if cls.mode == "skipped" else "English",
                             }
                         ).encode()
@@ -529,7 +566,9 @@ class BackendTests(unittest.TestCase):
         self.assertTrue(report["runs"][0]["translationAvailable"])
         for route, headers, body in self.requests:
             self.assertEqual(route, "/lookup")
-            self.assertEqual(body, dict(self.case, userToken="user-secret"))
+            self.assertEqual(
+                body, dict(self.case, userToken="user-secret", flowId="helper-replay")
+            )
             self.assertEqual(headers["Authorization"], "Bearer backend-secret")
         self.assertNotIn("secret", result.stdout + result.stderr)
 

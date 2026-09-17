@@ -17,9 +17,21 @@ func newLark(appID, appSecret, host string) *lark.Client {
 		lark.WithLogLevel(larkcore.LogLevelWarn), lark.WithHttpClient(timedHTTPClient{&http.Client{Timeout: 15 * time.Second}}))
 }
 
+// larkError preserves a Lark error code for the Backend response and timing record.
+type larkError struct {
+	path       string
+	statusCode int
+	code       int
+	message    string
+}
+
+func (e larkError) Error() string {
+	return fmt.Sprintf("Lark %s: http %d code %d %s", e.path, e.statusCode, e.code, e.message)
+}
+
 // larkErr words a failed call like the phone's LarkHttp did, so the record's `error:` rows read the same.
 func larkErr(path string, status, code int, msg string) error {
-	return fmt.Errorf("Lark %s: http %d code %d %s", path, status, code, msg)
+	return larkError{path: path, statusCode: status, code: code, message: msg}
 }
 
 type tokenKey struct{}

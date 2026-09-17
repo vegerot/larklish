@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"unicode"
 
@@ -19,6 +20,11 @@ var errNotTranslated = errors.New("Lark returned the input unchanged")
 // Translator is Lark's engine over the SDK (tenant token: the SDK's own cache).
 type Translator struct {
 	client *lark.Client
+}
+
+type translation struct {
+	English *string
+	Failure string
 }
 
 func (t *Translator) zhToEn(ctx context.Context, text string) (string, error) {
@@ -39,25 +45,37 @@ func (t *Translator) zhToEn(ctx context.Context, text string) (string, error) {
 	return out, nil
 }
 
-// EnglishOf is the phone's `Translator.englishOf` plus its retry: only Han text goes to the
-// engine, and a failed call is retried once (Lark's failures are transport-level and clustered,
-// Experiment 11). nil means "no English": the phone falls back to its own path (Lark once more,
-// then ML Kit with the `~` mark), so the record keeps its fallback rows.
-func (t *Translator) EnglishOf(ctx context.Context, text string) *string {
+// EnglishOf translates Han text and retries one transient failure. The Backend is the one owner of
+// Lark translation now, so callers receive the final failure category rather than asking the phone
+// to try the same API again.
+func (t *Translator) EnglishOf(ctx context.Context, text string) translation {
 	if !hasHan(text) {
-		return &text
+		return translation{English: &text}
 	}
+	var last error
 	for attempt := 0; attempt < 2; attempt++ {
 		out, err := t.zhToEn(ctx, text)
 		if err == nil {
-			return &out
+			return translation{English: &out}
 		}
+		last = err
 		log.Printf("translate failed: %v", err)
 		if errors.Is(err, errNotTranslated) {
 			break
 		}
 	}
-	return nil
+	return translation{Failure: translationFailure(last)}
+}
+
+func translationFailure(err error) string {
+	if errors.Is(err, errNotTranslated) {
+		return "not-translated"
+	}
+	var larkErr larkError
+	if errors.As(err, &larkErr) {
+		return fmt.Sprintf("lark:%d", larkErr.code)
+	}
+	return "transport"
 }
 
 // hasHan: the same property as the phone's `Char.isHan` (Character.isIdeographic).
@@ -68,6 +86,19 @@ func hasHan(s string) bool {
 		}
 	}
 	return false
+}
+
+// isHanName mirrors Android's String.isHanName: keep the phone's useful romanization for bare
+// Chinese personal names instead of replacing it with a Backend translation.
+func isHanName(s string) bool {
+	n := 0
+	for _, r := range s {
+		if !unicode.Is(unicode.Ideographic, r) {
+			return false
+		}
+		n++
+	}
+	return n >= 2 && n <= 4
 }
 
 // cut keeps the first n characters, like the phone's `take(n)` before the translate call.

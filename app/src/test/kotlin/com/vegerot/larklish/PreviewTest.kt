@@ -74,4 +74,11 @@ class PreviewTest {
         assertEquals(false, Preview.parse("Bits: Sync Task Conflicted").truncated)
         assertEquals(false, Preview.parse("You have received a message.").truncated)
     }
+
+    @Test
+    fun onlyACutOrHanMessageNeedsTheBackend() {
+        assertEquals(false, Preview.parse("陈昱萌: English message").needsBackend())
+        assertEquals(true, Preview.parse("Bot: 中文消息").needsBackend())
+        assertEquals(true, Preview.parse("陈昱萌: English...").needsBackend())
+    }
 }

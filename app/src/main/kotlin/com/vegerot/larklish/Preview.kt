@@ -25,6 +25,9 @@ data class Preview(val sender: String, val mention: Mention?, val message: Strin
     val truncated: Boolean
         get() = message.endsWith(ELLIPSIS)
 
+    /** A cut Preview needs Full text; otherwise only a Han message needs a Backend Update. */
+    fun needsBackend(): Boolean = truncated || message.any { it.isHan() }
+
     companion object {
         fun parse(text: String): Preview {
             // No boundary in the first 45 characters → Lark posts `Sender:...` (Experiment 06 E5).

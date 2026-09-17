@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// LookupRequest is what the phone sends for one cut Preview: the Original's title, its raw
-// text (`Sender: message...`), `sbn.postTime`, and the user access token the phone holds.
+// LookupRequest is what the phone sends for one Preview. Cut Previews also carry the notification
+// time and user token because their Full text needs the Lookup.
 type LookupRequest struct {
 	Title     string `json:"title"`
 	Text      string `json:"text"`
@@ -20,16 +20,25 @@ type LookupRequest struct {
 	FlowID    string `json:"flowId,omitempty"`
 }
 
-// LookupResponse: `found` with the Full text and its English (null when Lark would not
-// translate it), or `skipped` with the reason the phone records.
+type fieldFailure struct {
+	Field  string `json:"field"`
+	Reason string `json:"reason"`
+}
+
+// LookupResponse has a translated message from either the Preview or Full text. Individual title
+// and Sender failures do not block a message Update. `translation-failed` leaves the ML Kit Relay.
 type LookupResponse struct {
-	Outcome  string       `json:"outcome"`
-	Reason   string       `json:"reason,omitempty"`
-	MsgType  string       `json:"msgType,omitempty"`
-	ChatID   string       `json:"chatId,omitempty"`
-	FullText string       `json:"fullText,omitempty"`
-	English  *string      `json:"english"`
-	Timings  []TimingSpan `json:"timings"`
+	Outcome  string         `json:"outcome"`
+	Reason   string         `json:"reason,omitempty"`
+	Source   string         `json:"source,omitempty"`
+	MsgType  string         `json:"msgType,omitempty"`
+	ChatID   string         `json:"chatId,omitempty"`
+	Message  string         `json:"message,omitempty"`
+	English  *string        `json:"english"`
+	Title    *string        `json:"title"`
+	Sender   *string        `json:"sender"`
+	Failures []fieldFailure `json:"failures,omitempty"`
+	Timings  []TimingSpan   `json:"timings"`
 }
 
 // Server is the Backend: one Lookup per request, the chat cache for the helper, and a liveness probe.
@@ -67,8 +76,13 @@ func (s *Server) routes(token string) http.Handler {
 func (s *Server) handleLookup(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	var req LookupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Title == "" || req.Text == "" || req.WhenMs == 0 || req.UserToken == "" {
-		http.Error(w, "need title, text, whenMs, userToken", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Title == "" || req.Text == "" || req.FlowID == "" {
+		http.Error(w, "need title, text, flowId", http.StatusBadRequest)
+		return
+	}
+	preview := ParsePreview(req.Text)
+	if preview.Truncated() && (req.WhenMs == 0 || req.UserToken == "") {
+		http.Error(w, "cut Preview needs whenMs, userToken", http.StatusBadRequest)
 		return
 	}
 	timing := &lookupTiming{}
@@ -81,23 +95,52 @@ func (s *Server) handleLookup(w http.ResponseWriter, r *http.Request) {
 		}{req.FlowID, time.Since(start).Milliseconds(), timing.snapshot()})
 		infoLog.Printf("lookup timing %s", entry)
 	}()
-	ctx := withTiming(withToken(r.Context(), req.UserToken), timing)
-	var pick Pick
-	timing.stage("lookup", func() { pick = s.fetcher.FullTextOf(ctx, req.Title, ParsePreview(req.Text), req.WhenMs) })
-	if pick.Found == nil {
-		logger := infoLog
-		if pick.failed() {
-			logger = log.Default()
+	ctx := withTiming(r.Context(), timing)
+	source, message, msgType := "preview", preview.Message, "preview"
+	chatID := ""
+	if preview.Truncated() {
+		ctx = withToken(ctx, req.UserToken)
+		var pick Pick
+		timing.stage("lookup", func() { pick = s.fetcher.FullTextOf(ctx, req.Title, preview, req.WhenMs) })
+		if pick.Found == nil {
+			logger := infoLog
+			if pick.failed() {
+				logger = log.Default()
+			}
+			logger.Printf("[%s] → %s", req.Title, pick.Reason)
+			writeJSON(w, LookupResponse{Outcome: "skipped", Reason: pick.Reason, Timings: timing.snapshot()})
+			return
 		}
-		logger.Printf("[%s] → %s", req.Title, pick.Reason)
-		writeJSON(w, LookupResponse{Outcome: "skipped", Reason: pick.Reason, Timings: timing.snapshot()})
+		source, message, msgType, chatID = "full-text", pick.Found.Text, pick.Found.MsgType, pick.ChatID
+	}
+	var messageTranslation translation
+	timing.stage("translate.message", func() { messageTranslation = s.translator.EnglishOf(ctx, cut(message, maxTranslateChars)) })
+	if messageTranslation.English == nil {
+		failure := fieldFailure{Field: "message", Reason: messageTranslation.Failure}
+		infoLog.Printf("[%s] → translation-failed %s", req.Title, failure.Reason)
+		writeJSON(w, LookupResponse{Outcome: "translation-failed", Reason: failure.Reason, Source: source, MsgType: msgType, ChatID: chatID, Message: message, Failures: []fieldFailure{failure}, Timings: timing.snapshot()})
 		return
 	}
-	full := pick.Found.Text
-	var english *string
-	timing.stage("translate", func() { english = s.translator.EnglishOf(ctx, cut(full, maxTranslateChars)) })
-	infoLog.Printf("[%s] → found %s in %s, english: %v", req.Title, pick.Found.MsgType, pick.ChatID, english != nil)
-	writeJSON(w, LookupResponse{Outcome: "found", MsgType: pick.Found.MsgType, ChatID: pick.ChatID, FullText: full, English: english, Timings: timing.snapshot()})
+	answer := LookupResponse{Outcome: "found", Source: source, MsgType: msgType, ChatID: chatID, Message: message, English: messageTranslation.English}
+	if hasHan(req.Title) {
+		var title translation
+		timing.stage("translate.title", func() { title = s.translator.EnglishOf(ctx, req.Title) })
+		answer.Title = title.English
+		if title.English == nil {
+			answer.Failures = append(answer.Failures, fieldFailure{Field: "title", Reason: title.Failure})
+		}
+	}
+	if hasHan(preview.Sender) && !isHanName(preview.Sender) {
+		var sender translation
+		timing.stage("translate.sender", func() { sender = s.translator.EnglishOf(ctx, preview.Sender) })
+		answer.Sender = sender.English
+		if sender.English == nil {
+			answer.Failures = append(answer.Failures, fieldFailure{Field: "sender", Reason: sender.Failure})
+		}
+	}
+	infoLog.Printf("[%s] → found %s (%s), english: true", req.Title, msgType, source)
+	answer.Timings = timing.snapshot()
+	writeJSON(w, answer)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

@@ -22,11 +22,10 @@ private const val LARK = "com.larksuite.suite"
 private const val RELAY_ID = 1 // one Relay per Original key (the tag), so the id is constant
 private const val ERRORS_CHANNEL = "errors"
 private const val ERROR_ID = 2
-private const val MAX_TRANSLATE_CHARS = 1000 // the translation API's limit
 
 /**
  * Layer 3: turn every Lark Original into a Relay, and withdraw the Relay when Lark withdraws. Layer
- * 7: then ask the Backend for the Full text in English and Update the Relay with it.
+ * 7: then ask the Backend to improve every Han Preview, with Full text for cut Previews.
  */
 class LarkListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -34,7 +33,7 @@ class LarkListener : NotificationListenerService() {
     private val recorder by lazy {
         Recorder(File(filesDir, "events.jsonl"), networkState::snapshot)
     }
-    private val translator by lazy { defaultTranslator(recorder::fallback) }
+    private val translator by lazy { defaultTranslator() }
     private val userToken by lazy { defaultUserToken(this) }
     private val updates = HashMap<String, Job>() // in-flight Update per Original key
     private lateinit var manager: NotificationManager
@@ -120,14 +119,11 @@ class LarkListener : NotificationListenerService() {
                     // develop. Release builds cancel it (Max, 2026-08-25).
                     if (!BuildConfig.DEBUG) cancelNotification(sbn.key)
                     Log.i(TAG, "relayed key=${sbn.key} title=[$title] text=[$relayText]")
-                    // An uncut Preview already holds the whole message, so there is nothing to
-                    // fetch:
-                    // 33 of 34 such Relays had a Full text identical to their Preview (Experiment
-                    // 13).
-                    // Skipping them halves the API load, and with it the translate rate limit that
-                    // drives the ML Kit fallback. Recorded, so a soak can still price the
-                    // exception.
-                    if (preview.truncated) {
+                    // A complete Latin message needs no better translation. Title and Sender do
+                    // not affect this decision: the Backend is for the message the notification
+                    // is about. A cut Preview still needs Full text even when its visible part is
+                    // Latin.
+                    if (preview.needsBackend()) {
                         outcome =
                             update(
                                 sbn,
@@ -140,8 +136,8 @@ class LarkListener : NotificationListenerService() {
                                 timing,
                             )
                     } else {
-                        recorder.skipped(sbn.key, "not-truncated", flowId = flowId)
-                        outcome = "not-truncated"
+                        recorder.skipped(sbn.key, "complete-no-han", flowId = flowId)
+                        outcome = "complete-no-han"
                     }
                 } finally {
                     if (firstRelayAt != 0L) {
@@ -162,8 +158,8 @@ class LarkListener : NotificationListenerService() {
     }
 
     /**
-     * Layer 7: the Backend runs the Lookup and translates the Full text; the phone Updates the
-     * Relay with it.
+     * Layer 7: the Backend translates a complete Preview directly, or runs the Lookup and
+     * translates Full text for a cut Preview. The phone Updates the Relay with it.
      */
     private suspend fun update(
         sbn: StatusBarNotification,
@@ -183,37 +179,46 @@ class LarkListener : NotificationListenerService() {
                         title,
                         text,
                         sbn.postTime,
-                        timing.measureBlocking("user.token") { userToken.bearer(timing) },
+                        if (preview.truncated) {
+                            timing.measureBlocking("user.token") { userToken.bearer(timing) }
+                        } else null,
                         flowId,
                         timing,
                     )
                 }
             timing.backend(answer.timings)
             if (answer.outcome != "found") {
-                recorder.skipped(sbn.key, answer.reason, answer.backend, flowId)
-                return "skipped"
+                val reason =
+                    if (answer.outcome == "translation-failed") {
+                        "translation-failed:${answer.reason}"
+                    } else answer.reason
+                recorder.skipped(sbn.key, reason, answer.backend, flowId)
+                return answer.outcome
             }
-            // No English from the Backend means Lark would not translate it there. The phone's own
-            // Translator then tries Lark once more and falls back to ML Kit, marked `~`, as it
-            // always has.
-            val message =
-                answer.english
-                    ?: timing.measure("fulltext.fallback") {
-                        translator.englishOf(answer.fullText.take(MAX_TRANSLATE_CHARS))
-                    }
-            val relay = buildRelay(this, sbn, relayTitle, relaySender, preview.mention, message)
+            val message = checkNotNull(answer.english)
+            val relay =
+                buildRelay(
+                    this,
+                    sbn,
+                    answer.title ?: relayTitle,
+                    answer.sender ?: relaySender,
+                    preview.mention,
+                    message,
+                )
             manager.notify(sbn.key, RELAY_ID, relay)
             val relayText = relay.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
             recorder.updated(
                 sbn.key,
+                answer.source,
                 answer.msgType,
-                answer.fullText,
+                answer.message,
                 relayText,
                 answer.backend,
+                answer.failures,
                 flowId,
             )
             Log.i(TAG, "updated key=${sbn.key} via ${answer.backend} text=[$relayText]")
-            return "updated"
+            return "updated-${answer.source}"
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
