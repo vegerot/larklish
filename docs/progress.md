@@ -3822,6 +3822,27 @@ Next: reconnect the Pixel, install the already-built debug APK in place while pr
 and one cut Original to measure Relay-to-Update timing and the new failure counts. Do not send a
 new marked message without Max's authorization.
 
+### 2026-09-17 — Pixel accepts Backend-only translation on PPE
+
+- 📱 Reconnected Pixel 4a (Android 16) was listener-bound. Installed the debug APK in place; the
+  token-file SHA-256 stayed `b7c6bc50…f607b9` and Recorder history grew only from 2,903 to 2,912
+  rows as the acceptance events arrived. The saved Railway Backend override initially produced the
+  old contract's HTTP 400; reset it through `BackendUrlReceiver` to the public PPE route.
+- 📨 With Max's authorization, sent a short Han probe and a long Han probe to `Larklish 测试群`.
+  The complete Preview received a PPE `source: preview` Update in 2.909 s. The long Preview was
+  cut and received a PPE `source: full-text` Update in 5.036 s; its Full text matched the sent
+  message. Both final Relays contain no Han; Wi-Fi was connected and VPN off.
+- 📊 The cohort reports 1 Preview Update, 1 Full-text Update, 0 Lookup misses, and 0 translation
+  failures. The earlier Railway-contract error is retained as a configuration finding, not counted
+  as a PPE failure.
+- 🧰 Fixed `larklish-helper probe --expect auto` to accept a matched Update for a complete Han
+  Preview while still rejecting an Original with unknown truncation. Ruff and all 30 helper tests
+  pass.
+
+Next: soak naturally arriving Originals on PPE and watch the separate Preview Update, Full-text
+Update, Lookup-miss, and translation-failure counts. Keep the public PPE Backend override until a
+separate production cutover decision.
+
 ### 2026-09-23 — Snap-O evaluated for Larklish diagnostics
 
 - 📱 Verified Snap-O live against the connected Pixel 4a with Computer Use. Live Preview and a

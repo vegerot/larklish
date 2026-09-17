@@ -1397,7 +1397,7 @@ def probe_observation(
     complete = relay["cut"] is False and result.get("reason") == "complete-no-han"
     ok = expect == "relayed" or (updated and matches is True)
     if expect == "auto":
-        ok = (relay["cut"] is True and updated and matches is True) or complete
+        ok = (relay["cut"] is not None and updated and matches is True) or complete
     return {
         "ok": ok,
         "outcome": relay["outcome"],

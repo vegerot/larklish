@@ -352,6 +352,13 @@ class ProbeTests(unittest.TestCase):
             h.probe_observation(complete, self.marker, self.text, "auto")["ok"]
         )
 
+    def test_auto_accepts_a_complete_preview_update(self):
+        rows = [
+            dict(self.rows()[0], truncated=False),
+            dict(self.rows()[1], source="preview"),
+        ]
+        self.assertTrue(h.probe_observation(rows, self.marker, self.text, "auto")["ok"])
+
     def test_thread_observes_reply_marker_and_prints_only_summary(self):
         args = argparse.Namespace(
             text="private synthetic text",
