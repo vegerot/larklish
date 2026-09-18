@@ -3858,3 +3858,23 @@ separate production cutover decision.
 
 Next: try the smallest debug-only Network experiment when an individual phone HTTP failure needs
 more evidence than the current timing record provides.
+
+### 2026-09-18 — production promotion started through Bits
+
+- 🚀 Created normal Bits task `2859908`, **Larklish Backend translation production**, from the
+  superseded alias task `2850411`. It pins the already-soaked SCM artifact
+  `oec/seller/larklish:1.0.0.28` (commit `aa17ad5`), targets only the I18N FaaS project
+  `coplan.lark.larklish`, uses PPE lane `ppe_deploy_i18n_1`, and disables BOE. The older
+  release tickets `1229200073986` and `1229776511490` remain untouched; both are empty and
+  cannot promote this artifact.
+- ✅ The new task's I18N self-test pipelines passed. PPE now names the same artifact under
+  revision `1.0.12`; no production function or phone setting changed.
+- ⏳ Bits' Develop-stage GEC gate is waiting for manual checks. Max reports the GEC/QA skip is
+  approved, but the approval is not yet effective for this new task: a normal stage pass remains
+  blocked, and the documented QCSS manual-pass endpoint returns `13002 target report not exist`.
+  No skip, force-complete, Test, Merge, or production release was submitted.
+
+Next: apply the approved GEC/QA disposition to task `2859908`'s manual checks, then pass Develop,
+run Test, merge, and release production through its associated Bits release. Verify the public
+route without the PPE header before rebuilding the phone for production.
+
