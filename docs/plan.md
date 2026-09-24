@@ -434,6 +434,12 @@ one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are r
   `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
   to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
   to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
+- [ ] **Try Snap-O Network when an individual phone HTTP failure needs live inspection.** Keep
+  the experiment debug-only: add the real `network-httpurlconnection` dependency to debug builds,
+  its no-op counterpart to release builds, and wrap only the shared Lark and Backend connection
+  creation points. Use the standalone `snapo-network` CLI directly; do not wrap it in
+  `larklish-helper`. Keep `FlowTiming`, the Recorder and helper reports as the durable,
+  content-free evidence. See [Experiment 29](experiments/29-snap-o-evaluation.md).
 - [ ] **Promote the tested ByteDance Backend from PPE to production through Bits.** Follow the
   [ByteDance PPE-to-production plan](bytedance-ppe-to-production-plan.md).
   [Experiment 28](experiments/28-internal-hosting-handoff.md) records the

@@ -3776,3 +3776,19 @@ Next: investigate why this group no longer produces a Lark Original before sendi
 
 Next: implement the plan, verify both Backend branches and phone behavior, then
 release only to PPE for the planned soak.
+
+### 2026-09-23 — Snap-O evaluated for Larklish diagnostics
+
+- 📱 Verified Snap-O live against the connected Pixel 4a with Computer Use. Live Preview and a
+  saved screenshot worked. When USB briefly disappeared, both Snap-O and `adb` lost the phone;
+  both rediscovered it after reconnection. **No apps found** is expected until Larklish includes a
+  Snap-O tool library.
+- 🧭 Recorded the integration boundary in `docs/experiments/29-snap-o-evaluation.md`: Capture is
+  useful with no app change; Network may be a small debug-only experiment around the two existing
+  `HttpURLConnection` creation points; Tweaks and a custom plugin are not justified now.
+- 🪶 Added a deferred plan TODO. Use `snapo-network` directly rather than wrapping it in
+  `larklish-helper`, and retain `FlowTiming`, the Recorder and helper reports as durable,
+  content-free evidence. No app or CLI code changed.
+
+Next: try the smallest debug-only Network experiment when an individual phone HTTP failure needs
+more evidence than the current timing record provides.
