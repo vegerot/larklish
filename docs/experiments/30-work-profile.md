@@ -69,6 +69,36 @@ had a user-10 key and a cut Preview. The first Relay contained no Han; the Backe
 Full-text Update that exactly matched the sent message 6.257 seconds after the Relay, also with
 no Han. This verifies the complete Work-profile Original → Relay → Update path over Wi-Fi.
 
-The Railway deployment came from local Backend files, while the connected GitHub `main` still
-had the older Backend code. A future GitHub deployment could replace this working version; align
-the tracked source and deployment workflow before relying on GitHub auto-deploys again.
+At that point, the Railway deployment came from local Backend files while the connected GitHub
+`main` still had the older Backend code. We addressed that source mismatch in the next step.
+
+## Tracked-source Railway deployment
+
+GitHub `main` and ByteDance `main` had diverged after the Backend translation plan. We rebased
+the full ByteDance stack onto GitHub `main`; the resulting tree matched the original ByteDance
+tip, including the current Backend. We committed this experiment note as `5b52719` and pushed
+that tip to both remotes, with a force update needed only for the rewritten ByteDance `main`.
+
+Railway skipped the GitHub webhook because the tip commit changed only docs. A from-source
+redeploy then built GitHub commit `5b52719` as deployment
+`d528867f-ecc4-473b-bf0e-178908aff5ca`, which reached `SUCCESS`. A fresh phone probe,
+`[probe:8711a910]` / `om_x100b646a8a54aca0d319b32cecdb584`, produced a cut Work-profile
+Original, English Relay, and matching Full-text Update 6.374 seconds after the Relay. The phone
+kept the same Railway URL.
+
+## ByteCloud PPE recovery
+
+The old PPE function `mmyp0srw` remained absent; its removal cause was not established. A new
+PPE-only Bits task, `2888453`, pinned SCM `oec/seller/larklish:1.0.0.33` from commit `5b52719`.
+Self-test run `1235799827970` succeeded and created function `t648e7x4` in lane
+`ppe_deploy_i18n_1`, cluster `faas-sg`, revision `1.0.1` / `p5np3r88d0`. Its direct `/v1/ping`
+returned HTTP 200. The existing public PPE route returned 401 without Backend authentication
+and HTTP 200 with a valid Backend token and complete Han Preview (`source: preview`, English
+without Han). A synthetic cut request with an intentionally invalid user token reached Lark but
+could not verify Full text.
+
+For phone acceptance, we temporarily selected the public PPE URL and sent one marked message,
+`[probe:89abed8e]` / `om_x100b646a937008a4d343f9004631fae`. Its Work-profile Original had
+a cut Preview; Larklish posted an English Relay and a matching Full-text Update through PPE
+4.603 seconds later, with no Han. We then restored the phone's saved Railway URL. The
+production function and its Bits manual checks were not changed.

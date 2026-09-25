@@ -34,6 +34,7 @@ The end-to-end flow timing plan and its implementation additions are in
 | Grouping | Lark sets none; Android auto-groups per package | same |
 | Preview length | Lark truncates at ~64 chars | same |
 | Listener grant | `cmd notification allow_listener` — no Settings UI needed | `cmd notification` help |
+| Work profile | Lark runs as user 10 and Larklish's listener stays in personal user 0. AirWatch must permit `com.vegerot.larklish` as a cross-profile notification listener, and Lark must have Work-profile notifications enabled. Marked messages confirmed an Original → English Relay and, after the Backend repair, a Full-text Update across profiles. | `docs/experiments/30-work-profile.md` |
 | Lark withdraws Originals | Yes, on its own (desktop active). Relay must follow. | same |
 | Lark translation API | Works via `lark-cli api --as bot` (scope `translation:text` granted); English input passes through unchanged | `docs/experiments/00-adb.md` |
 | Pixel Live Translate | Not available (Tensor-only, and this is Lineage) | — |

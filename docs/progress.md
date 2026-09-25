@@ -3878,3 +3878,67 @@ Next: apply the approved GEC/QA disposition to task `2859908`'s manual checks, t
 run Test, merge, and release production through its associated Bits release. Verify the public
 route without the PPE header before rebuilding the phone for production.
 
+### 2026-09-24 — Work-profile Original reaches the personal-profile Relay
+
+- 📱 Lark is installed only in Work profile user 10; Larklish remains in personal user 0. With
+  Max's permission, allowed `com.vegerot.larklish` in AirWatch's cross-profile notification
+  listener policy and enabled Lark notifications for user 10. The policy backup remains on the
+  phone. Both settings survived reboot, and Larklish's listener was bound after profile unlock.
+- 📨 Sent one marked message to `Larklish 测试群`. The Recorder and notification service confirmed
+  a user-10 Original and a matching English Relay in user 0 after 590 ms. Evidence and message ID
+  are in `docs/experiments/30-work-profile.md`.
+- ⚠️ The Backend Update returned HTTP 404. The public PPE route and former direct PPE trigger
+  also failed independently; the older Railway Backend rejects the current request contract.
+  This is separate from the verified cross-profile Original → Relay path. No app code changed.
+
+Next: restore a compatible Backend route through the established production workflow, then
+verify a marked Original → Relay → Update. Recheck AirWatch's listener list after a policy sync.
+
+### 2026-09-24 — Backend restored through Railway
+
+- 🔎 The I18N-TT FaaS API returned `service not found` for PPE function `mmyp0srw`; production
+  function `kpb2dvsn` still exists. The public PPE route and direct trigger both returned 404.
+  Railway was healthy but ran commit `7b7e1f9` with the old `/lookup` contract. The reason for
+  PPE function removal remains unknown.
+- 🚄 Uploaded the current Backend source to the existing Railway `larklish/backend` production
+  service. Deployment `3180aafe-95e7-4c06-995a-ec69da4d6f48` reached `SUCCESS`; a live
+  authenticated complete-Preview Lookup returned HTTP 200. Focused Go server tests passed;
+  the full suite retained its known `TestReplayCorpus` result of 67/165 resolved.
+- 📱 Saved the Railway URL on the phone. A fresh marked test message produced a user-10 Original,
+  an English Relay, and a matching Full-text Update 6.257 seconds later. The cut Preview and
+  message ID are recorded in `docs/experiments/30-work-profile.md`. No app data was cleared.
+
+Next: keep the phone on the verified Railway URL. Reconcile GitHub `main` (still on the older
+Backend contract) with the deployed local source before its next auto-deploy; investigate why
+PPE function `mmyp0srw` disappeared separately. Recheck AirWatch's allowlist after policy sync.
+
+### 2026-09-24 — GitHub and ByteDance main aligned; Railway rebuilt from source
+
+- 🧵 Rebasing the full ByteDance stack onto GitHub `main` preserved both histories and produced
+  the same tracked tree as the original ByteDance tip. Committed the Work-profile experiment note
+  as `5b52719` and pushed it to GitHub `main` and ByteDance `main`; ByteDance needed a force
+  update for the rewritten tip. The pending plan/progress edits were shelved during the rebase
+  and restored afterward; unrelated Obsidian files were untouched.
+- 🚄 Railway's GitHub webhook skipped the docs-only tip, so a from-source redeploy built commit
+  `5b52719` as `d528867f-ecc4-473b-bf0e-178908aff5ca` (`SUCCESS`). A fresh marked phone probe
+  confirmed a cut Work-profile Original → English Relay → matching Full-text Update in 6.374 s.
+  The phone remains on the Railway URL. Evidence is in `docs/experiments/30-work-profile.md`.
+
+Next: keep GitHub and ByteDance `main` aligned for subsequent Backend changes. Continue the
+separate ByteCloud PPE recovery without bypassing the production Bits manual checks.
+
+### 2026-09-24 — ByteCloud PPE rebuilt and verified on the phone
+
+- 🚀 New PPE-only Bits task `2888453`, pinned to SCM `1.0.0.33` / commit `5b52719`, passed
+  self-test run `1235799827970` and created replacement function `t648e7x4` in
+  `ppe_deploy_i18n_1`. Direct health and the authenticated public Preview Lookup passed. The
+  old function `mmyp0srw` remains absent; the reason it disappeared is still unknown.
+- 📨 Temporarily selected the public PPE URL on the phone and sent one marked Work-profile test
+  message. Its cut Original produced an English Relay and matching Full-text Update through PPE
+  in 4.603 s, with no Han. Restored the phone's Railway URL afterward. Evidence and IDs are in
+  `docs/experiments/30-work-profile.md`.
+- 🔒 Production function `kpb2dvsn` and its existing Bits manual gate were not changed.
+
+Next: keep Railway as the phone's selected Backend; retain PPE as a separately verified path.
+Investigate why the old PPE function disappeared before relying on its lifetime. Continue the
+normal Bits process for production without bypassing the manual checks.
