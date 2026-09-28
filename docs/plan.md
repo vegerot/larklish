@@ -1,575 +1,124 @@
-# 🗺️ Larklish — Build plan
+# 🗺️ Larklish — Current plan
 
-Larklish grows like an onion 🧅. Each layer is the smallest thing that answers one
-question. Commit every layer, even the ones we throw away. The settled decisions are in
-the table below; `CONTEXT.md` holds the words.
-
-The current replay gate is documented in [Experiment 32](experiments/32-replay-gate.md).
-Known-case fixtures assert message identity and text; corpus resolution counts are diagnostic.
-
-The end-to-end flow timing plan and its implementation additions are in
-[`experiments/28-flow-timing.md`](experiments/28-flow-timing.md).
+Larklish helps Max understand and act on Lark notifications quickly. Support the Pixel 4a
+running Android 16 (minimum SDK 36). [CONTEXT.md](../CONTEXT.md) defines the project terms.
+Read [progress.md](progress.md) from the bottom for dated state and the latest handoff.
 
 ## Working rules
 
-- Keep `progress.md` short, append-only, and continuation-ready.
-  - The goal of `progress.md` is that any engineer can read this plan and then
-    read `progress.md` and understand what is done and what is left.
-  - Summarize each action (code changes, experiments, commits, findings) in
-    `progress.md` as the work happens, to hand off mid-task.
-  - Use one emoji per action. End every entry with a `Next:` block.
-- Mutable state (commit hashes, statuses, message ids) lives in `progress.md`,
-  not here. Evidence lives in `experiments/`.
-- Stop at the end of each layer. Do not continue until Max asks.
-- Commit at least at the end of each layer. Do not commit half-done work. Each
-  commit must build and install.
-- At the start of each layer, or after a context compaction, read
-  `progress.md` from the bottom and check the working copy against the last
-  entry (`git status`, `git diff --stat`).
-- If you need clarity the docs do not give, STOP and ASK.
+- Grow in small experimental layers. Validate important uncertainty on the phone.
+- Keep changes scoped and remove obsolete implementations instead of adding compatibility.
+- Record decisions/evidence in experiments and append a concise progress entry with `Next:`.
+- Check `sl status` and the diff before work and after context compaction.
+- Stop at the end of each requested layer. Commit completed layers; app changes must build
+  and install successfully. Test-only and documentation changes need their relevant checks.
+- Keep credentials and real notification records out of version control.
 
-## Settled by the experiments so far
+## Current behavior
 
-| Question | Answer | Evidence |
+1. Lark posts an **Original**. Its **Preview** has a group title and usually `Sender: message`.
+2. The phone translates Han text with **ML Kit** and posts the first English **Relay**.
+   Complete Latin fields pass through. Bare Chinese personal names are romanized.
+3. A complete Preview whose message has no Han needs no Backend call, even if its title
+   or Sender has Han. Its early Relay remains final.
+4. A complete Preview with a Han message goes to the Backend for Lark translation directly.
+5. A Preview ending in `...` goes to the Backend for **Lookup** and Full-text translation,
+   even when its visible text is entirely Latin. Only this branch needs a user access token.
+6. A successful Backend result **Updates** the existing Relay. On Lookup or message
+   translation failure, the first Relay remains. A title/Sender translation failure retains
+   that field's first wording. There is no phone-side Full-text translation fallback.
+
+The phone preserves the Original's PendingIntent for taps. It uses the Original's key
+as the Relay tag; newer Originals on that key cancel older pending Updates. Debug builds
+retain the Original for comparison; release builds cancel it. The removal handler cancels
+Relays when Lark withdraws Originals and ignores Larklish's own cancellation.
+
+ML Kit and Lookup both survived bounded deletion experiments:
+[31 — Lookup](experiments/31-lookup-deletion.md), [33 — early Relay](experiments/33-early-relay-deletion.md).
+These are small observational cohorts, not guarantees of translation quality or reliability.
+
+## Required deployment paths
+
+**Both internal ByteCloud and external Railway deployments are required by Max
+(2026-09-28).** Maintain one Go Backend implementation and request contract for both.
+Neither deployment is an obsolete alternative or a candidate for removal merely because
+both exist. This requirement does not imply automatic failover between them.
+
+The phone has a device-local HTTPS Backend URL; changing it requires no rebuild.
+The compiled default is the internal public alias. The last verified selected phone URL
+was Railway; consult progress and inspect settings before any deployment or cutover.
+
+| Path | Operation | Last recorded acceptance |
 | --- | --- | --- |
-| Lark package | `com.larksuite.suite` | `pm list packages` |
-| Original shape | `BigTextStyle`; title = group, text = `Sender: message`; no actions | `docs/experiments/00-adb.md` |
-| Grouping | Lark sets none; Android auto-groups per package | same |
-| Preview length | Lark truncates at ~64 chars | same |
-| Listener grant | `cmd notification allow_listener` — no Settings UI needed | `cmd notification` help |
-| Work profile | Lark runs as user 10 and Larklish's listener stays in personal user 0. AirWatch must permit `com.vegerot.larklish` as a cross-profile notification listener, and Lark must have Work-profile notifications enabled. Marked messages confirmed an Original → English Relay and, after the Backend repair, a Full-text Update across profiles. | `docs/experiments/30-work-profile.md` |
-| Lark withdraws Originals | Yes, on its own (desktop active). Relay must follow. | same |
-| Lark translation API | Works via `lark-cli api --as bot` (scope `translation:text` granted); English input passes through unchanged | `docs/experiments/00-adb.md` |
-| Pixel Live Translate | Not available (Tensor-only, and this is Lineage) | — |
-| Interception | A sideloaded listener receives Originals; `allow_listener` binds it at once, no restricted-settings gate | `docs/experiments/01-listener.md` |
-| Autogroup summary | Arrives as a second `posted` event with null title/text; Layer 3 skips `FLAG_GROUP_SUMMARY` | same |
-| Withdrawal | Lark calls `cancelAll()` (`reason=9`) whenever Max reads the chat anywhere; 7–19 s after the post while Max is at a computer | `docs/experiments/04-soak.md` |
-| ML Kit quality | Gist OK in 7 of 14 rows; names, identifiers and mentions damaged in almost all; 6 rows change meaning | `docs/experiments/02-quality.md` |
-| Lark API quality | Better, but not perfect: one identifier changed, one Sender dropped; rate limit `99991400` hit 5 of 14 calls | same |
-| Overnight soak | 10 h, one process, 0 crashes, 9/9 Originals relayed, 0 stale Relays; ML Kit: 4 English pass-through ✅, 4 Han messages ⚠️, 1 Han title ❌ | `docs/experiments/04-soak.md` |
-| Real-message benchmark | 30 real Previews: ML Kit 6 ✅ / 18 ⚠️ / 6 ❌, Lark 27 ✅ / 3 ⚠️ / 0 ❌; ML Kit translates Chinese Sender names literally | `docs/experiments/02-quality.md` Benchmark 3 |
-| Message-read scopes | Granted on the CLI app under Max's user identity (`search:message`, `im:message.*_msg:get_as_user`, …). Handoff's "effectively blocked" is false for this app | same, "Scope finding" |
-| Romanization | Android ICU `Han-Latin/Names` works on the phone; `romanize()` is tested (`RomanizeTest`, instrumented) | `Romanize.kt` |
-| Lark Preview budget | 45 characters of message text, cut back to a space/punctuation, `...` appended; no boundary before 45 → empty Preview; newline ends it | `docs/experiments/06-full-message.md` |
-| DM chat lookup | `chats/search` never returns p2p chats; `POST im/v1/messages/search` (by `from_ids` / `chat_type=p2p`) gives `meta_data.chat_id`, `position` — 15 s index latency vs 3 s for the list endpoint; cache per Sender | `docs/experiments/06-full-message.md` "E2 continued" |
-| `position` AppLink | The API mints `client/chat/open?…&position=N` and `client/thread/open?…`; the phone client ignores `position` and does not handle `client/thread/open` | same |
-| Deep links | Lark's tap target lives in unreadable intent extras; copying the `PendingIntent` inherits it. Documented AppLinks (`client/chat/open?openChatId=`, `openId=`, `client/bot/open?appId=`) work when we fire them; no AppLink opens a message or thread | `docs/experiments/07-deep-links.md` |
-| Layer 4 soak | 36 Relays on real traffic: 0 fallback rows; 8 Han rows graded 5 ✅ / 3 ⚠️ / 0 ❌; first Han group title readable; `romanize()` mangles bot Senders with Han (`Triton数据安全` → pinyin) | `docs/experiments/05-lark-api.md` "Soak" |
-| Lark API over raw HTTP | Host `open.feishu.cn` (Feishu-brand tenant); tenant token lasts 7200 s; no burst limit at 8 concurrent calls; Latin-heavy input passes through unchanged (deterministic) | `docs/experiments/05-lark-api.md` |
-| lark-cli token store | AES-256-GCM blobs (12-byte IV \| ciphertext \| tag) under one master key: macOS keychain `lark-cli` / `master.key` (`go-keyring-base64:` + base64 of the base64 key), Linux raw `~/.local/share/lark-cli/master.key`. User token blob `<appId>_<openId>.enc` = JSON `StoredUAToken`; app secret `appsecret_<appId>.enc`. A second `auth login` (Debian) did not invalidate the Mac's token | `tools/larklish-helper token`; lark-cli `internal/keychain` |
-| User-token refresh on the phone | `POST authen/v2/oauth/token` (JSON, `grant_type=refresh_token`) from the seed works; every refresh rotates the refresh token; the pair persists in `filesDir/user-token.json` | `UserToken.kt`, debug hook `--es debug refresh` |
-| `messages/search` for DMs | Without `query` the `chat_type` filter is ignored (mixed hits), so filter on `meta_data.is_p2p_chat`; `display_info` = `<peer name>\n<Sender>: <text>` (HTML-escaped). Bot DM Originals have title `Lark`; the Sender is the bot | `MessageFetcher.dmChatId`; commit 6 test |
-| Layer 5 on the phone | Group: Relay `Sender: ...` → Update with the full English 4 s later; a newer Original on the key cancels the older Update; bot DM: first Update 7 s (search), cached 3 s | `docs/progress.md` 2026-08-27 |
-| A day of real traffic | 73 Relays: 53 % of Previews truncated, 0 empty; 23 % DM-shaped (title `Lark`); Previews can span two lines; same-key re-posts < 10 s: 4 %; withdrawal median 11.5 min, p90 90 min | `docs/experiments/08-soak.md` |
-| `post` messages | Everyday type (4 of 12 newest in the busiest group; a plain sentence from the mobile editor is a `post`). `body.content` = `{title, content: [[{tag, text|image_key|user_name…}]]}` | same |
-| Fallback on Latin-heavy text | Both real ML Kit fallback rows made the English worse (`customFetch` → `CustomEtch`, shouting). `tools/events` had hidden them (`~` after `Sender: `) | same |
-| User refresh tokens | Single-use: the phone's first refresh killed the Mac's lark-cli chain 35 min later (`token_missing`). A separate `auth login` (Debian) is a separate chain and survives | same, "Layer 5's first hours" |
-| A copied seed expires early | The refresh token `tools/larklish-helper token` copies is spent as soon as *that* machine's lark-cli refreshes (days): the phone then gets `authen/v2/oauth/token` 400 `20064 … can only be used once`. Since Layer 7 commit 7 (2026-09-02) `filesDir/user-token.json` is the chain that counts: the phone refreshes from the file first and uses the build's seed only when there is no file, or when the file's chain itself answers `20064` — a rebuild carrying another seed no longer throws a healthy chain away | `UserToken.kt`; `docs/progress.md` 2026-09-02 |
-| Compose build | Works under AGP 9 built-in Kotlin with plugin `2.2.10`; BOM `2026.08.00` needs `compileSdk 37`, `targetSdk` stays 36 | same |
-| Message → Original delay | p50 5.1 s, p90 10.2 s, p95 24.3 s, **max 43.9 s** over 116 matched Relays. No message ever arrives *after* its Original, so only the backward edge matters | `docs/experiments/11-layer6-fixes.md` |
-| Topic chats | `San Jose 1199…`, `Seller Center - FE Oncall` are `chat_mode: topic`. A reply in a thread puts the **thread's root text** in the Original's title, so `chats/search` finds nothing — but `im/v1/messages` on the chat returns the thread replies | `docs/experiments/09-soak.md` |
-| Ambiguous titles | A truncated title can match many chats (`【bytedcli MR 处理】` → 6). Caching the first hit poisons the entry for good | same |
-| Preview vs. Full text | The Preview is **not** a faithful prefix: `emotion` tags read `[Delighted]` not `[emotion]`, `@All` reads `@all`, and a trailing bold run can be dropped. A case-insensitive 12-character prefix match inside the window is unambiguous (0 of 114 stems matched two of 35 chats) | `docs/experiments/11-layer6-fixes.md` |
-| Messages get edited | The API returns the edited text and Lark re-posts the Original. A stem match against an edited message can never succeed | same |
-| HTML in `text` bodies | 11 of 198 `text` messages carry tags (`<p>…`). Lark's Preview strips them | same |
-| Translate failures | Transport-level and clustered: 0 of 60 sequential calls failed, yet one failed inside a 20-call batch and its near-twin succeeded. 16 of 18 Han fragments behind the ML Kit fallbacks translate fine — one retry keeps Lark's quality for 10 of 11 Relays | same |
-| Person DMs | Also carry the title `Lark`. `title == Sender` never happened in 210 Relays | `docs/experiments/09-soak.md` |
-| `chats/search` is not deterministic | The same query can omit a chat that exists: 4 of 11 lookups for `Zhifu Liu, Max Coplan, Yonghao Cao` missed it, at `page_size` 20, 50 **and** 100 — the page is full every time, so this is not a paging cutoff. A title therefore resolves or not, run to run, and some `no-chat` rows are the API, not the rule. The Layer 6 LRU fallback catches these too | `docs/progress.md` 2026-08-28 |
-| Delayed pushes | Lark delivers a backlog minutes late: 3 m 59 s observed, three Originals inside two seconds, two of them `no-message`. `notification.when` is the *delivery* time, not the message time, so nothing on the notification reveals it. The match window reaches back 5 min for a full-length stem and 60 s for a short or empty one | `docs/progress.md` 2026-08-28 |
-| Mentions are localized | A mention shows whichever of an account's names the reader prefers, so the Preview and the Full text disagree on the opening and on nothing else: `@Oncall Assistant` / `@Oncall 助手`, `@all` / `@所有人`, `@Yan Fan` / `@樊艳`. `@所有人` has no `mentions` entry, so no amount of structure finds it. Matching the **close** of the stem instead, when both sides open with `@`, recovers 11 of 257 Originals with 0 false positives | `docs/experiments/12-soak-and-mentions.md` |
-| A found chat is not a readable chat | `chats/search` returns chats Max can **find** but not **read**: `ByteDance Research` names two, and `im/v1/messages` on one answers `400 230002 Bot/User can NOT be out of the chat`. Time bounds usually mask it (`ok, items: []`), which is why it is rare. A per-chat failure is now that chat's miss, never the lookup's, and such a chat is never cached | `docs/progress.md` 2026-08-31 |
-| Bot DMs are worth nothing | Every `no-chat` of the Layer 6 soak is a bot DM (`Approval`, `ByteCanteen`, `IT Security Center`, `Mail Assistant`). `messages/search` does find their chats; the peer name is localized so `dmChatId` rejects them — and the message is a `CARD` in every case. Repairing the name would only turn `no-chat` into `type:interactive`. 🚫 Do not build a bot-DM resolver | same, §1 |
-| The translate limit is the tenant's | 20 QPS **per tenant, shared by every app in it** (doc: 同租户下的应用没有限流，共享本租户的 20QPS 限流). Give-ups on `99991400` fall only in Beijing working hours: 14 of 81 Han texts on a weekday, 0 overnight. A dedicated app cannot help; only what we do after the error can | `docs/experiments/14-weekday-soak.md` §3 |
-| `@_all` in `text` bodies | A `text` body spells @all as the literal `@_all` and the `mentions` array never names it; the Preview reads `@all`. `resolveMentions` maps it | same §1 |
-| Cards preview their `title` | For an `interactive` message Lark's Preview is the card's `title`, never marked `...`; some cards carry real `text`/`at` elements, others only an image. First target of "Update for the other message types" | same, "Also seen" |
-| Weekday grade | 31 of 34 readable cut Previews Updated (91 %); 11 of the 31 through the localized-mention close rule, all correct | same §1–2 |
-| Feishu API intranet mirror | `open.feishu.cn` → `fsopen.bytedance.net` serves the tenant-token and translate endpoints, from the office network and inside the IDC. `lark-cli` hard-codes the public host by brand, so it cannot use the mirror | `docs/progress.md` 2026-09-02 |
-| The phone reaches the intranet | On the office Wi-Fi `Inspire Creativity` with no VPN, and on cellular through the SealSuite VPN (`fsopen` answers 200 in 1.1 s with Wi-Fi off) | same |
-| Lark auto-mutes a bot in a group | After a burst of bot messages, Lark turns that bot's notifications off in the group ("to reduce distractions"); the chat is not muted, no API shows it, and every probe goes silent while colleagues' messages relay. Undo on the desktop: group → View Bot List → right-click the bot → Unmute Bot Notifications | `docs/progress.md` 2026-09-02 night |
-| Bot Originals now carry the full text | Tonight's bot messages arrived with the whole text in `android.text` (117 characters, no `...`), so `not-truncated` and no Update. Human messages are still cut (a 22:58 colleague post was) | same |
-| The phone reaches a ByteFaaS trigger URL | `https://<id>.fn.bytedance.net` is intranet-only (`10.8.x.x`, `fdbd::`), yet the Pixel on the office Wi-Fi got `GET /v1/ping` 200 in 0.78 s over IPv4; the certificate is GlobalSign's `*.fn.bytedance.net`, so Android trusts it with no manifest change. Off the VPN it is unreachable | `docs/progress.md` 2026-09-03 |
-| SCM's Go image must match `go.mod` | spooky-bio's builds failed twice on an image older than its `go.mod` and passed on the 1.26 image; SCM does not honour `GOTOOLCHAIN`. The newest image seen is `bytedance.golang.compile_tango_1_26_bookworm` | `bytedcli scm repo version list --repo-id 524000` |
-| An IPv6-only instance needs the intranet Lark host | `fsopen.bytedance.net` has A and AAAA records; `open.feishu.cn` has no AAAA, and public egress from ByteFaaS needs a Mesh Egress whitelist (Aime) | `dig`; spooky-bio's cluster env `LARK_API_BASE_URL` |
-| ByteFaaS releases are self-service tickets | spooky-bio's 11 releases: steps Build → ReleaseCanary → ReleaseRegion → Release_All, 1–3 min, no approver | `bytedcli faas release list --service-id n3e8d5na` |
-| Backend translation ownership | The phone posts an ML Kit Relay, then the Backend translates every Han Preview and every cut Preview; only a cut Preview sends a user token and runs the Lookup. A complete Latin message skips the Backend. | `docs/backend-translation-plan.md` |
+| Railway (external) | GitHub main → service rooted at backend/; provider-managed HTTPS | Work-profile Original → Relay → Full-text Update, September 24 |
+| ByteCloud (internal) | ByteDance source → SCM artifact → ByteFaaS via Bits; separate PPE and production stages | Replacement PPE deployment and phone flow verified September 24; production promotion still gated |
 
-## Layers
+PPE means the pre-production environment. Production promotion uses the normal Bits
+checks; PPE success does not establish production acceptance. Recheck task/function state
+before acting: earlier PPE functions and release tasks in old plans have been superseded.
+Keep GitHub and ByteDance source histories aligned for subsequent Backend changes.
+A push can trigger deployment; choose the destination deliberately.
 
-### Layer 0 — adb only ✅ done
+Detailed deployment records: [Railway](experiments/26-railway-deployment.md),
+[Work profile and recovery](experiments/30-work-profile.md), and the dated progress entries.
+The earlier [ByteCloud promotion plan](bytedance-ppe-to-production-plan.md) is historical
+rollout context; its task IDs and checkpoints are not current execution instructions.
 
-See `docs/experiments/00-adb.md`.
+## Mechanisms and boundaries
 
-### Layer 1 — Listener ✅ done
+- Lark package: `com.larksuite.suite`; Larklish: `com.vegerot.larklish`.
+- Lark is in Work user 10; Larklish is in personal user 0. Cross-profile notification
+  access requires the AirWatch listener allowlist and Work-profile Lark notifications.
+  Root inspection is available with `adb shell 'su -c "..."'` when ADB root is authorized.
+- Backend routes use Bearer authentication for `/lookup` and `/chats`; `/v1/ping` is public.
+  The internal alias exposes the prefixed Lookup route. Android requires HTTPS.
+- The Backend uses standard Go HTTP plus the official Lark SDK. Its chat cache is in memory.
+  The phone supplies its user access token for each Full-text Lookup; the Backend does not
+  own a persistent user session.
+- The phone owns the rotating user-token file. Refresh tokens are single-use. Preserve
+  that file across installs; copying/reseeding a token can disrupt another refresh chain.
+- Lookup supports text and post messages. Cards, images and other types are not Full-text
+  implementations. Matching handles observed Preview differences; it remains heuristic.
+- Recorder events and timing spans share a flow ID. Use exact flow IDs for new analyses.
+  Timing starts at Original receipt; it cannot measure Lark's earlier delivery delay.
 
-See `docs/experiments/01-listener.md`. Gradle project (AGP 9.3.2, built-in Kotlin,
-`minSdk 36`), `LarkListener` logs every Lark Original. Interception works.
-
-### Layer 2 — Translator screen ✅ done
-
-See `docs/experiments/02-quality.md`. Compose `MainActivity` (text field → ML Kit → English,
-plus an `am start --es text` debug hook), `Translator` interface, `MlKitTranslator`.
-The quality table has 14 rows (5 real, 9 made up). Max's judgment is pending.
-
-### Layer 3 — Relay ✅ done
-
-See `docs/experiments/03-relay.md`. Verified for a bot DM and a synthesized group chat:
-the Relay carries the translated title, romanized-safe text, group avatar and tap intent;
-the withdrawal mirror handles `REASON_CLICK` and `REASON_APP_CANCEL_ALL`. Recall does not
-withdraw — Lark updates the Original in place. `POST_NOTIFICATIONS` is required.
-
-Cancel option (Max): debug builds keep the Original next to the Relay for comparison;
-release builds cancel it (`if (!BuildConfig.DEBUG) cancelNotification(...)`).
-
-### Layer 4 — phone Lark Translator ✅ superseded
-
-Experiment 05 established Lark's translation quality and rate-limit behaviour. The phone's
-`LarkApiTranslator` and Lark-then-ML-Kit fallback were removed in favour of one clear ownership
-boundary: ML Kit creates the first Relay and the Backend owns Lark translation for Updates.
-
-### Layer 5 — Full text in the Relay ✅ built, soaking
-
-Lark's Preview is at most 45 characters and often empty (Experiment 06). The Original
-cannot carry more (E1) and no AppLink opens a message (Experiment 07), so a cut Preview's Full
-text comes from the Open API under Max's user identity: title →
-chat id (`chats/search`, cached in `filesDir/chats.json`) → newest messages (`messages`
-list, `ByCreateTimeDesc`) → pick by time window and Preview stem → translate → **Update**
-the Relay. Two-phase Relay: ML Kit posts from the Preview at once, then the Backend Updates the
-same key with Lark translation. A complete Latin message skips the Backend; a complete Han
-Preview translates directly without a Lookup. Decisions (grilling, 2026-08-27):
-
-- Fetch only when the Preview ends in `...` (53 % of real Previews do — Experiment 08).
-  Complete Han Previews go straight to Backend translation instead.
-- Show the whole translated text in `BigTextStyle`; input capped at 1,000 chars (the
-  translation API limit). An AI summary is a 2.0 idea.
-- `text` and `post` messages (`post` flattened: title, one line per paragraph, `[image]`,
-  `@name` — commit 7, after Experiment 08 showed `post` is the everyday type). Any other
-  type → `skipped type:<msg_type>`; `no-message` = nothing in the window, `no-match` =
-  a text there did not start with the stem.
-- Groups: title → `chats/search` (exact name, or name prefix when the title ends in
-  `...`). DMs: `messages/search` around the Original's time, the `is_p2p_chat` hit whose
-  peer name (first line of `display_info`) is the Sender; polled up to 4 × 5 s for the
-  index lag; cached per Sender (`dm:<Sender>`). A DM is recognised by its title: `Lark`
-  (bots) or the Sender's own name (people — shape still unverified, none in the record).
-  The group and DM caches never cross (a bot that DMs Max also posts in groups).
-- Lark reuses one Original key per chat, so a newer Original on the same key cancels
-  the in-flight fetch. Otherwise the older Full text could overwrite the newer Relay.
-- Mismatch rule: newest message inside `[when − 15 s, when + 5 s]` whose text starts
-  with the Preview stem. Count mismatches during the soak before tightening it.
-- Debug builds post every error as an "Errors" notification.
-- Token: `tools/larklish-helper token` copies Max's refresh token from lark-cli's store into
-  `local.properties` → `BuildConfig`; the app persists rotations in
-  `filesDir/user-token.json` (2 h access, 7-day sliding refresh, Experiment 06 E4).
-
-Files: `LarkHttp.kt` (user-token refresh), `UserToken.kt`,
-`MessageFetcher.kt` (pure `pickMessage` + `resolveMentions`, tested), the Update path in
-`LarkListener`, `Recorder` events `updated` / `skipped`, `tools/events` `U` / `S` rows.
-Commits: docs → `LarkHttp` → `UserToken` + `tools/lark-token` → `MessageFetcher` → Update →
-DMs. Then a soak ≥ 1 day graded by `tools/events stats` (updated vs skipped by reason,
-mismatches, share of `post`). The plan may change mid-flight; record each change here
-and in `progress.md` with the reason.
-
-Far future: a backend holds the secrets and tokens and maybe runs the fetch. Keep the
-fetcher behind one interface so it can move.
-
-### Layer 6 — Make the Update land ✅ built, soaking
-
-Layer 5's first day Updated **34 of 91** real Relays (Experiment 09). The fetch works; the
-chat resolver and the match rule lose the rest. Every fix below is measured on an offline
-replay of 210 Relays (`tools/replay/`, Experiments 10–11), so the order is by measured
-value, not by guess. Baseline 101 → **119 of 210** stacked.
-
-1. **Window `BEFORE_MS` 15 s → 60 s** (+6, no extra calls). The delay from message to
-   Original runs to 43.9 s; 15 s throws away the top 7 %. It saturates at 60 s. Leave
-   `AFTER_MS` at 5 s — widening it to 60 s recovers nothing. *Later the same day: a
-   full-length stem reaches back 5 min, for delayed pushes — see the entry below.*
-2. **Case-insensitive prefix match** (+8 stacked): compare the first 12 whitespace-free
-   characters, case-folded, instead of the whole stem. 0 false positives across 35 chats.
-3. **`emotion` → `[emoji_type]`** in `postText` (+0 matches, but the Relay should read
-   `[Delighted]` like Lark). Strip HTML tags from `text` bodies in the same commit.
-4. **Retry Lark once before ML Kit, and record the reason** in the `relayed` event. All 11
-   fallbacks in the record were one 2.5 h block of transport errors, and ML Kit made the
-   English worse every time.
-5. **LRU 2 on `no-chat`** (+3, ~180 extra GETs): try the two most recently used chats and
-   take the stem match. This is the only way to reach a thread reply. Scanning every
-   cached chat finds the same 3 for 4× the calls; a thread-root cache alone finds 0.
-6. **Disambiguate prefix titles** (+1, optional): when a truncated title matches several
-   chats, try each and cache only the one a message confirms.
-
-Rejected: **retrying the message list** — worth 0. The forward edge of the window is
-already generous, so a retry cannot find anything the first call missed.
-
-Built 2026-08-28, one commit per fix, each verified on the phone. Two changes the replay
-did not predict: the messages list now carries `start_time`/`end_time` so a burst cannot
-push the message off the page, and `unwrapHtml` strips the markup Lark adds to an **edited**
-message. The chat cache now holds only what a message confirmed, so the one poisoned entry
-was cleared once (`rm files/chats.json`, force-stop) and cannot come back.
-
-Then soak again and re-grade with `tools/larklish-helper events stats` — now including `fallback` rows,
-which say whether the Translator hit an outage or an input Lark will not translate.
-
-### Layer 7 — Backend v0 ✅ built, soaking
-
-Larklish is also Max's entry in a full-stack hackathon, which needs a front end **and** a
-back end. Max uses it daily, so the Relay stays as fast as it is and the app keeps solving its
-two problems. Grilled 2026-09-02 (`docs/progress.md`); the shortcuts taken are listed below.
-
-- **What moves**: all Lark translation and the Update path. The phone keeps the listener, ML Kit
-  first Relay, Romanize, the Recorder and the user-token chain. Complete Han Previews go straight
-  to the Backend; cut Previews add the **Lookup** (title → chat id → newest messages → pick → Full
-  text) and send the user access token. The Update is off the Relay's critical path.
-- **Stateless Backend**, except an in-memory chat cache + LRU, re-learned after a restart (one
-  `chats/search` per chat). Refresh tokens are single-use: a server instance that dies between
-  a rotation and a write loses the chain, so the chain stays on the phone, where it has run for
-  a week.
-- **Go**, `net/http`, and the official SDK `github.com/larksuite/oapi-sdk-go/v3` (chat search,
-  message list, message search, translate; it renews the tenant token itself; the user token
-  goes per request; `WithOpenBaseUrl` for the IDC mirror). No token code in the Backend.
-- **Host**: a Go HTTP server on the Mac first (`go -C backend run .`, port 8787); ByteFaaS
-  later, under the node of the existing function `link-preview` (`n3e8d5na`, PSM
-  `coplan.lark.spooky`, runtime `native/v1`, cluster `faas-cn-north`, request timeout 7 s).
-  Port from `_BYTEFAAS_RUNTIME_PORT` → `PORT` → 8787, `GET /v1/ping`, Lark host from
-  `LARK_HOST` (`https://fsopen.bytedance.net` inside the IDC).
-- **Protocol**: `POST /lookup {title, text, flowId}` translates a complete Preview directly;
-  a cut Preview also supplies `{whenMs, userToken}` and runs the Lookup. The result names its
-  `source` (`preview` or `full-text`), message, optional translated title/Sender and timing spans.
-  `translation-failed` leaves the ML Kit Relay in place; a title or Sender failure is recorded but
-  does not block a successful message Update.
-- **Equivalence before deletion**: both replays write one outcome per Original
-  (`replay-corpus/outcomes-kotlin.tsv`, `outcomes-go.tsv`); `MessageFetcher.kt` and its tests
-  go only when the diff is empty, or Go is better on every differing row. Known edge: 5 of 257
-  stems carry an emoji inside the first 12 characters, where Kotlin counts UTF-16 units and Go
-  counts runes.
-- Files: `backend/` (`preview.go`, `pick.go`, `fetcher.go`, `lark.go`, `live.go`,
-  `translate.go`, `server.go`, `config.go`, `main.go`, and their tests), `app/…/Backend.kt`.
-  Deleted: `MessageFetcher.kt`, `PickMessageTest`, `MentionsTest`, `MessageTextTest`,
-  `ReplayTest`. Commits: docs → `Preview.parse` in Go → the rules in Go → the Kotlin replay
-  writes outcomes → the Lookup policy + the Go replay (the gate) → Lark client + server → the
-  app calls the Backend → soak.
-
-### Layer 8 — ByteFaaS: the Backend leaves the Mac 🚧 in progress
-
-Layer 7's Backend runs on this Mac, so an Update lands only while the Mac is up and on the
-same network. ByteFaaS removes that. Planned 2026-09-03 from Tika, Aime, `spooky-bio` (Max's
-one earlier ByteFaaS service) and the ByteFaaS console; the verified facts are rows above.
-
-- **Pipeline**: Codebase (`code.byted.org/max.coplan/larklish`, the default remote;
-  GitHub is the remote `github`, selected for Railway in Layer 9) → SCM (`oec/seller/larklish`: runs `build.sh` at the repo
-  root in its Go image, tars `output/`, builds on every push to `main` — the trigger branch is set in the SCM console; `bytedcli scm repo create --git-trigger` only flips the switch) → ByteFaaS (PSM
-  `coplan.lark.larklish` under `oec.seller.frontend`, runtime `native/v1` HTTP, cluster
-  `faas-cn-north`, created from the SCM version, `run_cmd /opt/bytefaas/run.sh`).
-- **Cluster**: request timeout 30 s (a DM Lookup polls ~12 s), init 120 s, IPv6-only as
-  spooky-bio, **one instance, always** (Max: no cold start, the chat cache survives idle
-  hours; it still restarts on each release): IDC `hl` min 1 max 1, every other IDC 0–0, set in
-  the console under Resource and scaling → Resources → Configure instance number (bytedcli's
-  `faas trigger replica-limit update` is for MQ triggers; on an HTTP trigger it answers
-  "record not found"). Env: `LARK_HOST=https://fsopen.bytedance.net` (an
-  IPv6-only instance cannot reach `open.feishu.cn`, and public egress needs a whitelist),
-  `LARK_APP_ID`, `LARK_APP_SECRET` as plain cluster env vars (a Shortcut).
-- **The phone** uses a device-local HTTPS Backend URL (default:
-  `https://shop.tiktokglobalshop.com/_/test/demo/larklish`). Edit it on the Larklish
-  screen and tap Save Backend URL, or set it over adb without rebuilding:
-  `adb shell am broadcast -n com.vegerot.larklish/.BackendUrlReceiver --es backend_url 'https://example.com'`.
-  The broadcast is restricted to the adb shell permission; the result reports
-  the saved URL. The original ByteFaaS trigger requires office Wi-Fi or the
-  SealSuite VPN. Max has now chosen
-  Railway for the immediate public demo, superseding the BytePlus VM proposal
-  and the Singapore PPE plus public NetLink/TLB route plan. The provider and
-  architecture are selected; deployment is pending. Follow
-  [the Railway deployment plan](railway-deployment-plan.md) and
-  [Experiment 25](experiments/25-railway-fly-comparison.md). Authenticated internal
-  production deployment remains a separate important TODO. The localhost/ADB
-  reverse fallback is removed.
-- **Backend authentication**: `Authorization: Bearer <token>` protects `/lookup`
-  and `/chats`; `/v1/ping` stays public for the FaaS health probe. Set the same
-  generated value in the Backend's `LARKLISH_BACKEND_TOKEN` environment variable
-  and gitignored `local.properties` key `larklish.backendToken`, which Gradle
-  includes in the phone's BuildConfig. Backend startup and phone builds reject a
-  missing token. Android permits HTTPS only. The helper uses this same token for
-  cache reads. Configure the token on FaaS before deploying this Backend version.
-- **Updates** (first run 2026-09-03, 4 min end to end): `sl push --to main` → SCM builds `1.0.0.N`
-  (31 s) → `bytedcli faas revision scm create … --scm-version 1.0.0.N` (dry run prints
-  `--from-revision`/`--number`; rerun with them and `--yes`) → `faas release create …
-  --code-revision <revision id>` (37 s, Build → Canary → Region) → `tools/larklish-helper
-  backend status` (the ping names the Go that built the binary) → `probe --idle`.
-- **I18N-TT release practice (2026-09-16)**: use direct ByteFaaS releases for quick PPE
-  iteration on `mmyp0srw` / `ppe_deploy_i18n_1`. Select the exact successful,
-  Singapore-synchronized SCM version, release only the PPE cluster, then verify its
-  revision, health, and the relevant public Lookup behavior. Keep Singapore production
-  `kpb2dvsn` on the normal Bits Test/Merge/Release path; the direct production
-  ByteFaaS release is blocked by policy. Direct PPE console and pinned-revision
-  `bytedcli` releases both succeeded for SCM `1.0.0.20` (see `progress.md`).
-- Words unchanged: **Backend**, **Lookup**. Files: `build.sh`, `run.sh`, `unittest.sh` at the root.
-  Commits: scripts + `go 1.26` → docs → (repo, SCM, function: ids in `progress.md`) → the app's
-  URL → soak.
-
-### Layer 9 — Railway public demo ✅ live
-
-- **Host**: one always-running Railway service in US West, California
-  (`us-west2`), project `larklish`, service `backend`, environment
-  `production`. Begin on the verified Trial, with one replica, Serverless
-  disabled, Trial's fixed 2 vCPU / 1 GB maximum, and the existing in-memory
-  cache. Measure usage against the USD 5 trial credit before choosing paid
-  service; the paid-service target remains below USD 15/month.
-- **Region rationale**: start near the West Coast demo phone. The earlier
-  Singapore choice was inherited from internal hosting, without a regional
-  latency comparison. Record Lookup and cellular Update timings during acceptance;
-  compare Singapore only if measured latency warrants it.
-- **Deployment**: connect GitHub `vegerot/larklish`, branch `main`, and enable
-  automatic deployments. Use service root `/backend` and watch path
-  `/backend/**`. Railpack detects Go. Native service settings define the builder,
-  US West replica and `/v1/ping` health check (60 s startup timeout). Trial uses
-  `ON_FAILURE` with up to 10 retries. New services cannot use `railway.toml`;
-  the live API rejected the earlier plan's config-file setting.
-  Configure variables, sleeping and resource limits before deployment.
-  Releases follow local checks → Sapling commit → push to `github`'s `main` →
-  Railway deployment. No separate GitHub Actions deployment workflow is needed.
-  Use CLI/MCP for configuration and operations, and verify each deployed commit.
-- **Public address**: generate one Railway domain targeting `PORT=8787` and
-  retain it across releases. The live URL is
-  `https://backend-production-a712b.up.railway.app`. Railway manages HTTPS and certificate renewal.
-  Preserve the existing HTTP protocol and Bearer authentication. The selected
-  Lark API host remains `https://open.larksuite.com`.
-- **Credentials**: the existing Backend token was copied from devbox into the
-  Mac's ignored `local.properties`, preserving every other property, and the
-  same token is configured in Railway. The phone's user-token chain is preserved.
-- **Sequence**: credential sync → Railway account/service configuration → push
-  the configuration to GitHub → connect the repository and deploy → generated
-  HTTPS domain → authenticated Lookup → in-place phone
-  update → cellular verification. This sequence is complete. The Pixel receives
-  full English Updates from Railway on Wi-Fi and on cellular with Wi-Fi/VPN off.
-  Restart, 15-minute cache retention, three concurrent Lookups, a three-message
-  notification burst and notification-group dismissal also passed.
-- **Later optimization**: both Railway and Fly have persistent volumes, and Fly
-  suspension can preserve RAM. Continuous running is the simplest initial
-  choice, not a technical necessity for cache preservation. Defer sleeping and
-  persistence until usage and latency measurements justify them.
-- **Records**: the exact current plan is in
-  [railway-deployment-plan.md](railway-deployment-plan.md). The earlier
-  [BytePlus plan](byteplus-deployment-plan.md) remains verbatim as history;
-  [Experiment 24](experiments/24-volcano-byteplus.md) retains its research and
-  [Experiment 25](experiments/25-railway-fly-comparison.md) explains the new choice.
-  [Experiment 26](experiments/26-railway-deployment.md) records implementation
-  steps, live platform constraints and verification results.
-
-### Later (not experiments)
-
-- [ ] Onboarding: deep-link to `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS`; note the
-  Android 13+ "Allow restricted settings" step for sideloaded apps.
-- [x] Debug UI: list of recent Original → Relay pairs. ✅ Done 2026-08-25: `Recorder`
-  appends every Relay pair and removal (with reason) to `filesDir/events.jsonl`;
-  `MainActivity` lists them newest-first with a Refresh button. Shell read:
-  `adb exec-out run-as com.vegerot.larklish cat files/events.jsonl`.
-- [x] ~~`LarkApiTranslator` behind a setting.~~ → Layer 4. Decision history: Max
-  (2026-08-25) kept ML Kit for faster iteration; Experiments 04–05 showed Lark's engine
-  fixes every ML Kit failure seen in the soak, so Layer 4 makes Lark primary with ML Kit
-  as fallback. The fat CLI app's secret in the APK is a Shortcut (see below).
-- [x] **Romanize only person names.** ✅ Done 2026-08-31: `Translator.senderOf` romanizes a
-  Sender only when `isHanName()` — bare Han, 2–4 characters — and sends every other
-  Han-containing Sender to the engine. Before, a bot or group Sender became meaningless
-  pinyin (`国际电商风险运营平台` → "Guo Ji Dian Shang Feng Xian Yun Ying Ping Tai",
-  `Triton数据安全` → "Triton Shu Ju An Quan"); 10 of 257 Relays carried one. `buildRelay`
-  now takes the Sender already in English, like the title and the message.
-  Evidence: `docs/experiments/05-lark-api.md` "Soak".
-- [ ] **App icon: finish the 译鸟 mark.** 2026-08-27: an AI-generated flat bird (navy
-  body, orange belly, two chirp arcs, teal disc; `docs/logo/larklish-v1.webp`) is in use as
-  the adaptive launcher icon and, as an alpha silhouette, the notification small icon.
-  Todo before it is final: (1) two **bold chirp arcs** about the size of the head — the
-  current ones vanish at 24 dp; (2) a **rounded, fuller wing tip** (the taper fades at small
-  sizes; rounded ends also echo Lark's strokes); (3) scale the bird ~15 % down so it fits the
-  adaptive-icon **66 % safe zone** (the wing tip is at ~75 % of the radius); (4) optional: a
-  lighter aqua upper wing behind the navy one as a Lark-family cue. Produce it as an SVG →
-  `VectorDrawable`, replacing the raster. The **large icon** (row avatar) stays the
-  Original's group avatar (Layer 3).
-- [ ] **Tests for `Preview.parse`** (TDD, Max's call): once the Layer 2/3 experiments end,
-  write the Sender/message split test-first. Cases: plain `Sender: message`,
-  `Sender@you:` and `Sender@all:`, a message that itself contains `: `, no `: ` at all.
-- [ ] **Update for the other message types.** After `text` and `post` (Layer 5),
-  cards (`interactive`), images, stickers, files. The soak's `msg_type` counts set the order.
-  **Cards first** (2026-09-02): Lark previews a card by its `title` with no `...`, so the
-  guard skips it, and every `type:interactive` and card-shaped `no-match` in Experiment 14 is
-  one. Some carry real `text` and `at` elements a flattener could read (the 风险平台 report);
-  others hold only an image and "请升级至最新版本客户端", worth nothing. Measure the split
-  over the record before building. Evidence: `docs/experiments/14-weekday-soak.md` "Also seen".
-- [ ] **Translate only the Han runs when Lark passes text through.** Both real fallback
-  rows of the soak were Latin-heavy sentences with a few Han words; ML Kit damaged the
-  English (`customFetch` → `CustomEtch`). Instead of the whole sentence, send each Han run
-  (`权限申请`) to the Translator and splice the results back. Evidence:
-  `docs/experiments/08-soak.md`. Priced 2026-09-02: 6 of 111 Relays were `NotTranslated`,
-  and ML Kit made every one worse (Title-Case, `MR #3245` mangled). Sketch: join the Han runs
-  with `\n`, one Lark call, split on `\n`, splice — one call, not one per run. Evidence:
-  `docs/experiments/14-weekday-soak.md` §3.
-- [ ] **A second Update when Lark's quota frees up.** The `99991400` limit is the tenant's
-  20 QPS, shared by every app, and busy only in Beijing working hours (14 of 81 Han texts
-  gave up on a weekday, 0 overnight). The retry runs 0.8 s after the first call, inside the
-  same busy window, and the windows last minutes. Instead: post the ML Kit text at once, as
-  now, then retry Lark on a slow clock (say 30 s, 60 s, 120 s) and Update the Relay again
-  when it answers — Lark's quality a minute late beats ML Kit's for good. Bound it: the
-  Relay may already be withdrawn (median 11.5 min). Evidence: `docs/experiments/14-weekday-soak.md` §3.
-- [ ] **Cache a chat only on `Found`.** `if (candidates.size == 1 && !outcome.failed())
-  remember(…)` caches a clean miss, and a chat Max cannot read answers a clean miss under
-  time bounds (`ok, items: []` masks `230002`). `ByteDance Research 技术交流群` sits in
-  `chats.json` that way. Harm 0 so far (all three Originals under that title were cards), so
-  it waits — ~1 line in `backend/fetcher.go` when it bites, or a Backend restart. Evidence:
-  `docs/experiments/14-weekday-soak.md` "Also seen".
-- [x] **Fetch only when the Preview ends in `...`.** ✅ Done 2026-08-31: `Preview.truncated`
-  gates the Update, and a Relay that skips it records `skipped not-truncated` so a soak can
-  still price the exception. 54 % of Relays never needed the fetch, and 33 of the 34 Updates
-  measured from an uncut Preview returned a Full text **identical** to it. The exception is
-  a `post` with a title: Lark previews only the title, with no `...`, so those are lost
-  (1 of 34, a probe). Evidence: `docs/experiments/13-fetch-guard.md`.
-- [ ] **Image in the Relay (far future, Max).** Lark's Original for an image says only
-  `[image]`. Android can show the picture (`Notification.BigPictureStyle().bigPicture(bitmap)`).
-  The Layer 5 fetch already sees these messages (`msg_type` `image`, today a
-  `skipped type:image` row): `body.content` is `{"image_key": "img_…"}` and
-  `GET /open-apis/im/v1/messages/{message_id}/resources/{image_key}?type=image` downloads
-  it under the user identity (scope `im:resource`). Same for stickers and, later, files.
-- [ ] **AI summary of the Full text (2.0 idea, Max).** For long messages, show a summary
-  instead of the whole translation.
-- [ ] **Tighten the Layer 5 match rule** if the soak shows mismatches (wrong message
-  picked for an Original): compare more of the text, or use `messages/search`.
-- [ ] **`msgs` should show what the Lookup matches.** The helper's `flat_text` is a Python copy of
-  the Backend's `candidateOf` (`postText`, `unwrapHtml`, `resolveMentions`) and already differs:
-  no HTML unwrap, `@_user_1` left unresolved, `[img]` for `[image]`. The fix is the `token`
-  arrangement in Go: move the rules out of `package main` into `backend/rules`, add
-  `backend/cmd/flatten` (raw messages on stdin → the Backend's text), and have `msgs` shell out
-  to `go -C backend run ./cmd/flatten`. Do it the day a `no-match` investigation needs `msgs`
-  to be exact (2026-09-03). The corpus already carries raw messages for the same reason.
-- [ ] **Try Snap-O Network when an individual phone HTTP failure needs live inspection.** Keep
-  the experiment debug-only: add the real `network-httpurlconnection` dependency to debug builds,
-  its no-op counterpart to release builds, and wrap only the shared Lark and Backend connection
-  creation points. Use the standalone `snapo-network` CLI directly; do not wrap it in
-  `larklish-helper`. Keep `FlowTiming`, the Recorder and helper reports as the durable,
-  content-free evidence. See [Experiment 29](experiments/29-snap-o-evaluation.md).
-- [ ] **Promote the tested ByteDance Backend from PPE to production through Bits.** Follow the
-  [ByteDance PPE-to-production plan](bytedance-ppe-to-production-plan.md).
-  [Experiment 28](experiments/28-internal-hosting-handoff.md) records the
-  earlier route work and blockers; its rewrite/PPE-pinning instructions are
-  superseded by this plan.
-- [ ] Add performance dashboard in the app
-
-## Shortcuts (fix before Larklish is a public app)
-
-Taken for velocity while Larklish serves Max and maybe Max's team. Each one is a known
-gap, not an oversight. The future backend removes most of them.
-
-- The fat CLI app's secret is in the APK (`local.properties` → `BuildConfig`). A public
-  build needs a dedicated app with only `translation:text` + `im:message` scopes.
-- Max's user refresh token is bootstrapped into the APK the same way
-  (`tools/larklish-helper token`). The app persists rotations in `filesDir`, so the APK copy is
-  only a seed — and a consumed one: refresh tokens are single-use, so the machine that
-  ran `tools/lark-token --write` needs `lark-cli auth login` again (Experiment 08).
-- No sign-in screen. A public build needs the device-code flow lark-cli uses. It is also
-  the fix the day the seed token dies (7 days without a refresh).
-- ML Kit and the token chain run on the phone; Lark translation and Updates run on the Backend
-  (Layer 7).
-- Backend authentication now requires a Bearer token for `/lookup` and `/chats`;
-  the new Android build requires HTTPS. Both changes are tested, but only PPE
-  has the authenticated Backend deployed and the phone update remains pending.
-  The shared Backend token is embedded in the APK and admits any holder. A
-  server-side check allowing only Max's verified Lark identity was proposed;
-  it is not implemented or part of the settled immediate demo scope.
-- ByteFaaS (Layer 8): the app ID and secret remain plain cluster environment
-  variables, and the chat cache dies with the process. The direct trigger still
-  needs office-network/VPN access. The public route is deployed, but the
-  prefixed Backend handler is pending. The older production code remains
-  unauthenticated until its release is completed; the app will select PPE during
-  its trial and remove that header after the alias-bearing code reaches
-  production, as specified in the plan above.
-
-## Commands
-
-Dev machines (Max moves between them; `local.properties` is per machine):
-
-- macOS with Android Studio. SDK at `~/Library/Android/sdk` (Studio wrote `sdk.dir`
-  into `local.properties`; has `platforms/android-37.0`, `build-tools/36.0.0`,
-  `platform-tools`, `cmdline-tools`). Build through the Studio MCP (`build_project`) or
-  `./gradlew`; both work.  Prefer using Android Studio MCP over `./gradlew` generally,
-    but often the CLI will be more convenient than Studio MCP.
-- GNU+Linux (Debian), the desktop. SDK at `~/Android/Sdk` (has `platforms/android-36`,
-  `build-tools/36.0.0`, `platform-tools`). No `sdkmanager` installed; none needed so far.
-  `uv` in `~/.local/bin` (installed 2026-08-27 for `tools/lark-token`).
-- GNU+Linux, the ByteDance dev box (`devbox`, home `/data00/home/max.coplan`, address
-  `10.251.236.182`). A different machine from the desktop. Toolchain installed
-  2026-08-28: Temurin JDK 21 in `~/.jdks/jdk-21.0.12.1+1` (the system JDK 11 cannot run
-  Gradle 9.7.1) and the SDK at `~/Android/Sdk` (`cmdline-tools`, `platform-tools` 37.0.1,
-  `platforms;android-37.0`, `build-tools;36.0.0`). The platform package is
-  `android-37.0`, not `android-37`. `uv` and `lark-cli` in `~/.local/bin`. No phone on
-  USB: `adb` reaches the Pixel 4a through a reverse tunnel from the Mac (below).
+## Checks and everyday commands
 
 ```sh
-export JAVA_HOME=~/.jdks/jdk-21.0.12.1+1                   # dev box only: the system JDK 11 is too old
-export ANDROID_HOME=~/Android/Sdk                         # devbox only: for Gradle 9.7.1
-"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-  platform-tools "platforms;android-37.0" "build-tools;36.0.0"   # devbox only: once per machine
-cp debug.keystore ~/.android/debug.keystore              # once per machine: same debug signer everywhere,
-                                                          #   so installDebug upgrades in place (keeps data + grants)
-ln -s "$PWD/.claude/memory" \
-  ~/.claude/projects/"$(pwd | tr '/.' '--')"/memory  # once per machine: Claude's project memory is in the repo
-echo "sdk.dir=$HOME/Android/Sdk" > local.properties       # once per machine; Studio does it on macOS
-uv venv && uv pip install --system-certs -r tools/requirements.txt   # once per machine: the helper's venv, only for
-                                                          #   `showcase` (Pillow) and `token` (cryptography);
-                                                          #   Debian: curl -LsSf https://astral.sh/uv/install.sh | sh
-uv run --script tools/larklish-helper token --write       # Layers 4–5: lark.appId, lark.appSecret,
-                                                          #   lark.userRefreshToken from lark-cli's store
-lark-cli auth login                                       #   …then log lark-cli in again: the phone consumes
-                                                          #   that refresh token (single-use, Experiment 08)
-adb exec-out run-as com.vegerot.larklish cat files/user-token.json   # …or seed from the phone's own live
-                                                          #   refreshToken → lark.userRefreshToken: no chain is spent
-                                                          #   (a copied seed dies when that machine's lark-cli refreshes)
-./gradlew installDebug
-./gradlew testDebugUnitTest                                # JVM tests
-go -C backend run .                                        # Layer 7: the Backend on this Mac, port 8787
-                                                          #   (local.properties: larklish.backendUrl=http://<mac-ip>:8787,
-                                                          #    or the ByteFaaS trigger URL https://<id>.fn.bytedance.net)
-go -C backend test ./...                                   #   Go tests; the corpus replay runs when replay-corpus/ exists
-./build.sh && ls output                                    # Layer 8: what SCM builds (linux/amd64 binary + run.sh)
-sl push --to main                                          #   origin = code.byted.org/max.coplan/larklish; SCM builds on push
-bytedcli scm repo version list oec/seller/larklish --branch main      #   the SCM versions (1.0.0.N); build-log / diagnose on failure
-bytedcli faas function list --search larklish              #   the function's service id
-bytedcli faas log --service-id <id> --since 10m            #   the Backend's stdout on ByteFaaS
-bytedcli faas revision scm create --service-id <id> --scm-repo oec/seller/larklish --scm-version 1.0.0.N   # deploy step 1 (dry-run; add the printed --yes line)
-bytedcli faas release create --service-id <id> --region cn-north --cluster faas-cn-north --code-revision <revision id>   # deploy step 2 (the id from step 1, not the number); `faas release list --limit 1` to watch
-LARK_APP_ID=… LARK_APP_SECRET=… bytedcli faas cluster update --service-id <id> --env-from-env LARK_APP_ID --env-from-env LARK_APP_SECRET   # secrets from the process env, never argv
-bytedcli faas cluster get --service-id jmc8tl6s --region cn-north --cluster faas-cn-north   #   replicaLimit (hl 1–1), timeouts, env keys
-curl -s https://jmc8tl6s.fn.bytedance.net/v1/ping             #   the Backend on ByteFaaS (service jmc8tl6s, PSM coplan.lark.larklish):
-                                                          #   `pong go1.25.x linux/amd64` — the Go that built the running binary
-adb reverse tcp:8787 tcp:8787                              #   over USB the phone reaches the Mac as http://127.0.0.1:8787
-while true; do adb wait-for-usb-device reverse tcp:8787 tcp:8787; \
-  adb wait-for-usb-disconnect; done                        #   …once per plug-in, then wait for the unplug (a background task on the Mac)
-curl -s localhost:8787/v1/ping; curl -s localhost:8787/chats   #   liveness; the Backend's chat cache
-ssh -N -o ExitOnForwardFailure=yes devbox                 # when working remotely on devbox: on the Mac: carry its adb server to the dev box
-                                                          #   (~/.ssh/config: Host devbox, HostName 10.251.236.182,
-                                                          #   RemoteForward 5037 localhost:5037; the DNS name
-                                                          #   `devbox` is a load balancer, not the machine)
-export ADB_SERVER_SOCKET=tcp:localhost:5037                # on the dev box: adb talks to the Mac's server
-export PATH="$HOME/Android/Sdk/platform-tools:$PATH"       # devbox: client and server versions must match
-adb shell cmd notification allow_listener com.vegerot.larklish/.LarkListener
-adb shell pm grant com.vegerot.larklish android.permission.POST_NOTIFICATIONS
-adb shell pm grant com.vegerot.larklish android.permission.ACCESS_COARSE_LOCATION    # debug soak diagnostics only
-adb shell pm grant com.vegerot.larklish android.permission.ACCESS_FINE_LOCATION      # Wi-Fi SSID; Location must be on
-adb shell pm grant com.vegerot.larklish android.permission.ACCESS_BACKGROUND_LOCATION # listener runs in the background
-adb logcat --pid="$(adb shell pidof com.vegerot.larklish)"
-tools/larklish-helper probe "中文消息"                          # post, then show the Recorder outcome
-tools/larklish-helper probe --idle --expect updated "中文消息"  # require an Update; deep idle does not guarantee a cut Preview
-tools/larklish-helper probe --thread "中文消息"                 #   …with a reply in a thread
-tools/larklish-helper probe --debug refresh                   #   MainActivity hooks: user, refresh, fetch
-tools/larklish-helper chats                                   # what the configured Backend's chat-id cache holds
-tools/larklish-helper events stats                            # the Relay record; views: list, stats, grade, pull
-tools/larklish-helper events --since 2026-08-29T00:30 --han list
-tools/larklish-helper events --since 2026-09-01T03:50 grade   #   the soak grade: cut Previews vs their Update outcome
-tools/larklish-helper events --exclude-test-group --utc grade --group-by network --json
-tools/larklish-helper msgs 'US Global E-Commerce' --around 2026-09-02T14:06   # what a chat said then (id or title)
-tools/larklish-helper chats search 'ByteDance Research' --repeat 3            # chats/search hits, and how often they appear
-tools/larklish-helper translate '先别发布' --repeat 30          # one Lark translate call, with its code (rate-limit probe)
-tools/larklish-helper phone status --details            # adb pre-flight: apps, listener, idle, active network, reverse
-tools/larklish-helper phone install                     # test + install; prove user-token.json survived unchanged
-tools/larklish-helper phone log -n 20                   #   the app's logcat, keys shortened; --clear resets it
-tools/larklish-helper phone shade shot.png              #   adb helpers: top, home, shot, shade
-tools/larklish-helper backend status                    # configured Backend health, authentication and cache
-tools/larklish-helper backend lookup --repeat 3         # replay the newest recorded Original, sanitized output
-uv run --script tools/larklish-helper showcase 02-english "<message>" "<caption>"   # Lark vs Larklish side by side
-                                                          #   → docs/showcase/; force-idle the phone first for the cut
-tools/larklish-helper replay fetch                            # pull replay-corpus/ (gitignored: real messages)
-./gradlew testDebugUnitTest --tests '*ReplayTest*' -i  #   …score the shipped rules over it
-python3 -c 'import sys; sys.path.insert(0, "tools"); from larklish_helper import read_events; …'   # one-off scripts: the helper is the library
+sl status
+./gradlew testDebugUnitTest
+./gradlew ktfmtFormat
+uvx --system-certs ruff format tools
+go -C backend test ./...
+python3 -m unittest discover -s tools
+./tools/larklish-helper phone status --details
+./tools/larklish-helper events stats
+./tools/larklish-helper phone install
 ```
+
+Prefer Android Studio MCP when convenient. The helper is plain Python; only `token` and
+`showcase` need its extra dependencies. Import helper functions for one-off investigations.
+The install helper verifies token-file preservation. Do not clear app data to update it.
+
+[Experiment 32](experiments/32-replay-gate.md) defines the replay gate: portable fictional
+fixtures assert message identity/text or expected skips. Private corpus resolution counts
+are diagnostic, not a percentage-based correctness gate. Real messages stay ignored.
+
+## Shortcuts
+
+This is a single-user app. App credentials, the user-token seed and the shared Backend
+Bearer token are embedded in the APK from ignored local.properties. There is no sign-in
+screen or per-user Backend authorization. Wider distribution requires revisiting those
+choices. ByteCloud production acceptance remains separate from PPE acceptance.
+
+## Next work
+
+- Preserve both deployment paths and resolve internal production promotion through Bits.
+- Test narrow translation-fidelity improvements against actual ML Kit results before
+  adding parsing or masking machinery. Preserve useful early English.
+- Investigate timing inconsistencies before claiming precise latency savings.
+- Add other message types only after measuring the missing value in real traffic.
+
+Earlier layer plans, alternatives and deferred feature proposals are retained in
+[the historical build plan](plan-history-2026-09-28.md). They are evidence and ideas,
+not automatic requirements. Add work here only when it serves a current user need.

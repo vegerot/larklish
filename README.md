@@ -43,10 +43,10 @@ Larklish keeps the phone’s notification workflow intact while restoring missin
 
 1. Lark posts an Original notification.
 2. The Larklish client receives its title and text through the platform’s notification listener.
-3. The client translates the text.
-4. Larklish posts a Relay using the same notification key, so it occupies the same familiar notification slot.
-5. If the Preview was complete, the Relay is done.
-6. If the Preview was cut, the Backend performs a Lookup and Larklish sends an Update containing the Full text in your language.
+3. The phone uses on-device ML Kit to translate the Preview into an early English Relay.
+4. Larklish posts its own Relay, using the Original’s notification key as its tag so subsequent Updates replace that Relay.
+5. If the Preview is complete and its message has no foreign text, the Relay is done. Otherwise, the Backend translates a complete Preview or performs Lookup for a cut Preview.
+6. A successful result Updates the Relay with the full Lark-translated text. If Lookup or translation fails, the early Relay remains.
 
 ![Lark Original and Larklish Relay showing long-message recovery](docs/showcase/02-english.webp)
 
@@ -65,10 +65,10 @@ The hard part is not translating a sentence. It is recognizing when the notifica
 
 - The app understands Lark’s actual notification shape: the title is the group name and the text begins with the Sender.
 - It translates both the group title and the message Preview, preserving the Sender boundary.
-- It preserves platform notification identity and follows Lark when Lark withdraws an Original.
+- It preserves the Original’s tap target, reuses a stable Relay identity for Updates, and follows Lark when Lark withdraws an Original.
 - It detects whether the Preview is truncated instead of fetching every message, keeping the common path fast and inexpensive.
 - It handles direct messages differently from group chats when resolving a conversation for a Lookup.
-- It uses the Lark translation API first and keeps an on-device ML Kit fallback for cases where translation is needed but the API cannot provide a result. A `~` marker makes a fallback visible rather than silently pretending all translations came from the same path.
+- It posts an early ML Kit Relay, then lets the Backend improve it with Lark translation. The early Relay remains useful when an Update cannot be produced.
 - It refreshes the user token through the normal Lark user-token chain. The Backend receives the user's access token per request; it does not own a long-lived user session.
 
 These choices turn an apparently small feature into a complete, usable product loop.
@@ -77,18 +77,17 @@ These choices turn an apparently small feature into a complete, usable product l
 
 ```mermaid
 flowchart LR
-    LARK["Lark notification\nOriginal"]
-    LISTENER["Platform client\nparse Preview"]
-    TRANSLATE["Client Translator\ntitle + message"]
-    RELAY["Native Relay\nsame notification key"]
-    CHECK{"Preview cut?"}
-    BACKEND["Go Backend\nLookup + Update"]
-    API["Lark APIs\nchat + message + translation"]
-    UPDATE["Relay Update\nFull text in English"]
-
-    LARK --> LISTENER --> TRANSLATE --> RELAY --> CHECK
-    CHECK -->|"No"| DONE["Done"]
-    CHECK -->|"Yes"| BACKEND --> API --> BACKEND --> UPDATE
+    O[Original] --> P[Parse Preview]
+    P --> M[ML Kit] --> R[Early English Relay]
+    R --> C{Cut Preview?}
+    C -->|Yes| L[Backend Lookup for Full text]
+    C -->|No| H{Message contains foreign text?}
+    H -->|No| D[Keep Relay]
+    H -->|Yes| T[Backend Lark translation]
+    L --> T
+    T -->|Success| U[Update existing Relay]
+    L -->|Miss| D
+    T -->|Failure| D
 ```
 
 ### Frontend: a native experience that stays out of the way
@@ -97,13 +96,13 @@ The current app is intentionally focused. It owns notification interception, Pre
 
 The reference implementation is tested on a rooted Pixel 4a running LineageOS 23.2 / Android 16. That focus let the project optimize for a real end-to-end experience while keeping the product architecture open to other clients.
 
-### Backend: only the expensive path leaves the phone
+### Backend: translation and Full-text Lookup
 
-The Go Backend runs only when a notification Preview is incomplete. It performs the smallest useful Lookup:
+The Go Backend translates complete Previews directly. For a cut Preview, it first performs Lookup:
 
 `title → chat id → newest messages → matching message → Full text → translation`
 
-It is stateless apart from an in-memory chat cache and LRU. It uses Go’s `net/http` and the official Lark Go SDK, with explicit Bearer authentication between the phone and Backend. The same service can run locally for development or as a ByteFaaS service in ByteCloud in production.
+It is stateless apart from an in-memory chat cache and LRU. It uses Go’s `net/http` and the official Lark Go SDK, with explicit Bearer authentication between the phone and Backend. The same service supports two required deployments: internal ByteCloud and external Railway. See the [current plan](docs/plan.md) for behavior and the [progress record](docs/progress.md) for dated deployment state.
 
 ### AI and data handling
 
@@ -123,7 +122,9 @@ Larklish has been built by testing the real layers separately and then joining t
 - The phone’s user-token file survived in-place APK installation byte for byte, and the notification listener stayed bound.
 - Focused Backend tests, `go vet`, FE unit tests, formatting checks, static checks, and helper tests pass. There is also a full replay corpus the project maintains to make message-selection regressions visible.
 
-The current acceptance boundary is clear: complete Previews are fully verified on the phone, and the Backend Lookup is verified live. A fresh phone probe that starts with an actually cut Preview is the remaining proof point for claiming the complete Relay-to-Update timing path on the deployed Backend.
+Recorded September 24 phone probes verified a cut Work-profile Original → Relay → Full-text Update through Railway and ByteCloud PPE. ByteCloud production promotion remains separate. [Experiment 30](docs/experiments/30-work-profile.md) records the checks; these are dated acceptance results, not a live service-health claim.
+
+September 28 deletion experiments supported retaining both Full-text Lookup and the early ML Kit Relay. Translation remains imperfect, and some Lookups miss. See [Experiment 31](docs/experiments/31-lookup-deletion.md) and [Experiment 33](docs/experiments/33-early-relay-deletion.md).
 
 <video controls preload="metadata" playsinline src="docs/showcase/larklish-byteartist.mp4"></video>
 <!-- website: https://byteartist-beta.bytedance.net/model/video?mode=video; model: Seedance 2.5; prompt: Create a fast, funny, exaggerated cinematic office comedy. A Chinese Lark notification arrives and instantly makes a global team act like they are decoding an ancient alien transmission: one teammate squints at the phone, another grabs a giant magnifying glass, and a third prepares an absurd emergency translation committee. The recipient asks the voice assistant to read it, but the assistant throws up its hands. Then Larklish swoops in like a tiny superhero, replaces the notification in the same slot with a clear English message, and the entire team instantly relaxes and keeps working. End on a confident close-up of the phone notification and a playful wink. Warm, polished, visually clear, genuinely funny. No real app logos, no fake UI screenshots, no illegible text, no watermark. -->
@@ -180,7 +181,7 @@ The audience should leave with one memorable idea:
 *Larklish turns notification chaos into one calm card without interrupting the work.*
 ## Project status and next step
 
-Larklish is a real working app with a live ByteFaaS Backend in ByteCloud.
+Larklish has verified phone flows through Railway and ByteCloud PPE. Both deployment paths are required; ByteCloud production promotion remains pending in the last recorded handoff. Use [docs/plan.md](docs/plan.md) for the current design and read [docs/progress.md](docs/progress.md) from the bottom for the latest evidence.
 
 ---
 

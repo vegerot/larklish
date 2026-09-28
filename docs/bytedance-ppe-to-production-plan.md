@@ -1,5 +1,8 @@
 # Deploy Larklish on ByteDance PPE, then switch the Pixel to production
 
+> Historical rollout plan. Use [plan.md](plan.md) and the latest entries in
+> [progress.md](progress.md) before acting; deployment IDs and checkpoints below may be superseded.
+
 ## Summary
 
 Use the public route that is already live. It forwards `/_/test/demo/larklish/lookup` to the correct PSM but currently gets a Backend 404. Add that exact path as an authenticated Backend handler, deploy it to PPE, and have the Android app send `x-tt-env: ppe_deploy_i18n_1`. No new TLB configuration is needed.

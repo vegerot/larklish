@@ -1,5 +1,8 @@
 # Move Lark translation to the Backend
 
+> Historical rollout plan. Use [plan.md](plan.md) and the latest entries in
+> [progress.md](progress.md) before acting; deployment IDs and checkpoints below may be superseded.
+
 ## Summary
 
 The phone will use on-device ML Kit to post the first Relay. It will call the Backend unless the message has no Han text and its Preview is complete. For other complete Previews, the Backend translates the Preview without a Lookup. For truncated Previews, it performs the existing Lookup and translates the Full text.

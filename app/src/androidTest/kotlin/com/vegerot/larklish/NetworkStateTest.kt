@@ -24,7 +24,15 @@ class NetworkStateTest {
             val recorder = Recorder(file) { network }
             recorder.relayed("key", "group", "Sender: ...", "group", "Sender: ...", true)
             network = JSONObject("""{"vpn":true,"wifiConnected":false,"wifiSsid":null}""")
-            recorder.updated("key", "text", "Full text", "Sender: Full text", "https://backend")
+            recorder.updated(
+                "key",
+                "full-text",
+                "text",
+                "Full text",
+                "Sender: Full text",
+                "https://backend",
+                emptyList(),
+            )
             network = JSONObject("""{"vpn":false,"wifiConnected":true,"wifiSsid":null}""")
             recorder.skipped("key", "error: Read timed out")
 

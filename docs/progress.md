@@ -3997,3 +3997,21 @@ and missing-evidence cases ungraded; add expectations when raw evidence supports
 Next: retain early Relay behavior. If pursuing translation fidelity, test a narrow
 URL/identifier-preservation hypothesis before changing the Translator; do not infer
 that all four material-error rows were wholly useless to the user.
+
+### 2026-09-28 — current guidance consolidated; URL preservation tested
+
+- 🧭 Max confirmed both ByteCloud and Railway are required. Replaced the historical
+  build-plan narrative with current behavior, deployment requirements, checks and next work;
+  preserved the original in plan-history-2026-09-28.md. Corrected README translation flow
+  and dated acceptance claims. Marked old rollout plans historical.
+- 🧪 Ran five URL-bearing Chinese inputs through ML Kit on the Pixel. Keeping URLs out
+  of separate prose translations preserved links but damaged context/spacing. Numbered
+  placeholders preserved all five URLs and sentence context with one translation call.
+  Experiment 34 records the bounded result and remaining wrapper contract questions.
+- 🛠️ Corrected a stale Recorder.updated call in NetworkStateTest that prevented Android
+  instrumentation from compiling. Android unit tests/build and the corrected phone test pass.
+  Only the test APK was installed; temporary probe removed. Current guidance links resolve.
+
+Next: implement a small URL-only wrapper if proceeding, with explicit marker and punctuation
+cases before shipping. Both hosting paths and the early Relay remain required. No broader
+identifier masking, performance dashboard or deployment automation follows from this trial.
