@@ -3982,3 +3982,18 @@ additional matching rule, length guard, or deployment follows from row 47.
 
 Next: use known-case expectations for future Lookup changes. Keep corpus counts diagnostic
 and missing-evidence cases ungraded; add expectations when raw evidence supports them.
+
+### 2026-09-28 — retain early ML Kit Relay after bounded deletion experiment
+
+- 🔎 Graded the latest 20 non-test Han-containing Originals: 14 useful message gists,
+  4 material errors, and 2 title-only translations. The 13 Updates are graded separately;
+  Backend translation also has errors. Evidence and limitations are in Experiment 33.
+- 🪶 Rejected removing ML Kit: four useful early Relays never received an Update.
+  Recorded first-Relay median is 0.768 s; observed Relay-to-Update wall-clock median is
+  2.069 s among successes. These are not predictions of a Backend-only implementation.
+- 📊 Noted a wall/monotonic timing discrepancy in one flow; no precise optimization
+  claim follows. No runtime code, phone setting, or deployment changed.
+
+Next: retain early Relay behavior. If pursuing translation fidelity, test a narrow
+URL/identifier-preservation hypothesis before changing the Translator; do not infer
+that all four material-error rows were wholly useless to the user.
