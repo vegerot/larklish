@@ -3942,3 +3942,43 @@ separate ByteCloud PPE recovery without bypassing the production Bits manual che
 Next: keep Railway as the phone's selected Backend; retain PPE as a separately verified path.
 Investigate why the old PPE function disappeared before relying on its lifetime. Continue the
 normal Bits process for production without bypassing the manual checks.
+
+### 2026-09-28 — bounded Full-text Lookup deletion experiment
+
+- 🔎 Compared the latest 50 non-test cut Originals by exact flow ID from a fresh phone
+  Recorder snapshot. Offline deletion retains the first Preview Relay and removes the
+  Lookup Update. Agent assessment: 23 substantive additions, 5 minor additions,
+  1 Update losing visible Preview text, and 21 non-Updates (including 1 cancellation).
+- 🪶 Rejected deleting Lookup and skipping Latin-only Previews: 15 of the substantive
+  additions had Latin-only Previews. No reliable cheaper eligibility rule emerged.
+  Experiment 31 records the rubric, limits, and ignored private evidence location.
+  No runtime code, deployment, or phone settings changed.
+
+Next: investigate Experiment 31 row 47 against its raw API message to explain the lost
+Preview prose before choosing a fix. Do not infer a matching-rule or hosting deletion
+from this whole-Lookup comparison.
+
+### 2026-09-28 — row 47 follows an edited API message
+
+- 🔎 Retrieved the raw API message for Experiment 31 row 47. Both post representations
+  contain only the URL; the message is marked edited about three seconds before the
+  first Relay. A temporary Go probe reproduced the recorded text and match through
+  production parsing and matching, then was removed.
+- 🪶 Corrected the initial defect interpretation: a stale Preview after an edit is the
+  strongest explanation, although the API does not expose the pre-edit text. No parser
+  loss or wrong-message match was demonstrated. No runtime fix is justified.
+
+Next: retain Lookup and the current edit behavior. Experiment 31 is complete; no
+additional matching rule, length guard, or deployment follows from row 47.
+
+### 2026-09-28 — replay correctness gate replaces aggregate threshold
+
+- 🔎 Inspected 10 resolved and 10 unresolved corpus rows: 10 supported identities,
+  1 unsupported card, 9 unknowns lacking captured DM mappings. Experiment 32 records evidence.
+- 🪶 Removed the inherited 50% assertion. Kept 67/165 as a diagnostic; 11 portable
+  fictional fixtures assert message identity/text or skip through production parsing and Lookup.
+- 🧪 Backend tests pass. Wrong-ID and lost-match mutations fail the new gate; both were
+  restored. No runtime changes or phone installation were needed.
+
+Next: use known-case expectations for future Lookup changes. Keep corpus counts diagnostic
+and missing-evidence cases ungraded; add expectations when raw evidence supports them.

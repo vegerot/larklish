@@ -4,6 +4,9 @@ Larklish grows like an onion 🧅. Each layer is the smallest thing that answers
 question. Commit every layer, even the ones we throw away. The settled decisions are in
 the table below; `CONTEXT.md` holds the words.
 
+The current replay gate is documented in [Experiment 32](experiments/32-replay-gate.md).
+Known-case fixtures assert message identity and text; corpus resolution counts are diagnostic.
+
 The end-to-end flow timing plan and its implementation additions are in
 [`experiments/28-flow-timing.md`](experiments/28-flow-timing.md).
 

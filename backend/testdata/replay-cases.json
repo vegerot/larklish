@@ -1,0 +1,406 @@
+[
+  {
+    "name": "image followed by cut prose",
+    "sourceRow": 1,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: [image]Anyone wants to swap a green bag..."
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"img\"}], [{\"tag\": \"text\", \"text\": \"Anyone wants to swap a green bag for a red one?\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "[image]\nAnyone wants to swap a green bag for a red one?"
+  },
+  {
+    "name": "complete Han post",
+    "sourceRow": 2,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: 我有一个绿色的杯子，想换其他颜色"
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"text\", \"text\": \"我有一个绿色的杯子，想换其他颜色\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "我有一个绿色的杯子，想换其他颜色"
+  },
+  {
+    "name": "complete Latin post",
+    "sourceRow": 5,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: Anyone wants to play chess today"
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"text\", \"text\": \"Anyone wants to play chess today\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "Anyone wants to play chess today"
+  },
+  {
+    "name": "image then localized mention",
+    "sourceRow": 9,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: [image]@Support Assistant 页面出现错误"
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"img\"}], [{\"tag\": \"at\", \"user_name\": \"Support 助手\", \"user_id\": \"@_user_1\"}, {\"tag\": \"text\", \"text\": \" 页面出现错误\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "[image]\n@Support 助手 页面出现错误"
+  },
+  {
+    "name": "direct message",
+    "sourceRow": 10,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Lark",
+      "text": "Alex: Does this change need a rebase?"
+    },
+    "titles": {},
+    "dms": {
+      "Alex": "chat-example"
+    },
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"text\": \"Does this change need a rebase?\"}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "Does this change need a rebase?"
+  },
+  {
+    "name": "localized opening mention with shared suffix",
+    "sourceRow": 11,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: @Morgan @Taylor 请帮忙检查这个功能是否可以迁移..."
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"at\", \"user_name\": \"小明\", \"user_id\": \"@_user_1\"}, {\"tag\": \"text\", \"text\": \" @Taylor 请帮忙检查这个功能是否可以迁移到新的服务？\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "@小明 @Taylor 请帮忙检查这个功能是否可以迁移到新的服务？"
+  },
+  {
+    "name": "all mention case folding",
+    "sourceRow": 21,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: @all do you know who owns this project..."
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"at\", \"user_name\": \"All\", \"user_id\": \"@_user_1\"}, {\"tag\": \"text\", \"text\": \" do you know who owns this project?\"}], [{\"tag\": \"img\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "@All do you know who owns this project?\n[image]"
+  },
+  {
+    "name": "cut plain Han text",
+    "sourceRow": 27,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: 这条测试消息足够长，通知只显示前面一部分..."
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"text\": \"这条测试消息足够长，通知只显示前面一部分，后面还有具体的操作说明。\"}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "这条测试消息足够长，通知只显示前面一部分，后面还有具体的操作说明。"
+  },
+  {
+    "name": "short complete text",
+    "sourceRow": 28,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: 简短测试"
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"text\": \"简短测试\"}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "简短测试"
+  },
+  {
+    "name": "localized mention complete post",
+    "sourceRow": 33,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group...",
+      "text": "Alex: @Support Assistant 想咨询下事件上报区域的问题"
+    },
+    "titles": {
+      "Example group...": [
+        "chat-example"
+      ]
+    },
+    "dms": {},
+    "messages": [
+      {
+        "message_id": "newer-unrelated",
+        "chat_id": "chat-example",
+        "msg_type": "text",
+        "create_time": "1799999999000",
+        "body": {
+          "content": "{\"text\": \"An unrelated message.\"}"
+        }
+      },
+      {
+        "message_id": "expected",
+        "chat_id": "chat-example",
+        "msg_type": "post",
+        "create_time": "1799999991000",
+        "body": {
+          "content": "{\"title\": \"\", \"content\": [[{\"tag\": \"at\", \"user_name\": \"Support 助手\", \"user_id\": \"@_user_1\"}, {\"tag\": \"text\", \"text\": \" 想咨询下事件上报区域的问题\"}]]}"
+        }
+      }
+    ],
+    "wantChat": "chat-example",
+    "wantMessage": "expected",
+    "wantText": "@Support 助手 想咨询下事件上报区域的问题"
+  },
+  {
+    "name": "unsupported card",
+    "sourceRow": 7,
+    "original": {
+      "whenMs": 1800000000000,
+      "title": "Example group",
+      "text": "Reporter: Daily report"
+    },
+    "titles": {
+      "Example group": [
+        "chat-example"
+      ]
+    },
+    "messages": [
+      {
+        "message_id": "card",
+        "chat_id": "chat-example",
+        "msg_type": "interactive",
+        "create_time": "1799999990000",
+        "body": {
+          "content": "{\"title\": \"Daily report\", \"elements\": []}"
+        }
+      }
+    ],
+    "wantReason": "type:interactive"
+  }
+]

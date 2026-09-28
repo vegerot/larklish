@@ -91,7 +91,8 @@ func loadCorpus(t *testing.T, dir string) *corpusSource {
 // TestReplayCorpus replays a day of real Originals through the Lookup the Backend ships, over
 // a corpus pulled by `tools/larklish-helper replay fetch`. The corpus is real colleagues'
 // messages, so it is never committed; without it this test skips. It writes one line per
-// Original to outcomes-go.tsv (the Layer 7 gate diffed it against the Kotlin replay's).
+// Original to outcomes-go.tsv. Resolution is diagnostic: missing corpus mappings and
+// unsupported types are not regressions. TestReplayKnownCases is the correctness gate.
 func TestReplayCorpus(t *testing.T) {
 	dir := "../replay-corpus"
 	if _, err := os.Stat(filepath.Join(dir, "originals.jsonl")); err != nil {
@@ -123,8 +124,41 @@ func TestReplayCorpus(t *testing.T) {
 	for _, r := range reasons {
 		t.Logf("  %4d  %s", counts[r], r)
 	}
-	// Experiment 11 measured 119 of 210 for these rules; a real regression drops far below half.
-	if counts["found"]*2 < len(src.originals) {
-		t.Errorf("only %d of %d resolved", counts["found"], len(src.originals))
+}
+
+// These fictional fixtures preserve the raw API shapes reviewed in Experiment 32.
+// Unlike the private corpus, they run on every machine and have known message identities.
+func TestReplayKnownCases(t *testing.T) {
+	var cases []struct {
+		Name                                        string
+		Original                                    original
+		Titles                                      map[string][]string
+		DMs                                         map[string]string
+		Messages                                    []*larkim.Message
+		WantChat, WantMessage, WantText, WantReason string
+	}
+	readJSON(t, "testdata", "replay-cases.json", &cases)
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			src := &corpusSource{titles: c.Titles, dms: c.DMs, messages: map[string][]Candidate{}}
+			for _, m := range c.Messages {
+				chat := str(m.ChatId)
+				src.messages[chat] = append(src.messages[chat], candidateOf(m))
+			}
+			got := quiet(src).FullTextOf(t.Context(), c.Original.Title, ParsePreview(c.Original.Text), c.Original.WhenMs)
+			if c.WantReason != "" {
+				if got.Found != nil || got.Reason != c.WantReason {
+					t.Fatalf("got %v, want %s", got, c.WantReason)
+				}
+				return
+			}
+			if got.Found == nil {
+				t.Fatalf("got %v, want message %s", got, c.WantMessage)
+			}
+			if got.ChatID != c.WantChat || got.Found.ID != c.WantMessage || got.Found.Text != c.WantText {
+				t.Fatalf("got chat=%q message=%q text=%q; want chat=%q message=%q text=%q",
+					got.ChatID, got.Found.ID, got.Found.Text, c.WantChat, c.WantMessage, c.WantText)
+			}
+		})
 	}
 }
