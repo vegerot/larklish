@@ -64,9 +64,8 @@ flowchart TD
         NeuralTrans["Lark Neural Translation API"]
     end
 
-    subgraph Infra["☁️ Dual Infrastructure Deployment"]
+    subgraph Infra["☁️ Infrastructure Deployment"]
         ByteFaaS["ByteDance ByteFaaS (Bits / PPE)"]
-        Railway["Railway Cloud Deployment"]
     end
 
     NLS --> MLKit
@@ -77,7 +76,6 @@ flowchart TD
     LarkSDK --> NeuralTrans
     NeuralTrans -->|"Full-text Update"| OSNotify
     Handler -.-> ByteFaaS
-    Handler -.-> Railway
 ```
 
 ### Core Engineering Principles
