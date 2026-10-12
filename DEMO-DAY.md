@@ -27,7 +27,7 @@
 sequenceDiagram
     autonumber
     actor Lark as Lark App
-    participant OS as Android 16 (LineageOS)
+    participant OS as Android 16
     participant Client as Larklish Client (ML Kit)
     participant Backend as Larklish Backend (Go)
     

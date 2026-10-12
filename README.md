@@ -94,7 +94,7 @@ flowchart LR
 
 The current app is intentionally focused. It owns notification interception, Preview parsing, translation, Relay/Update presentation, the user-token chain, and recording. A future native client on another platform can implement the same small contract while reusing the Backend and product behavior. No client requires changes to the Lark app or cooperation from message senders.
 
-The reference implementation is tested on a rooted Pixel 4a running LineageOS 23.2 / Android 16. That focus let the project optimize for a real end-to-end experience while keeping the product architecture open to other clients.
+The reference implementation is tested on a Pixel 4a running Android 16. That focus let the project optimize for a real end-to-end experience while keeping the product architecture open to other clients.
 
 ### Backend: translation and Full-text Lookup
 
