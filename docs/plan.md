@@ -24,9 +24,12 @@ Read [progress.md](progress.md) from the bottom for dated state and the latest h
 4. A complete Preview with a Han message goes to the Backend for Lark translation directly.
 5. A Preview ending in `...` goes to the Backend for **Lookup** and Full-text translation,
    even when its visible text is entirely Latin. Only this branch needs a user access token.
-6. A successful Backend result **Updates** the existing Relay. On Lookup or message
-   translation failure, the first Relay remains. A title/Sender translation failure retains
-   that field's first wording. There is no phone-side Full-text translation fallback.
+6. A successful Backend result **Updates** the existing Relay. When a cut Preview resolves to a
+   Full-text message whose body Lark's translation API returns unchanged (`not-translated`),
+   the Backend still returns that Full text as `found` so the Update expands the cut Preview.
+   On Lookup or complete-Preview message translation failure, the first Relay remains. A
+   title/Sender translation failure retains that field's first wording. There is no phone-side
+   Full-text translation fallback.
 
 The phone preserves the Original's PendingIntent for taps. It uses the Original's key
 as the Relay tag; newer Originals on that key cancel older pending Updates. Debug builds
@@ -45,13 +48,14 @@ Neither deployment is an obsolete alternative or a candidate for removal merely 
 both exist. This requirement does not imply automatic failover between them.
 
 The phone has a device-local HTTPS Backend URL; changing it requires no rebuild.
-The compiled default is the internal public alias. The last verified selected phone URL
-was Railway; consult progress and inspect settings before any deployment or cutover.
+The compiled default is the internal public alias (`https://shop.tiktokglobalshop.com/_/test/demo/larklish`
+with `x-tt-env: ppe_deploy_i18n_1`). The selected phone URL is currently ByteCloud PPE
+(switched from Railway on October 20 after the Railway trial expired).
 
 | Path | Operation | Last recorded acceptance |
 | --- | --- | --- |
-| Railway (external) | GitHub main → service rooted at backend/; provider-managed HTTPS | Work-profile Original → Relay → Full-text Update, September 24 |
-| ByteCloud (internal) | ByteDance source → SCM artifact → ByteFaaS via Bits; separate PPE and production stages | Replacement PPE deployment and phone flow verified September 24; production promotion still gated |
+| Railway (external) | GitHub main → service rooted at backend/; provider-managed HTTPS | Work-profile Original → Relay → Full-text Update, September 24 (trial expired October 16; HTTP 404 until plan selected) |
+| ByteCloud (internal) | ByteDance source → SCM artifact → ByteFaaS via Bits; separate PPE and production stages | PPE task `2950156` (`oec/seller/larklish:1.0.0.39`) and phone `debug fetch` verified October 20; production promotion on `kpb2dvsn` (`1.0.3` / `tlpcjxmx7n`) still gated by ByteCycle policy |
 
 PPE means the pre-production environment. Production promotion uses the normal Bits
 checks; PPE success does not establish production acceptance. Recheck task/function state

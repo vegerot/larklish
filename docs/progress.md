@@ -4015,3 +4015,50 @@ that all four material-error rows were wholly useless to the user.
 Next: implement a small URL-only wrapper if proceeding, with explicit marker and punctuation
 cases before shipping. Both hosting paths and the early Relay remain required. No broader
 identifier masking, performance dashboard or deployment automation follows from this trial.
+
+### 2026-10-20 — 22-day soak analysis, URL wrapper, Full-text English fix, and ByteCloud PPE switch
+
+- 📊 Soak analysis (`2026-09-28 17:00` → `2026-10-20 14:19`, 22 days): `774` Relays (`356` cut
+  Previews, `418` complete Previews) and `326` Updates (`219` Full-text: `170` post, `49` text;
+  `107` Preview), with `3.002 s` median (`5.196 s` p90) Relay-to-Update latency.
+- 🔎 Non-updated breakdown (`185` Backend calls):
+  - `61` `skipped error`: `58` were HTTP 404 after `2026-10-16 14:57 PDT` when Railway's trial
+    expired (`"Your trial has expired. Please select a plan to continue using Railway"`); `3`
+    were transient phone Wi-Fi disconnects before Oct 16.
+  - `43` `skipped no-chat`: `32` `[Lark]` system/bot notifications (Mail Assistant, Feishu ESOP,
+    Calendar/Meeting started alerts, Approval, Kani) and `11` `[Reminder]` calendar notifications.
+  - `23` unsupported message types (`22` `interactive`, `1` `general_calendar`).
+  - `22` `skipped translation-failed:not-translated`: `20` were cut Previews (`source: full-text`)
+    whose resolved Full text was predominantly English (with localized `@mentions` such as
+    `@Oncall 助手`, Chinese `[emoji]` tags like `[送心]` / `[派对]`, or a short Chinese phrase)
+    where Lark's translation API returned the message unchanged and `backend/server.go` discarded
+    the Full text instead of expanding the cut Preview.
+  - `1` `skipped no-message` where a localized `@mention` (`@星舟 助手` vs `@Stargazer Assistant`)
+    combined with a trailing `[Thinks]` emoji omitted from the notification Preview prevented
+    `backend/pick.go` from matching (left untouched per Max's instruction).
+- 🛠️ Shipped commit `354bf0b` ("Preserve URLs in ML Kit translation and keep unchanged full-text
+  messages") to both `code.byted.org` and `github.com` `main`:
+  - `Translator.kt`, `UrlTranslationTest.kt`: wraps `https?://[^\s\p{IsHan}<>]+` URLs in
+    numbered `URL0`, `URL1` placeholders during ML Kit translation (`./gradlew testDebugUnitTest`
+    and on-device `UrlTranslationTest` pass).
+  - `backend/server.go`, `backend/server_test.go`: when `source == "full-text"` and
+    `messageTranslation.Failure == "not-translated"`, keeps `english = &message` (`outcome = "found"`)
+    and records the `not-translated` failure instead of discarding the Full text (`go -C backend test ./...` passes).
+- 🚀 Switched Backend to ByteCloud PPE (`ppe_deploy_i18n_1` on
+  `https://shop.tiktokglobalshop.com/_/test/demo/larklish`):
+  - Built SCM version `oec/seller/larklish:1.0.0.39`. Created Bits PPE task `2950156` (cloned from
+    `2888453` on lane `ppe_deploy_i18n_1`) and ran `quick-run` to completion (`SUCCEEDED`).
+  - Also created FaaS SCM revision `1.0.3` (`tlpcjxmx7n`) on production service `kpb2dvsn`; direct
+    FaaS release remains blocked by OEC ByteCycle freeze policy (`国际化电商_Faas未走bytecycle平台发布拦截策略_20221118`).
+  - Reinstalled `app-debug.apk` on the Pixel 4a, refreshed and verified `user-token.json` from
+    `lark-cli`, removed `shared_prefs/backend.xml` so the phone uses the default ByteCloud alias
+    with `x-tt-env: ppe_deploy_i18n_1`, and verified both Preview translation (`outcome=found`)
+    and authenticated Full-text chat/message lookup (`200 OK`) from the phone via `debug fetch`.
+  - ⚠️ Note: `./gradlew connectedDebugAndroidTest` uninstalls both the test APK and `app-debug.apk`
+    after completion, wiping `/data/data/com.vegerot.larklish/`. Always back up `files/user-token.json`
+    and `files/events.jsonl` before running instrumentation tests.
+
+Next: monitor the new soak on ByteCloud PPE (`ppe_deploy_i18n_1`), complete the Bits production
+release gate for `coplan.lark.larklish` (`kpb2dvsn`) when ready, or select a Railway plan if
+restoring the external Railway path.
+
