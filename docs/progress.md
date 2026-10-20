@@ -4056,7 +4056,8 @@ identifier masking, performance dashboard or deployment automation follows from 
     and authenticated Full-text chat/message lookup (`200 OK`) from the phone via `debug fetch`.
   - ⚠️ Note: `./gradlew connectedDebugAndroidTest` uninstalls both the test APK and `app-debug.apk`
     after completion, wiping `/data/data/com.vegerot.larklish/`. Always back up `files/user-token.json`
-    and `files/events.jsonl` before running instrumentation tests.
+    and `files/events.jsonl` before running instrumentation tests. Full details in
+    `docs/experiments/35-soak-and-bytecloud-switch.md`.
 
 Next: monitor the new soak on ByteCloud PPE (`ppe_deploy_i18n_1`), complete the Bits production
 release gate for `coplan.lark.larklish` (`kpb2dvsn`) when ready, or select a Railway plan if

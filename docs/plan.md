@@ -64,7 +64,8 @@ Keep GitHub and ByteDance source histories aligned for subsequent Backend change
 A push can trigger deployment; choose the destination deliberately.
 
 Detailed deployment records: [Railway](experiments/26-railway-deployment.md),
-[Work profile and recovery](experiments/30-work-profile.md), and the dated progress entries.
+[Work profile and recovery](experiments/30-work-profile.md),
+[22-day soak and ByteCloud PPE switch](experiments/35-soak-and-bytecloud-switch.md), and the dated progress entries.
 The earlier [ByteCloud promotion plan](bytedance-ppe-to-production-plan.md) is historical
 rollout context; its task IDs and checkpoints are not current execution instructions.
 
