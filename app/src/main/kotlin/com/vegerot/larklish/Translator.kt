@@ -8,12 +8,31 @@ interface Translator {
 /** The one Translator on the phone: ML Kit. Lark translation belongs to the Backend. */
 fun defaultTranslator(): Translator = MlKitTranslator()
 
+private val urlPattern = Regex("https?://[^\\s\\p{IsHan}<>]+")
+private val urlMarkerPattern = Regex("URL[0-9]+")
+
 /**
- * Only Han text goes to the Translator. English, names, identifiers and emoji pass unchanged — ML
- * Kit mangles them (Experiment 02; it turned a lone 😀 into "Bamboo").
+ * Translate Han-containing fields while preserving HTTP(S) URLs exactly. Keep sentence context with
+ * numbered markers; retain the Original text if the translation loses a marker. Fields without Han
+ * pass unchanged (Experiment 02; ML Kit turned a lone emoji into "Bamboo").
  */
-suspend fun Translator.englishOf(text: String): String =
-    if (text.any { it.isHan() }) zhToEn(text) else text
+suspend fun Translator.englishOf(text: String): String {
+    if (text.none { it.isHan() }) return text
+    val urls = mutableMapOf<String, String>()
+    var nextMarker = 0
+    val masked =
+        urlPattern.replace(text) { match ->
+            while (text.contains("URL$nextMarker", ignoreCase = true)) nextMarker++
+            val marker = "URL${nextMarker++}"
+            urls[marker] = match.value
+            marker
+        }
+    val english = zhToEn(masked)
+    // ML Kit can rewrite text. A lost or duplicated marker cannot safely name its URL.
+    val markers = urlMarkerPattern.findAll(english).map { it.value }.toList()
+    if (urls.keys.any { marker -> markers.count { it == marker } != 1 }) return text
+    return urlMarkerPattern.replace(english) { urls[it.value] ?: it.value }
+}
 
 /**
  * The Sender in English. A bare Han name romanizes well (陈昱萌 → "Chen Yumeng"), but a bot or a group

@@ -115,13 +115,22 @@ func (s *Server) handleLookup(w http.ResponseWriter, r *http.Request) {
 	}
 	var messageTranslation translation
 	timing.stage("translate.message", func() { messageTranslation = s.translator.EnglishOf(ctx, cut(message, maxTranslateChars)) })
+	var failures []fieldFailure
 	if messageTranslation.English == nil {
 		failure := fieldFailure{Field: "message", Reason: messageTranslation.Failure}
-		infoLog.Printf("[%s] → translation-failed %s", req.Title, failure.Reason)
-		writeJSON(w, LookupResponse{Outcome: "translation-failed", Reason: failure.Reason, Source: source, MsgType: msgType, ChatID: chatID, Message: message, Failures: []fieldFailure{failure}, Timings: timing.snapshot()})
-		return
+		// Full text whose body is predominantly English (apart from localized @mentions or [emoji])
+		// comes back unchanged from Lark's language detector; keep the recovered Full text rather
+		// than leaving the truncated Preview on the phone.
+		if source == "full-text" && messageTranslation.Failure == "not-translated" {
+			messageTranslation.English = &message
+			failures = append(failures, failure)
+		} else {
+			infoLog.Printf("[%s] → translation-failed %s", req.Title, failure.Reason)
+			writeJSON(w, LookupResponse{Outcome: "translation-failed", Reason: failure.Reason, Source: source, MsgType: msgType, ChatID: chatID, Message: message, Failures: []fieldFailure{failure}, Timings: timing.snapshot()})
+			return
+		}
 	}
-	answer := LookupResponse{Outcome: "found", Source: source, MsgType: msgType, ChatID: chatID, Message: message, English: messageTranslation.English}
+	answer := LookupResponse{Outcome: "found", Source: source, MsgType: msgType, ChatID: chatID, Message: message, English: messageTranslation.English, Failures: failures}
 	if hasHan(req.Title) {
 		var title translation
 		timing.stage("translate.title", func() { title = s.translator.EnglishOf(ctx, req.Title) })

@@ -33,6 +33,8 @@ func fakeLark(t *testing.T) (*httptest.Server, *[]string) {
 			t.Errorf("unexpected messages query: %s", r.URL.RawQuery)
 		}
 		reply(w, `{"code":0,"msg":"success","data":{"items":[
+			{"message_id":"om_2","msg_type":"text","create_time":"1787869581000","deleted":false,
+			 "body":{"content":"{\"text\":\"<p>English full text that stays unchanged after cut [不变]</p>\"}"}},
 			{"message_id":"om_1","msg_type":"text","create_time":"1787869580000","deleted":false,
 			 "body":{"content":"{\"text\":\"<p>这是一条很长的消息，前四十五个字符里没有边界</p><p>第二段 @_user_1</p>\"}"},
 			 "mentions":[{"key":"@_user_1","name":"Max Coplan"}]}]}}`)
@@ -46,6 +48,18 @@ func fakeLark(t *testing.T) (*httptest.Server, *[]string) {
 		}
 		if strings.Contains(body.Text, "失败") {
 			reply(w, `{"code":99991400,"msg":"rate limited"}`)
+			return
+		}
+		if strings.Contains(body.Text, "不变") {
+			b, _ := json.Marshal(struct {
+				Code int `json:"code"`
+				Data struct {
+					Text string `json:"text"`
+				} `json:"data"`
+			}{0, struct {
+				Text string `json:"text"`
+			}{body.Text}})
+			reply(w, string(b))
 			return
 		}
 		reply(w, `{"code":0,"msg":"success","data":{"text":"This is a long message\nSecond paragraph @Max Coplan"}}`)
@@ -190,6 +204,18 @@ func TestTranslationFailuresKeepAUsableMessageSeparate(t *testing.T) {
 	failed := request(`{"title":"English group","text":"Bot: 失败消息","flowId":"message"}`)
 	if failed.Outcome != "translation-failed" || failed.Reason != "lark:99991400" || failed.English != nil || len(failed.Failures) != 1 || failed.Failures[0].Field != "message" {
 		t.Errorf("message failure = %+v", failed)
+	}
+	previewUnchanged := request(`{"title":"English group","text":"Bot: English with 不变","flowId":"preview-unchanged"}`)
+	if previewUnchanged.Outcome != "translation-failed" || previewUnchanged.Reason != "not-translated" || previewUnchanged.English != nil {
+		t.Errorf("preview unchanged = %+v", previewUnchanged)
+	}
+	fullTextUnchanged := request(`{"title":"Larklish 测试群","text":"Bot: English full text that...","whenMs":1787869583000,"userToken":"u-test","flowId":"full-text-unchanged"}`)
+	wantFull := "English full text that stays unchanged after cut [不变]"
+	if fullTextUnchanged.Outcome != "found" || fullTextUnchanged.Source != "full-text" || fullTextUnchanged.English == nil || *fullTextUnchanged.English != wantFull {
+		t.Errorf("full-text unchanged = %+v", fullTextUnchanged)
+	}
+	if len(fullTextUnchanged.Failures) != 1 || fullTextUnchanged.Failures[0] != (fieldFailure{Field: "message", Reason: "not-translated"}) {
+		t.Errorf("full-text unchanged failures = %+v", fullTextUnchanged.Failures)
 	}
 }
 

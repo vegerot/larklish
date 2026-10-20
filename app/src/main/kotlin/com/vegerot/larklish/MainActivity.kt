@@ -86,7 +86,8 @@ private suspend fun MainActivity.debugHook(what: String, title: String, text: St
                     title,
                     previewText,
                     System.currentTimeMillis(),
-                    if (Preview.parse(previewText).truncated) defaultUserToken(this).bearer() else null,
+                    if (Preview.parse(previewText).truncated) defaultUserToken(this).bearer()
+                    else null,
                     flowId = "debug-fetch",
                 )
             Log.i(TAG, "debug fetch [$title]: $answer")
